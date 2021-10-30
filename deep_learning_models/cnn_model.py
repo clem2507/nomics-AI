@@ -1,3 +1,4 @@
+import os
 import time
 import numpy as np
 import keras_tuner as kt
@@ -49,7 +50,7 @@ def evaluate_model(load_flag, create_flag):
     plot_confusion_matrix(cm=cm, classes=['Invalid signal', 'Valid signal'], title='Confusion Matrix')
 
     # Save the model
-    filepath = 'models/cnn/saved_model'
+    filepath = os.path.dirname(os.path.abspath('runscript.py')) + '/models/cnn/saved_model'
     save_model(model, filepath)
     return accuracy
 

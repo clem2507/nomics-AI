@@ -12,8 +12,8 @@ from utils.util import extractDataFromLine, timesConvertion, remove_outlier, occ
 
 
 def load_data():
-    X = np.loadtxt('data/dataset/X.txt')
-    y = np.loadtxt('data/dataset/y.txt')
+    X = np.loadtxt(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/X.txt')
+    y = np.loadtxt(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/y.txt')
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
@@ -40,12 +40,12 @@ class Preprocessing:
         self.sec_interval = 0.1
 
     def load_dataframe(self):
-        self.dataset_df = pd.read_pickle('data/dataset/df.pkl')
+        self.dataset_df = pd.read_pickle(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/df.pkl')
 
     def create_dataframe(self):
         # do not change this value
         # invalid analysis upload
-        invalid_dir = 'data/invalid_analysis'
+        invalid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/invalid_analysis'
         for filename in os.listdir(invalid_dir):
             # make sure file name is not invalid (had issue with .DS_Store file)
             if filename.startswith('20'):
@@ -83,7 +83,7 @@ class Preprocessing:
         print('-------')
 
         # valid analysis upload
-        valid_dir = 'data/all_analysis'
+        valid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis'
         for filename in os.listdir(valid_dir):
             # make sure file name is not invalid (had issue with .DS_Store file)
             if filename.startswith('20'):
@@ -137,9 +137,9 @@ class Preprocessing:
                 out = [arr, row.label]
                 self.dataset_df = self.dataset_df.append(pd.Series(out, index=self.dataset_df.columns), ignore_index=True)
 
-        self.dataset_df.to_pickle('data/dataset/df.pkl')
+        self.dataset_df.to_pickle(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/df.pkl')
 
-        df_info_file = open('data/dataset/df_info.txt', 'w')
+        df_info_file = open(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/df_info.txt', 'w')
         df_info_file.write('This file contains information about the currently saved dataset df \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'Sampling time in minutes = {time_split} \n')
@@ -182,8 +182,8 @@ class Preprocessing:
         X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
         # X and y variables saving in google drive
-        np.savetxt('data/dataset/X.txt', X.reshape(X.shape[0], -1))
-        np.savetxt('data/dataset/y.txt', y)
+        np.savetxt(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/X.txt', X.reshape(X.shape[0], -1))
+        np.savetxt(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/y.txt', y)
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 

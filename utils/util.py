@@ -196,13 +196,13 @@ def sequence_test(model_path):
     model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
 
     # edf file
-    file1 = r'/content/drive/MyDrive/Thesis/data/01/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR'
-    file2 = r'/content/drive/MyDrive/Thesis/data/01/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y'
-    file3 = r'/content/drive/MyDrive/Thesis/data/01/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y'
+    file1 = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR'
+    file2 = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y'
+    file3 = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y'
 
     files = [file1, file2, file3]
 
-    invalid_dir = r'/content/drive/MyDrive/Thesis/data/invalid_analysis'
+    invalid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/invalid_analysis'
 
     # for f in files:
     for f in os.listdir(invalid_dir):
