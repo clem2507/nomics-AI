@@ -39,7 +39,10 @@ class Preprocessing:
         # do not change this value
         self.sec_interval = 0.1
 
-    def create_dataframes(self):
+    def load_dataframe(self):
+        self.dataset_df = pd.read_pickle('data/dataset/df.pkl')
+
+    def create_dataframe(self):
         # do not change this value
         # invalid analysis upload
         invalid_dir = 'data/invalid_analysis'
@@ -113,7 +116,7 @@ class Preprocessing:
                 else:
                     break
 
-    def split_dataframes(self):
+    def split_dataframe(self):
         col_names = ['data', 'label']
         temp_dataset_df = pd.DataFrame(columns=col_names)
         for i in range(len(self.invalid_mk3_df_list)):
@@ -134,11 +137,35 @@ class Preprocessing:
                 out = [arr, row.label]
                 self.dataset_df = self.dataset_df.append(pd.Series(out, index=self.dataset_df.columns), ignore_index=True)
 
-        self.dataset_df.label.value_counts()
+        self.dataset_df.to_pickle('data/dataset/df.pkl')
 
-    def create_dataset(self):
-        self.create_dataframes()
-        self.split_dataframes()
+        df_info_file = open('data/dataset/df_info.txt', 'w')
+        df_info_file.write('This file contains information about the currently saved dataset df \n')
+        df_info_file.write('--- \n')
+        df_info_file.write(f'Sampling time in minutes = {time_split} \n')
+        df_info_file.write(f'Sample size = {max_length} \n')
+        df_info_file.write(f'Num of samples in total = {len(self.dataset_df)} \n')
+        if 0 in self.dataset_df.label.value_counts().keys():
+            df_info_file.write(f'Num of invalid samples = {self.dataset_df.label.value_counts()[0]} \n')
+        else:
+            df_info_file.write(f'Num of invalid samples = 0 \n')
+        if 1 in self.dataset_df.label.value_counts().keys():
+            df_info_file.write(f'Num of valid samples = {self.dataset_df.label.value_counts()[1]} \n')
+        else:
+            df_info_file.write(f'Num of valid samples = 0 \n')
+        df_info_file.write('---')
+        df_info_file.close()
+        print('---')
+        print(self.dataset_df.label.value_counts())
+        print('---')
+
+    def create_dataset(self, create_flag):
+        if create_flag:
+            self.create_dataframe()
+            self.split_dataframe()
+        else:
+            self.load_dataframe()
+
         X = np.array(self.dataset_df.data.tolist())
         X = tf.keras.preprocessing.sequence.pad_sequences(X, dtype='float64', padding='post')
         y = to_categorical(np.array(self.dataset_df['label'].tolist()))

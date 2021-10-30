@@ -13,12 +13,11 @@ from data_loader.preprocessing import Preprocessing, load_data
 from utils.util import plot_confusion_matrix, f1_m
 
 
-def evaluate_model(load_flag):
+def evaluate_model(load_flag, create_flag):
     if load_flag:
         X_train, y_train, X_test, y_test = load_data()
     else:
-        X_train, y_train, X_test, y_test = Preprocessing().create_dataset()
-    X_train, y_train, X_test, y_test = Preprocessing().create_dataset()
+        X_train, y_train, X_test, y_test = Preprocessing().create_dataset(create_flag)
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, epochs, batch_size = 0.1, 2, 3, 32
@@ -50,7 +49,7 @@ def evaluate_model(load_flag):
     plot_confusion_matrix(cm=cm, classes=['Invalid signal', 'Valid signal'], title='Confusion Matrix')
 
     # Save the model
-    filepath = '../models/cnn/saved_model'
+    filepath = 'models/cnn/saved_model'
     save_model(model, filepath)
     return accuracy
 
@@ -93,7 +92,7 @@ def hyperparameters_tuning():
     print(tuner.get_best_models()[0].summary())
 
 
-def train_CNN(load_flag):
-    score = evaluate_model(load_flag)
+def train_CNN(load_flag, create_flag):
+    score = evaluate_model(load_flag, create_flag)
     score = score * 100.0
     print('score:', score, '%')
