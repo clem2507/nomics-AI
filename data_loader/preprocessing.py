@@ -8,7 +8,7 @@ from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 
-from utils.util import extractDataFromLine, timesConvertion, remove_outlier, occurrences_counter
+from utils.util import extract_data_from_line, string_datetime_conversion, remove_outlier, occurrences_counter
 
 
 def load_data():
@@ -17,7 +17,7 @@ def load_data():
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+    X_train, y_train, X_test, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
     print('----')
     print(X_train.shape)
@@ -48,7 +48,7 @@ class Preprocessing:
         invalid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/invalid_analysis'
         for filename in os.listdir(invalid_dir):
             # make sure file name is not invalid (had issue with .DS_Store file)
-            if filename.startswith('20'):
+            if not filename.startswith('.'):
                 mk3_file = os.path.join(invalid_dir, filename + '/' + filename + '.mk3')
                 data_mk3 = open(mk3_file)
                 lines = data_mk3.readlines()
@@ -58,9 +58,9 @@ class Preprocessing:
                 col_names = ['start', 'end', 'label']
                 df_mk3 = pd.DataFrame(columns=col_names)
                 for line in lines:
-                    if line.split(sep=";")[-1][:-1] == 'Out of Range':
-                        if line.split(sep=";")[-2] == '1':
-                            temp = pd.Series(extractDataFromLine(line), index=df_mk3.columns)
+                    if line.split(sep=';')[-1][:-1] == 'Out of Range':
+                        if line.split(sep=';')[-2] == '1':
+                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
                             df_mk3 = df_mk3.append(temp, ignore_index=True)
                 if len(df_mk3) < 1:
                     continue
@@ -70,7 +70,7 @@ class Preprocessing:
                 edf_file = os.path.join(invalid_dir, filename + '/' + filename + '.edf')
                 raw_data = mne.io.read_raw_edf(edf_file)
                 data, times = raw_data[:]
-                times = timesConvertion(times, start_record_time, start_record_date)
+                times = string_datetime_conversion(times, start_record_time, start_record_date)
                 df_jawac = pd.DataFrame()
                 df_jawac.insert(0, 'times', times)
                 df_jawac.insert(1, 'data', data[0])
@@ -86,7 +86,7 @@ class Preprocessing:
         valid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis'
         for filename in os.listdir(valid_dir):
             # make sure file name is not invalid (had issue with .DS_Store file)
-            if filename.startswith('20'):
+            if not filename.startswith('.'):
                 # in this case, we want to have a balanced amount of valid and invalid analysis
                 if len(self.valid_jawac_df_list) < len(self.invalid_jawac_df_list):
                     mk3_file = os.path.join(valid_dir, filename + '/' + filename + '.mk3')
@@ -98,13 +98,13 @@ class Preprocessing:
                     for line in lines:
                         # check if the analysis is really valid
                         # otherwise, we just skip it
-                        if line.split(sep=";")[-1][:-1] == 'Out of Range':
+                        if line.split(sep=';')[-1][:-1] == 'Out of Range':
                             continue
 
                     edf_file = os.path.join(valid_dir, filename + '/' + filename + '.edf')
                     raw_data = mne.io.read_raw_edf(edf_file)
                     data, times = raw_data[:]
-                    times = timesConvertion(times, start_record_time, start_record_date)
+                    times = string_datetime_conversion(times, start_record_time, start_record_date)
                     df_jawac = pd.DataFrame()
                     df_jawac.insert(0, 'times', times)
                     df_jawac.insert(1, 'data', data[0])

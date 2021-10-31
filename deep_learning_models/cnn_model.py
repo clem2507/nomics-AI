@@ -70,7 +70,7 @@ def hyperparameters_tuning():
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         return model
 
-    LOG_DIR = f"{int(time.time())}"
+    LOG_DIR = f'{int(time.time())}'
     X_train, y_train, X_test, y_test = Preprocessing().create_dataset()
 
     tuner = RandomSearch(
@@ -93,7 +93,7 @@ def hyperparameters_tuning():
     print(tuner.get_best_models()[0].summary())
 
 
-def train_CNN(load_flag, create_flag):
+def train_cnn(load_flag, create_flag):
     score = evaluate_model(load_flag, create_flag)
     score = score * 100.0
     print('score:', score, '%')
