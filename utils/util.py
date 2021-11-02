@@ -120,7 +120,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
     classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label'])
     curr_time = analysis_start
     for label in classes:
-        temp = [curr_time, curr_time + datetime.timedelta(minutes=time_step), label]
+        temp = [curr_time, curr_time + datetime.timedelta(minutes=time_step), label[0]]
         classes_df = classes_df.append(pd.Series(temp, index=classes_df.columns), ignore_index=True)
         curr_time += datetime.timedelta(minutes=time_step)
 
@@ -197,134 +197,15 @@ def binary_y_format_revert(y):
     return np.array(out)
 
 
-def test_sequences(model_path):
-    # model loader
-    model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
-
-    # edf file
-    file1 = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR'
-    file2 = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y'
-    file3 = os.path.dirname(os.path.abspath('runscript.py')) + '/data/all_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y'
-
-    files = [file1, file2, file3]
-
-    invalid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/invalid_analysis'
-
-    # for f in files:
-    for f in os.listdir(invalid_dir):
-        # make sure file name is not invalid (had issue with .DS_Store file)
-        if not f.startswith('.'):
-            # mk3 file
-            mk3_file = os.path.join(invalid_dir, f + '/' + f + '.mk3')
-            data_mk3 = open(mk3_file)
-            # data_mk3 = open(f+'.mk3')
-            lines = data_mk3.readlines()
-            start_record_time = lines[5].split(';')[0]
-            start_record_date = lines[5].split(';')[1]
-
-            # edf file
-            edf_file = os.path.join(invalid_dir, f + '/' + f + '.edf')
-            raw_data = mne.io.read_raw_edf(edf_file)
-            # raw_data = mne.io.read_raw_edf(f+'.edf')
-            data, times = raw_data[:]
-            time_interval = 0.1
-            times = string_datetime_conversion(times, start_record_time, start_record_date)
-            df_jawac = pd.DataFrame()
-            df_jawac.insert(0, 'times', times)
-            df_jawac.insert(1, 'data', data[0])
-            df_jawac = df_jawac.resample(str(time_interval) + 'S', on='times').median()['data'].to_frame(name='data')
-            df_jawac.reset_index(inplace=True)
-
-            # time split in minutes
-            time_split = 1
-            size = int((60 / time_interval) * time_split)
-            X_test_seq = np.array([df_jawac.loc[i:i + size - 1, :].data for i in range(0, len(df_jawac), size)], dtype=object)
-
-            X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq, padding='post', dtype='float64')
-
-            X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
-
-            df_jawac.set_index('times', inplace=True)
-
-            predictions = model.predict(X_test_seq_pad)
-            classes = []
-            for item in predictions:
-                idx = np.argmax(item)
-                # if item[idx] > 0.9:
-                classes.append(idx)
-                # else:
-                # classes.append(1)
-
-            valid_total = 0
-            invalid_total = 0
-            for label in classes:
-                if label == 1:
-                    valid_total += 1
-                if label == 0:
-                    invalid_total += 1
-            valid_mean = valid_total / len(classes)
-            invalid_mean = invalid_total / len(classes)
-
-            print('--------')
-
-            print('valid percentage:', (valid_mean * 100), '%')
-            print('invalid percentage:', (invalid_mean * 100), '%')
-
-            print('--------')
-
-            print('valid hours:', ((valid_total * time_split) / 60), 'h')
-            print('invalid hours:', ((invalid_total * time_split) / 60), 'h')
-
-            print('--------')
-
-            new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], time_split, threshold=0.8)
-
-            print('new start analysis time:', new_start)
-            print('new end analysis time:', new_end)
-            if new_start is not None and new_end is not None:
-                print('analysis duration:', (new_end - new_start))
-            else:
-                print('analysis duration: Unknown')
-
-            print('--------')
-
-            # graph
-            fig, ax = plt.subplots()
-            fig.set_size_inches(18.5, 10.5)
-
-            # in minutes
-            graph_time_split = 3
-
-            ax.plot(df_jawac.resample(str(graph_time_split)+'S').median()['data'].to_frame(name='data').index.tolist(), df_jawac.resample(str(graph_time_split)+'S').median()['data'].to_frame(name='data').data.tolist())
-            # ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-            ax.axhline(y=0, color='r', linewidth=1)
-            if new_start is not None and new_end is not None:
-                ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
-                ax.axvline(x=new_end, color='k', linewidth=2, linestyle='--')
-            ax.set(xlabel='time', ylabel='opening (mm)', title='Jawac Signal')
-            ax.grid()
-
-            curr_time = convert_string_to_time(start_record_time, start_record_date)
-            for label in classes:
-                if label == 0:
-                    plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.20)
-                elif label == 1:
-                    plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.20)
-                curr_time += datetime.timedelta(minutes=time_split)
-
-            legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
-                               Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2)]
-            ax.legend(handles=legend_elements, loc='upper left')
-
-            plt.show()
-
-
 def analysis_classification(edf, model):
-    # time_split and time_interval in minutes
-    time_split = 1
-    time_interval = 1
+    # time_split in minutes
+    time_split = 5
+    # time_split = 3
+    # time_resampling in seconds
+    time_resampling = 3
+    # time_resampling = 10
     start = time.time()
-    model_path = os.path.dirname(os.path.abspath('runscript.py')) + f'/models/{model.lower()}/split_{time_split}_resampling_{time_interval}/saved_model'
+    model_path = os.path.dirname(os.path.abspath('runscript.py')) + f'/models/{model.lower()}/split_{time_split}_resampling_{time_resampling}/saved_model'
     # model loader
     if model.lower() in ['cnn', 'lstm']:
         if os.path.exists(model_path):
@@ -343,10 +224,10 @@ def analysis_classification(edf, model):
     df_jawac = pd.DataFrame()
     df_jawac.insert(0, 'times', times)
     df_jawac.insert(1, 'data', data[0])
-    df_jawac = df_jawac.resample(str(time_interval) + 'S', on='times').median()['data'].to_frame(name='data')
+    df_jawac = df_jawac.resample(str(time_resampling) + 'S', on='times').median()['data'].to_frame(name='data')
     df_jawac.reset_index(inplace=True)
 
-    size = int((60 / time_interval) * time_split)
+    size = int((60 / time_resampling) * time_split)
     X_test_seq = np.array([df_jawac.loc[i:i + size - 1, :].data for i in range(0, len(df_jawac), size)], dtype=object)
 
     X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq, padding='post', dtype='float64')
@@ -360,16 +241,16 @@ def analysis_classification(edf, model):
     for item in predictions:
         idx = np.argmax(item)
         # if item[idx] > 0.9:
-        classes.append(idx)
+        classes.append((idx, item[idx]))
         # else:
         # classes.append(1)
 
     valid_total = 0
     invalid_total = 0
     for label in classes:
-        if label == 1:
+        if label[0] == 1:
             valid_total += 1
-        if label == 0:
+        if label[0] == 0:
             invalid_total += 1
     valid_mean = valid_total / len(classes)
     invalid_mean = invalid_total / len(classes)
@@ -401,24 +282,21 @@ def analysis_classification(edf, model):
     fig, ax = plt.subplots()
     fig.set_size_inches(18.5, 10.5)
 
-    # in minutes
-    graph_time_interval = time_split
-
-    # ax.plot(df_jawac.resample(str(graph_time_interval)+'S').median()['data'].to_frame(name='data').index.tolist(), df_jawac.resample(str(graph_time_interval)+'S').median()['data'].to_frame(name='data').data.tolist())
+    # ax.plot(df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').index.tolist(), df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').data.tolist())
     ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
     ax.axhline(y=0, color='r', linewidth=1)
     if new_start is not None and new_end is not None:
         ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
         ax.axvline(x=new_end, color='k', linewidth=2, linestyle='--')
-    ax.set(xlabel='time', ylabel='opening (mm)', title='Jawac Signal')
+    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {edf[:-4]}')
     ax.grid()
 
     curr_time = raw_data.__dict__['info']['meas_date']
     for label in classes:
-        if label == 0:
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.20)
-        elif label == 1:
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.20)
+        if label[0] == 0:
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.25*label[1])
+        elif label[0] == 1:
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.25*label[1])
         curr_time += datetime.timedelta(minutes=time_split)
 
     legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
