@@ -14,11 +14,8 @@ from data_loader.preprocessing import Preprocessing, load_data
 from utils.util import plot_confusion_matrix, f1_m
 
 
-def evaluate_model(load_flag, create_flag):
-    if load_flag:
-        X_train, y_train, X_test, y_test = load_data()
-    else:
-        X_train, y_train, X_test, y_test = Preprocessing().create_dataset(create_flag)
+def evaluate_model(time_split, time_interval):
+    X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_interval=time_interval).create_dataset()
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, epochs, batch_size = 0.1, 2, 3, 32
@@ -47,12 +44,23 @@ def evaluate_model(load_flag, create_flag):
     plot_confusion_matrix(cm=cm, classes=['Invalid signal', 'Valid signal'], title='Confusion Matrix')
 
     # Save the model
-    filepath = os.path.dirname(os.path.abspath('runscript.py')) + '/models/lstm/saved_model'
+    if not os.path.exists(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/lstm/split_{time_split}_resampling_{time_interval}'):
+        os.mkdir(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/lstm/split_{time_split}_resampling_{time_interval}')
+    filepath = os.path.dirname(os.path.abspath('runscript.py')) + f'/models/lstm/split_{time_split}_resampling_{time_interval}/saved_model'
+    model_info_file = open(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/lstm/split_{time_split}_resampling_{time_interval}/info.txt', 'w')
+    model_info_file.write(f'This file contains information about the LSTM model accuracy using a {time_split} minutes signal time split and {time_interval} minutes median data resampling \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'num of epochs = {epochs} \n')
+    model_info_file.write(f'last epoch test accuracy = {accuracy} \n')
+    model_info_file.write(f'confusion matrix (invalid | valid) = \n {cm} \n')
+    model_info_file.write('--- \n')
+    model_info_file.close()
+
     save_model(model, filepath)
     return accuracy
 
 
-def hyperparameters_tuning():
+def hyperparameters_tuning(time_split, time_interval):
 
     def build_model(hp):
         n_timesteps, n_features, n_outputs = 1800, 1, 2
@@ -66,7 +74,7 @@ def hyperparameters_tuning():
         return model
 
     LOG_DIR = f'{int(time.time())}'
-    X_train, y_train, X_test, y_test = Preprocessing().create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_interval=time_interval).create_dataset()
 
     tuner = RandomSearch(
         build_model,
@@ -88,7 +96,7 @@ def hyperparameters_tuning():
     print(tuner.get_best_models()[0].summary())
 
 
-def train_lstm(load_flag, create_flag):
-    score = evaluate_model(load_flag, create_flag)
+def train_lstm(time_split, time_interval):
+    score = evaluate_model(time_split, time_interval)
     score = score * 100.0
     print('score:', score, '%')

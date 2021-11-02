@@ -1,9 +1,8 @@
 import os
-import time
 import argparse
 
-# from deep_learning_models.cnn_model import train_cnn
-# from deep_learning_models.lstm_model import train_lstm
+from deep_learning_models.cnn_model import train_cnn
+from deep_learning_models.lstm_model import train_lstm
 # from deep_learning_models.cnn_model import hyperparameters_tuning as ht_cnn
 # from deep_learning_models.lstm_model import hyperparameters_tuning as ht_lstm
 
@@ -11,12 +10,7 @@ from utils.util import f1_m, analysis_classification
 
 
 def run(edf, model):
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-    start = time.time()
     analysis_classification(edf=edf, model=model)
-    end = time.time()
-    print('execution time =', (end-start), 'sec')
-    print('--------')
 
 
 def parse_opt():
@@ -32,16 +26,19 @@ def main(p):
 
 
 if __name__ == '__main__':
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    # invalid
     # python runscript.py --edf 'data/all_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM'
-    # python runscript.py --edf 'data/all_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'LSTM'
+    # valid
     # python runscript.py --edf 'data/all_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'LSTM'
+    # python runscript.py --edf 'data/all_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'LSTM'
     opt = parse_opt()
     main(opt)
 
-    # train_cnn(load_flag=True, create_flag=False)
-    # ht_lstm()
+    # train_cnn(time_split=1, time_interval=1)
+    # ht_lstm(time_split=1, time_interval=1)
     # test_sequences(model_path=os.path.dirname(os.path.abspath('runscript.py')) + '/models/cnn/saved_model')
 
-    # train_lstm(load_flag=True, create_flag=False)
-    # ht_cnn()
+    # train_lstm(time_split=1, time_interval=1)
+    # ht_cnn(time_split=1, time_interval=1)
     # test_sequences(model_path=os.path.dirname(os.path.abspath('runscript.py')) + '/models/lstm/saved_model')

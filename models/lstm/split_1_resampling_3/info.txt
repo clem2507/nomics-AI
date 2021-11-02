@@ -1,0 +1,8 @@
+This file contains information about the LSTM model accuracy using a 1 minutes signal time split and 3 minutes median data resampling 
+--- 
+num of epochs = 3 
+last epoch test accuracy = 0.9455353617668152 
+confusion matrix (invalid | valid) = 
+ [[28408   726]
+ [ 2461 26920]] 
+--- 

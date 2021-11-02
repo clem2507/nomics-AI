@@ -1,0 +1,8 @@
+This file contains information about the CNN model accuracy using a 1 minutes signal time split and 1 minutes median data resampling 
+--- 
+num of epochs = 3 
+last epoch test accuracy = 0.9375790357589722 
+confusion matrix (invalid | valid) = 
+ [[28590   548]
+ [ 3104 26264]] 
+--- 
