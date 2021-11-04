@@ -2,6 +2,8 @@ import os
 import numpy as np
 import keras_tuner as kt
 
+from math import sqrt
+from statsmodels.stats.proportion import proportion_confint
 from keras_tuner.tuners import RandomSearch
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv1D, Dropout, MaxPooling1D, Flatten, Dense
@@ -9,8 +11,8 @@ from tensorflow.keras.models import save_model
 from sklearn.metrics import confusion_matrix
 from sklearn.utils import shuffle
 
-from data_loader.preprocessing import Preprocessing, load_data
-from utils.util import plot_confusion_matrix, f1_m
+from data_loader.preprocessing import Preprocessing
+from utils.util import plot_confusion_matrix, f1_m, num_of_correct_pred
 
 
 def evaluate_model(time_split, time_resampling, epochs):
@@ -30,7 +32,15 @@ def evaluate_model(time_split, time_resampling, epochs):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     print(model.summary())
     # fit network
-    model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose)
+    history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose)
+
+    test_loss_history = history.history['loss']
+    test_accuracy_history = history.history['accuracy']
+    test_f1_history = history.history['f1_m']
+    validation_loss_history = history.history['val_loss']
+    validation_accuracy_history = history.history['val_accuracy']
+    validation_f1_history = history.history['val_f1_m']
+
     # evaluate model
     _, accuracy, *r = model.evaluate(X_test, y_test, batch_size=batch_size, verbose=verbose)
 
@@ -41,21 +51,40 @@ def evaluate_model(time_split, time_resampling, epochs):
     for item in y_test:
         int_y_test.append(np.argmax(item))
 
+    # for 95 % confidence interval
+    interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
+    lower_bound, upper_bound = proportion_confint(num_of_correct_pred(y_true=int_y_test, y_pred=classes), len(classes), 0.05)
+
     cm = confusion_matrix(y_true=int_y_test, y_pred=classes)
 
-    plot_confusion_matrix(cm=cm, classes=['Invalid signal', 'Valid signal'], title='Confusion Matrix')
+    cm_plt = plot_confusion_matrix(cm=cm, classes=['Invalid signal', 'Valid signal'], title='Confusion Matrix')
 
     # Save the model
-    if not os.path.exists(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}'):
-        os.mkdir(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}')
-    if not os.path.exists(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
-        os.mkdir(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
-    filepath = os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
-    model_info_file = open(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
-    model_info_file.write(f'This file contains information about the CNN model accuracy using a {time_split} minutes signal time split and {time_resampling} minutes median data resampling \n')
+    if not os.path.exists(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}'):
+        os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}')
+    if not os.path.exists(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
+        os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
+    cm_plt.savefig(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
+    filepath = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+    model_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
+    model_info_file.write(f'This file contains information about the LSTM model accuracy using a {time_split} minutes signal time split and {time_resampling} minutes median data resampling \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
-    model_info_file.write(f'Last epoch test accuracy = {accuracy} \n')
+    model_info_file.write(f'Test loss history = {test_loss_history} \n')
+    model_info_file.write(f'Test accuracy history = {test_accuracy_history} \n')
+    model_info_file.write(f'Test f1_score history = {test_f1_history} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
+    model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
+    model_info_file.write(f'Validation f1_score history = {validation_f1_history} \n')
+    model_info_file.write('--- \n')
+    # In fact, if we repeated this experiment over and over, each time drawing a new sample S, containing […] new examples, we would find that for approximately 95% of these experiments, the calculated interval would contain the true error. For this reason, we call this interval the 95% confidence interval estimate
+    model_info_file.write(f'Radius of the CI = {interval} \n')
+    model_info_file.write(f'True classification of the model is likely between {accuracy - interval} % and {accuracy + interval} % \n')
+    model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
+    model_info_file.write(f'Upper bound model classification accuracy = {upper_bound} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Final test accuracy = {accuracy} % \n')
     model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
     model_info_file.write('--- \n')
     model_info_file.close()
@@ -78,7 +107,7 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         return model
 
-    LOG_DIR = os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/ht_tuning/results_split_{time_split}_resampling_{time_resampling}'
+    LOG_DIR = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/ht_tuning/results_split_{time_split}_resampling_{time_resampling}'
     X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling).create_dataset()
 
     tuner = RandomSearch(
@@ -98,7 +127,7 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         validation_data=(X_test, y_test)
     )
 
-    ht_info_file = open(os.path.dirname(os.path.abspath('runscript.py')) + f'/models/cnn/ht_tuning/results_split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
+    ht_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/cnn/ht_tuning/results_split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
     ht_info_file.write(f'This file contains information about the CNN hyperparameters tuning \n')
     ht_info_file.write('--- \n')
     ht_info_file.write(f'Splitting time in minutes = {time_split} \n')
@@ -119,3 +148,4 @@ def train_cnn(time_split, time_resampling, epochs):
     score = evaluate_model(time_split, time_resampling, epochs)
     score = score * 100.0
     print('score:', score, '%')
+    print('-----')

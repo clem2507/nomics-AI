@@ -12,6 +12,7 @@ from scipy import stats
 from keras import backend as K
 from datetime import datetime as dt
 from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 from tensorflow.keras.models import load_model
 
 
@@ -76,7 +77,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes)
     plt.yticks(tick_marks, classes)
 
     if normalize:
@@ -96,6 +97,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+    return plt
 
 
 def occurrences_counter(arr):
@@ -197,15 +199,25 @@ def binary_y_format_revert(y):
     return np.array(out)
 
 
+def num_of_correct_pred(y_true, y_pred):
+    count = 0
+    for i in range(len(y_pred)):
+        if y_true[i] == y_pred[i]:
+            count += 1
+    return count
+
+
 def analysis_classification(edf, model):
     # time_split in minutes
-    time_split = 5
+    time_split = 1
     # time_split = 3
     # time_resampling in seconds
-    time_resampling = 3
-    # time_resampling = 10
+    time_resampling = 1
+    # time_resampling = 5
+    epochs = 5
     start = time.time()
-    model_path = os.path.dirname(os.path.abspath('runscript.py')) + f'/models/{model.lower()}/split_{time_split}_resampling_{time_resampling}/saved_model'
+    model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/{model.lower()}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+    # model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/backup/split_{time_split}_resampling_{time_resampling}/saved_model'
     # model loader
     if model.lower() in ['cnn', 'lstm']:
         if os.path.exists(model_path):
@@ -215,7 +227,7 @@ def analysis_classification(edf, model):
     else:
         raise Exception('model should either be CNN or LSTM, found something else')
 
-    full_path = os.path.dirname(os.path.abspath('runscript.py')) + '/' + edf
+    full_path = os.path.dirname(os.path.abspath('run_script.py')) + '/' + edf
 
     # edf file
     raw_data = mne.io.read_raw_edf(full_path)
@@ -288,7 +300,14 @@ def analysis_classification(edf, model):
     if new_start is not None and new_end is not None:
         ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
         ax.axvline(x=new_end, color='k', linewidth=2, linestyle='--')
-    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {edf[:-4]}')
+    title = ''
+    for c in reversed(edf[:-4]):
+        if c != '/':
+            title += c
+        else:
+            break
+    title = title[::-1]
+    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title}')
     ax.grid()
 
     curr_time = raw_data.__dict__['info']['meas_date']
@@ -300,11 +319,13 @@ def analysis_classification(edf, model):
         curr_time += datetime.timedelta(minutes=time_split)
 
     legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
-                       Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2)]
+                       Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
+                       Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
     ax.legend(handles=legend_elements, loc='upper left')
 
     end = time.time()
     print('execution time =', (end - start), 'sec')
     print('--------')
 
+    # plt.savefig(os.path.dirname(os.path.abspath('run_script.py')) + '/invalid_plt.png')
     plt.show()

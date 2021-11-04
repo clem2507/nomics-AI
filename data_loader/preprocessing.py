@@ -1,9 +1,11 @@
 import os
 import mne
+import time
 import random
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import statistics as stat
 
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
@@ -17,8 +19,8 @@ def load_data(time_split, time_resampling):
     print(f'{time_resampling} minutes data resampling')
     print('-----')
     print('data loading...')
-    X = np.loadtxt(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/split_{time_split}_resampling_{time_resampling}/X.txt')
-    y = np.loadtxt(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/split_{time_split}_resampling_{time_resampling}/y.txt')
+    X = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{time_split}_resampling_{time_resampling}/X.txt')
+    y = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{time_split}_resampling_{time_resampling}/y.txt')
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
@@ -36,7 +38,7 @@ def load_data(time_split, time_resampling):
 
 def create_dataframes():
     # invalid analysis upload
-    invalid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/invalid_analysis'
+    invalid_dir = os.path.dirname(os.path.abspath('run_script.py')) + '/data/invalid_analysis'
     invalid_count = 0
     for filename in sorted(os.listdir(invalid_dir)):
         # make sure file name is not invalid (had issue with .DS_Store file)
@@ -59,7 +61,7 @@ def create_dataframes():
                 if len(df_mk3) < 1:
                     continue
                 else:
-                    df_mk3.to_pickle(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/invalid_mk3_dfs/{filename}_mk3.pkl')
+                    df_mk3.to_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_mk3_dfs/{filename}_mk3.pkl')
 
                 edf_file = os.path.join(invalid_dir, filename + '/' + filename + '.edf')
                 raw_data = mne.io.read_raw_edf(edf_file)
@@ -68,17 +70,18 @@ def create_dataframes():
                 df_jawac = pd.DataFrame()
                 df_jawac.insert(0, 'times', times)
                 df_jawac.insert(1, 'data', data[0])
-                df_jawac.to_pickle(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/invalid_jawac_dfs/{filename}_jawac.pkl')
+                df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
+                df_jawac.to_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_jawac_dfs/{filename}_jawac.pkl')
                 invalid_count += 1
                 print(f'invalid count = {invalid_count}')
-                print(f'{len(invalid_dir) - invalid_count} invalid analysis left')
+                print(f'{len(os.listdir(invalid_dir)) - invalid_count} invalid analysis left')
             else:
                 print(f'file: {filename} does not exist')
 
     print('-----')
 
     # valid analysis upload
-    valid_dir = os.path.dirname(os.path.abspath('runscript.py')) + '/data/valid_analysis'
+    valid_dir = os.path.dirname(os.path.abspath('run_script.py')) + '/data/valid_analysis'
     valid_analysis_files = os.listdir(valid_dir)
     random.shuffle(valid_analysis_files)
     valid_count = 0
@@ -106,8 +109,9 @@ def create_dataframes():
                     df_jawac = pd.DataFrame()
                     df_jawac.insert(0, 'times', times)
                     df_jawac.insert(1, 'data', data[0])
+                    df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
                     # df_jawac = remove_outlier(df_jawac, 10)
-                    df_jawac.to_pickle(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/valid_jawac_dfs/{filename}_jawac.pkl')
+                    df_jawac.to_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_jawac_dfs/{filename}_jawac.pkl')
                     valid_count += 1
                     print(f'valid count = {valid_count}')
                     print(f'{invalid_count - valid_count} valid analysis left')
@@ -130,25 +134,25 @@ class Preprocessing:
 
     def split_dataframe(self):
         count = 0
-        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/invalid_mk3_dfs')):
+        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/invalid_mk3_dfs')):
             if not pkl.startswith('.'):
-                self.invalid_mk3_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/invalid_mk3_dfs/{pkl}'))
+                self.invalid_mk3_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_mk3_dfs/{pkl}'))
                 count += 1
                 print(f'invalid mk3 #{count}')
 
         print('-----')
         count = 0
-        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/invalid_jawac_dfs')):
+        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/invalid_jawac_dfs')):
             if not pkl.startswith('.'):
-                self.invalid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/invalid_jawac_dfs/{pkl}'))
+                self.invalid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_jawac_dfs/{pkl}'))
                 count += 1
                 print(f'invalid jawac #{count}')
 
         print('-----')
         count = 0
-        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset/valid_jawac_dfs')):
+        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/valid_jawac_dfs')):
             if not pkl.startswith('.'):
-                self.valid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/valid_jawac_dfs/{pkl}'))
+                self.valid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_jawac_dfs/{pkl}'))
                 count += 1
                 print(f'valid jawac #{count}')
         print('-----')
@@ -157,30 +161,45 @@ class Preprocessing:
         temp_dataset_df = pd.DataFrame(columns=col_names)
         print('invalid df extraction...')
         for i in range(len(self.invalid_mk3_df_list)):
-            self.invalid_jawac_df_list[i] = self.invalid_jawac_df_list[i].resample(str(self.time_resampling) + 'S', on='times').median()['data'].to_frame(name='data')
+            self.invalid_jawac_df_list[i] = self.invalid_jawac_df_list[i].resample(str(self.time_resampling) + 'S').median()['data'].to_frame(name='data')
             for idx, row in self.invalid_mk3_df_list[i].iterrows():
                 temp = [self.invalid_jawac_df_list[i].loc[row['start']:row['end']].data.tolist(), 0]
                 temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
 
         print('valid df extraction...')
         for i in range(len(self.valid_jawac_df_list)):
-            self.valid_jawac_df_list[i] = self.valid_jawac_df_list[i].resample(str(self.time_resampling) + 'S', on='times').median()['data'].to_frame(name='data')
+            self.valid_jawac_df_list[i] = self.valid_jawac_df_list[i].resample(str(self.time_resampling) + 'S').median()['data'].to_frame(name='data')
             temp = [self.valid_jawac_df_list[i].data.tolist(), 1]
             temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
 
-        print('dataset df splitting and fusion...')
         max_length = int(self.time_split * (60 / self.time_resampling))
+        print(f'dataset df splitting in samples of length {max_length}...')
+        div, step, step_num = 10, 0, 0,
+        step_max = int(len(temp_dataset_df)/div)
+        curr_time = time.time()
+        time_list = []
         for idx, row in temp_dataset_df.iterrows():
             temp = [row[0][i:i + max_length] for i in range(0, len(row[0]), max_length)][:-1]
             for arr in temp:
                 out = [arr, row.label]
                 self.dataset_df = self.dataset_df.append(pd.Series(out, index=self.dataset_df.columns), ignore_index=True)
+            step += 1
+            if step > step_max:
+                step = 0
+                step_num += 1
+                time_list.append(time.time() - curr_time)
+                print(f'progress --> {step_num}/{div} | time: {round(time.time() - curr_time, 2)} sec | est. rem. time: {round((stat.mean(time_list))*(div-step_num), 2)} sec / {round(((stat.mean(time_list))*(div-step_num))/60, 2)} min |')
+                curr_time = time.time()
+            # print(f'{round(time.time() - curr_time, 2)} sec', end='\r')
+        time_list.append(time.time() - curr_time)
+        print(f'progress --> 10/10 | total time: {round(sum(time_list)/60, 2)} min')
+
         print('-----')
 
         # create directory
-        os.mkdir(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}')
+        os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}')
 
-        df_info_file = open(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
+        df_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
         df_info_file.write('This file contains information about the content of the X.txt file \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'Splitting time in minutes = {self.time_split} \n')
@@ -202,11 +221,10 @@ class Preprocessing:
 
         print(self.dataset_df.label.value_counts())
         print('-----')
-        print('successfully saved!')
 
     def create_dataset(self):
         dir_path = f'split_{self.time_split}_resampling_{self.time_resampling}'
-        if dir_path in os.listdir(os.path.dirname(os.path.abspath('runscript.py')) + '/data/dataset'):
+        if dir_path in os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset'):
             X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling)
         else:
             self.split_dataframe()
@@ -227,8 +245,8 @@ class Preprocessing:
             X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
             # X and y variables saving
-            np.savetxt(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
-            np.savetxt(os.path.dirname(os.path.abspath('runscript.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+            np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+            np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
