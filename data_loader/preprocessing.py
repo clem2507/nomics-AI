@@ -1,12 +1,13 @@
 import os
 import mne
 import time
-import random
+import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import statistics as stat
 
+from tqdm import tqdm
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
@@ -14,13 +15,19 @@ from imblearn.over_sampling import SMOTE
 from utils.util import extract_data_from_line, string_datetime_conversion, remove_outlier, occurrences_counter, check_nan
 
 
-def load_data(time_split, time_resampling):
+def load_data(time_split, time_resampling, num_class):
     print(f'{time_split} minutes signal time split')
     print(f'{time_resampling} minutes data resampling')
+    print(f'{num_class} classes classification')
     print('-----')
     print('data loading...')
-    X = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{time_split}_resampling_{time_resampling}/X.txt')
-    y = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{time_split}_resampling_{time_resampling}/y.txt')
+
+    if num_class == 2:
+        X = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/binomial/split_{time_split}_resampling_{time_resampling}/X.txt')
+        y = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/binomial/split_{time_split}_resampling_{time_resampling}/y.txt')
+    else:
+        X = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/multinomial/split_{time_split}_resampling_{time_resampling}/X.txt')
+        y = np.loadtxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/multinomial/split_{time_split}_resampling_{time_resampling}/y.txt')
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
@@ -82,10 +89,8 @@ def create_dataframes():
 
     # valid analysis upload
     valid_dir = os.path.dirname(os.path.abspath('run_script.py')) + '/data/valid_analysis'
-    valid_analysis_files = os.listdir(valid_dir)
-    random.shuffle(valid_analysis_files)
     valid_count = 0
-    for filename in sorted(valid_analysis_files):
+    for filename in sorted(os.listdir(valid_dir)):
         # make sure file name is not invalid (had issue with .DS_Store file)
         if not filename.startswith('.'):
             if valid_count < invalid_count:
@@ -97,11 +102,20 @@ def create_dataframes():
                     start_record_time = lines[5].split(';')[0]
                     start_record_date = lines[5].split(';')[1]
                     lines = lines[7:]
+                    col_names = ['start', 'end', 'label']
+                    df_mk3 = pd.DataFrame(columns=col_names)
                     for line in lines:
                         # check if the analysis is really valid
                         # otherwise, we just skip it
                         if line.split(sep=';')[-1][:-1] == 'Out of Range':
                             continue
+                        else:
+                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
+                            df_mk3 = df_mk3.append(temp, ignore_index=True)
+                    if len(df_mk3) < 1:
+                        continue
+                    else:
+                        df_mk3.to_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_mk3_dfs/{filename}_mk3.pkl')
 
                     raw_data = mne.io.read_raw_edf(edf_file)
                     data, times = raw_data[:]
@@ -110,7 +124,6 @@ def create_dataframes():
                     df_jawac.insert(0, 'times', times)
                     df_jawac.insert(1, 'data', data[0])
                     df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
-                    # df_jawac = remove_outlier(df_jawac, 10)
                     df_jawac.to_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_jawac_dfs/{filename}_jawac.pkl')
                     valid_count += 1
                     print(f'valid count = {valid_count}')
@@ -123,59 +136,77 @@ def create_dataframes():
 
 class Preprocessing:
 
-    def __init__(self, time_split, time_resampling):
+    def __init__(self, time_split, time_resampling, num_class):
         self.invalid_jawac_df_list = []
         self.invalid_mk3_df_list = []
         self.valid_jawac_df_list = []
+        self.valid_mk3_df_list = []
         self.dataset_df = pd.DataFrame(columns=['data', 'label'])
         # time_split and resampling time_resampling in minutes
         self.time_split = time_split
         self.time_resampling = time_resampling
+        self.num_class = num_class
 
     def split_dataframe(self):
-        count = 0
-        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/invalid_mk3_dfs')):
-            if not pkl.startswith('.'):
-                self.invalid_mk3_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_mk3_dfs/{pkl}'))
-                count += 1
-                print(f'invalid mk3 #{count}')
+        pkl_files = sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/invalid_mk3_dfs'))
+        for i in tqdm(range(len(pkl_files))):
+            if not pkl_files[i].startswith('.'):
+                self.invalid_mk3_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_mk3_dfs/{pkl_files[i]}'))
 
-        print('-----')
-        count = 0
-        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/invalid_jawac_dfs')):
-            if not pkl.startswith('.'):
-                self.invalid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_jawac_dfs/{pkl}'))
-                count += 1
-                print(f'invalid jawac #{count}')
+        pkl_files = sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/invalid_jawac_dfs'))
+        for i in tqdm(range(len(pkl_files))):
+            if not pkl_files[i].startswith('.'):
+                self.invalid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/invalid_jawac_dfs/{pkl_files[i]}'))
 
-        print('-----')
-        count = 0
-        for pkl in sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/valid_jawac_dfs')):
-            if not pkl.startswith('.'):
-                self.valid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_jawac_dfs/{pkl}'))
-                count += 1
-                print(f'valid jawac #{count}')
-        print('-----')
+        pkl_files = sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/valid_mk3_dfs'))
+        for i in tqdm(range(len(pkl_files))):
+            if not pkl_files[i].startswith('.'):
+                self.valid_mk3_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_mk3_dfs/{pkl_files[i]}'))
+
+        pkl_files = sorted(os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/valid_jawac_dfs'))
+        for i in tqdm(range(len(pkl_files))):
+            if not pkl_files[i].startswith('.'):
+                self.valid_jawac_df_list.append(pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_jawac_dfs/{pkl_files[i]}'))
 
         col_names = ['data', 'label']
         temp_dataset_df = pd.DataFrame(columns=col_names)
-        print('invalid df extraction...')
-        for i in range(len(self.invalid_mk3_df_list)):
+
+        for i in tqdm(range(len(self.invalid_mk3_df_list))):
             self.invalid_jawac_df_list[i] = self.invalid_jawac_df_list[i].resample(str(self.time_resampling) + 'S').median()['data'].to_frame(name='data')
             for idx, row in self.invalid_mk3_df_list[i].iterrows():
                 temp = [self.invalid_jawac_df_list[i].loc[row['start']:row['end']].data.tolist(), 0]
                 temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
 
-        print('valid df extraction...')
-        for i in range(len(self.valid_jawac_df_list)):
+        for i in tqdm(range(len(self.valid_mk3_df_list))):
             self.valid_jawac_df_list[i] = self.valid_jawac_df_list[i].resample(str(self.time_resampling) + 'S').median()['data'].to_frame(name='data')
-            temp = [self.valid_jawac_df_list[i].data.tolist(), 1]
-            temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
+            if self.num_class == 2:
+                temp = [self.valid_jawac_df_list[i].data.tolist(), 1]
+                temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
+            else:
+                for idx, row in self.valid_mk3_df_list[i].iterrows():
+                    if row.label == "Zone d'exclusion":
+                        temp = [self.valid_jawac_df_list[i].loc[row['start']:row['end']].data.tolist(), 2]
+                        self.valid_jawac_df_list[i].drop(self.valid_jawac_df_list[i].loc[row['start']:row['end']].index.tolist(), inplace=True)
+                        temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
+
+                prev_time = None
+                temp = []
+                for idx, row in self.valid_jawac_df_list[i].iterrows():
+                    if prev_time is not None:
+                        if prev_time + datetime.timedelta(0, seconds=self.time_resampling) == idx:
+                            temp.append(row.data)
+                        else:
+                            if len(temp) > 0:
+                                temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
+                            temp = []
+                    prev_time = idx
+                if len(temp) > 0:
+                    temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
 
         max_length = int(self.time_split * (60 / self.time_resampling))
         print(f'dataset df splitting in samples of length {max_length}...')
-        div, step, step_num = 10, 0, 0,
-        step_max = int(len(temp_dataset_df)/div)
+        div, step, step_num = 10, 0, 0
+        step_max = int(len(temp_dataset_df) / div)
         curr_time = time.time()
         time_list = []
         for idx, row in temp_dataset_df.iterrows():
@@ -188,18 +219,22 @@ class Preprocessing:
                 step = 0
                 step_num += 1
                 time_list.append(time.time() - curr_time)
-                print(f'progress --> {step_num}/{div} | time: {round(time.time() - curr_time, 2)} sec | est. rem. time: {round((stat.mean(time_list))*(div-step_num), 2)} sec / {round(((stat.mean(time_list))*(div-step_num))/60, 2)} min |')
+                print(f'progress --> {step_num}/{div} | time: {round(time.time() - curr_time, 2)} sec | est. rem. time: {round((stat.mean(time_list)) * (div - step_num), 2)} sec / {round(((stat.mean(time_list)) * (div - step_num)) / 60, 2)} min |')
                 curr_time = time.time()
             # print(f'{round(time.time() - curr_time, 2)} sec', end='\r')
         time_list.append(time.time() - curr_time)
-        print(f'progress --> 10/10 | total time: {round(sum(time_list)/60, 2)} min')
+        print(f'progress --> {div}/{div} | total time: {round(sum(time_list) / 60, 2)} min')
 
         print('-----')
 
         # create directory
-        os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}')
+        if self.num_class == 2:
+            os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            df_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
+        else:
+            os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            df_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
 
-        df_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
         df_info_file.write('This file contains information about the content of the X.txt file \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'Splitting time in minutes = {self.time_split} \n')
@@ -209,11 +244,16 @@ class Preprocessing:
         if 0 in self.dataset_df.label.value_counts().keys():
             df_info_file.write(f'Num of invalid samples = {self.dataset_df.label.value_counts()[0]} \n')
         else:
-            df_info_file.write(f'Num of invalid samples = 0 \n')
+            df_info_file.write('Num of invalid samples = 0 \n')
         if 1 in self.dataset_df.label.value_counts().keys():
             df_info_file.write(f'Num of valid samples = {self.dataset_df.label.value_counts()[1]} \n')
         else:
-            df_info_file.write(f'Num of valid samples = 0 \n')
+            df_info_file.write('Num of valid samples = 0 \n')
+        if self.num_class != 2:
+            if 2 in self.dataset_df.label.value_counts().keys():
+                df_info_file.write(f'Num of awake samples = {self.dataset_df.label.value_counts()[2]} \n')
+            else:
+                df_info_file.write('Num of awake samples = 0 \n')
         df_info_file.write('---')
         df_info_file.close()
 
@@ -223,12 +263,22 @@ class Preprocessing:
         print('-----')
 
     def create_dataset(self):
+        split_flag = False
         dir_path = f'split_{self.time_split}_resampling_{self.time_resampling}'
-        if dir_path in os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset'):
-            X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling)
+        if self.num_class == 2:
+            if dir_path in os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/samples/binomial'):
+                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+            else:
+                self.split_dataframe()
+                split_flag = True
         else:
-            self.split_dataframe()
+            if dir_path in os.listdir(os.path.dirname(os.path.abspath('run_script.py')) + '/data/dataset/samples/multinomial'):
+                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+            else:
+                self.split_dataframe()
+                split_flag = True
 
+        if split_flag:
             X = np.array(self.dataset_df.data.tolist())
             X = tf.keras.preprocessing.sequence.pad_sequences(X, dtype='float64', padding='post')
             y = to_categorical(np.array(self.dataset_df['label'].tolist()))
@@ -238,15 +288,20 @@ class Preprocessing:
             oversample = SMOTE()
             X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
 
-            y = to_categorical(y)
+            if self.num_class == 2:
+                y = to_categorical(y)
 
             print('after balancing dataset:', occurrences_counter(y))
 
             X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
             # X and y variables saving
-            np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
-            np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+            if self.num_class == 2:
+                np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+                np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+            else:
+                np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+                np.savetxt(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 

@@ -132,19 +132,19 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
     while flag is False:
         if new_start_time is None or flag is False:
             for idx, row in classes_df.iterrows():
-                if row.label == 0:
-                    classes_df.drop(index=idx, inplace=True)
                 if row.label == 1:
                     new_start_time = row.start_time
                     break
+                else:
+                    classes_df.drop(index=idx, inplace=True)
 
         if new_end_time is None or flag is False:
             for idx, row in classes_df.iloc[::-1].iterrows():
-                if row.label == 0:
-                    classes_df.drop(index=idx, inplace=True)
                 if row.label == 1:
                     new_end_time = row.end_time
                     break
+                else:
+                    classes_df.drop(index=idx, inplace=True)
 
         if 0 in classes_df.label.values and 1 in classes_df.label.values:
             if (classes_df.label.value_counts()[1] / len(classes_df)) > threshold:
@@ -207,17 +207,24 @@ def num_of_correct_pred(y_true, y_pred):
     return count
 
 
-def analysis_classification(edf, model):
-    # time_split in minutes
-    time_split = 1
-    # time_split = 3
-    # time_resampling in seconds
-    time_resampling = 1
-    # time_resampling = 5
-    epochs = 5
+def analysis_classification(edf, model, num_class):
+
     start = time.time()
-    model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/{model.lower()}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
-    # model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/backup/split_{time_split}_resampling_{time_resampling}/saved_model'
+    if num_class == 2:
+        # time_split in minutes
+        time_split = 1
+        # time_resampling in seconds
+        time_resampling = 1
+        epochs = 5
+        model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/{model.lower()}/binomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+    else:
+        # time_split in minutes
+        time_split = 3
+        # time_resampling in seconds
+        time_resampling = 1
+        epochs = 10
+        model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/{model.lower()}/multinomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+
     # model loader
     if model.lower() in ['cnn', 'lstm']:
         if os.path.exists(model_path):
@@ -252,10 +259,7 @@ def analysis_classification(edf, model):
     classes = []
     for item in predictions:
         idx = np.argmax(item)
-        # if item[idx] > 0.9:
         classes.append((idx, item[idx]))
-        # else:
-        # classes.append(1)
 
     valid_total = 0
     invalid_total = 0
@@ -313,14 +317,26 @@ def analysis_classification(edf, model):
     curr_time = raw_data.__dict__['info']['meas_date']
     for label in classes:
         if label[0] == 0:
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.25*label[1])
+            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.3*label[1])
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.25)
         elif label[0] == 1:
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.25*label[1])
+            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.3*label[1])
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.25)
+        elif label[0] == 2:
+            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='b', alpha=0.3*label[1])
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='b', alpha=0.25)
         curr_time += datetime.timedelta(minutes=time_split)
 
-    legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
-                       Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
-                       Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
+    if num_class == 2:
+        legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
+                           Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
+                           Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
+    else:
+        legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
+                           Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
+                           Patch(facecolor='b', edgecolor='w', label='awake area', alpha=0.2),
+                           Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
+
     ax.legend(handles=legend_elements, loc='upper left')
 
     end = time.time()
