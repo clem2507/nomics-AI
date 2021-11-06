@@ -1,4 +1,4 @@
-<img src="https://user-images.githubusercontent.com/43852207/140623269-642a3d0f-ee76-4194-aa56-b7305617de9d.jpeg" width="170" height="170"> <img src="https://user-images.githubusercontent.com/43852207/140623238-20bbde3c-7dfe-4965-b773-331e6e906069.jpg" width="170" height="170">
+[<img src="https://user-images.githubusercontent.com/43852207/140623269-642a3d0f-ee76-4194-aa56-b7305617de9d.jpeg" width="170" height="170">](https://www.brizzy.eu) [<img src="https://user-images.githubusercontent.com/43852207/140623238-20bbde3c-7dfe-4965-b773-331e6e906069.jpg" width="170" height="170">](https://www.maastrichtuniversity.nl/education/bachelor/data-science-and-artificial-intelligence)
 
 # Multinomial Classification Ai Of Human Sleep Physiological Signal Data
 ### Maastricht University - BSc Thesis in Collaboration with Nomics Sleep & Care
@@ -71,6 +71,6 @@ The advantage of using LSTM model is its ability to learn and remember the infor
 
 ...
 
-## Helpful Links
-- [Maastricht University DSAI](https://www.maastrichtuniversity.nl/education/bachelor/data-science-and-artificial-intelligence)
+## Links
 - [Nomics Sleep & Care](https://www.brizzy.eu)
+- [Maastricht University DSAI](https://www.maastrichtuniversity.nl/education/bachelor/data-science-and-artificial-intelligence)
