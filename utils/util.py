@@ -169,7 +169,13 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
             new_start_time = analysis_start
             new_end_time = analysis_end
 
-    return new_start_time, new_end_time
+    valid_count = 0
+    for idx, row in classes_df.iterrows():
+        if row.label == 1:
+            valid_count += 1
+    valid_hours = (valid_count*time_step) / 60
+    valid_rate = (valid_count / len(classes_df)*100)
+    return valid_hours, valid_rate, new_start_time, new_end_time
 
 
 def recall_m(y_true, y_pred):
@@ -219,7 +225,7 @@ def analysis_classification(edf, model, num_class):
         model_path = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/{model.lower()}/binomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
     else:
         # time_split in minutes
-        time_split = 3
+        time_split = 1
         # time_resampling in seconds
         time_resampling = 1
         epochs = 10
@@ -283,14 +289,17 @@ def analysis_classification(edf, model, num_class):
 
     print('--------')
 
-    new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], time_split, threshold=0.8)
+    valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], time_split, threshold=0.8)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
+    duration = (new_end - new_start)
     if new_start is not None and new_end is not None:
-        print('analysis duration:', (new_end - new_start))
+        print('analysis duration:', duration)
     else:
         print('analysis duration: Unknown')
+    print('valid hours in new bounds:', valid_hours, 'h')
+    print('valid rate in new bounds:', valid_rate, '%')
 
     print('--------')
 
@@ -345,3 +354,5 @@ def analysis_classification(edf, model, num_class):
 
     # plt.savefig(os.path.dirname(os.path.abspath('run_script.py')) + '/invalid_plt.png')
     plt.show()
+
+    # return new_start, new_end, duration, valid_hours, valid_rate

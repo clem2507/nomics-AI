@@ -31,9 +31,10 @@ if __name__ == '__main__':
     # valid
     # python run_script.py --edf 'data/valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'LSTM' --num_class 2
     # python run_script.py --edf 'data/valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'LSTM' --num_class 2
-    # python run_script.py --edf 'data/valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'LSTM' --num_class 2
     # python run_script.py --edf 'data/valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'LSTM' --num_class 2
+    # python run_script.py --edf 'data/valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'LSTM' --num_class 2
     # TO CHECK
     # python run_script.py --edf 'data/valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'LSTM' --num_class 2
+    # python run_script.py --edf 'data/valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'LSTM' --num_class 2
     opt = parse_opt()
     main(p=opt)

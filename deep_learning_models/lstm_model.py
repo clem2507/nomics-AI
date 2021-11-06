@@ -26,9 +26,13 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     model.add(Dense(352, activation='relu'))
     model.add(Dense(480, activation='relu'))
     model.add(Dense(96, activation='relu'))
-    # sigmoid activation function better than softmax for binary classification
-    model.add(Dense(n_outputs, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
+    if num_class == 2:
+        # sigmoid activation function better than softmax for binary classification
+        model.add(Dense(n_outputs, activation='sigmoid'))
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
+    else:
+        model.add(Dense(n_outputs, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     print(model.summary())
     # fit network
     history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose)
@@ -106,8 +110,13 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         model.add(Dropout(hp.Float('dropout_rate', min_value=0.1, max_value=0.5, step=0.1)))
         for i in range(hp.Int('n_layers', min_value=1, max_value=3, step=1)):
             model.add(Dense(hp.Int(f'dense_{i}_units', min_value=32, max_value=544, step=64), activation='relu'))
-        model.add(Dense(n_outputs, activation='softmax'))
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        if num_class == 2:
+            # sigmoid activation function better than softmax for binary classification
+            model.add(Dense(n_outputs, activation='sigmoid'))
+            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
+        else:
+            model.add(Dense(n_outputs, activation='softmax'))
+            model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
         return model
 
     if num_class == 2:
