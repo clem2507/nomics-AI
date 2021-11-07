@@ -21,10 +21,8 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, batch_size = 0.1, 1, 32
     model = Sequential()
-    model.add(LSTM(96, input_shape=(n_timesteps, n_features)))
-    model.add(Dropout(0.1))
-    model.add(Dense(352, activation='relu'))
-    model.add(Dense(480, activation='relu'))
+    model.add(LSTM(480, input_shape=(n_timesteps, n_features)))
+    model.add(Dropout(0.4))
     model.add(Dense(96, activation='relu'))
     if num_class == 2:
         # sigmoid activation function better than softmax for binary classification
@@ -68,13 +66,14 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
         model_type = 'multinomial'
 
     # Save the model
-    if not os.path.exists(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}'):
-        os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}')
-    if not os.path.exists(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
-        os.mkdir(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
-    cm_plt.savefig(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
-    filepath = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
-    model_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
+    if not os.path.exists(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}'):
+        os.mkdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}')
+    if not os.path.exists(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
+        os.mkdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
+    cm_plt.savefig(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
+    # TODO Change the file path to make it depend on the current time it has been created??
+    filepath = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+    model_info_file = open(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {num_class} classes LSTM model accuracy using a {time_split} minutes signal time split and {time_resampling} minutes median data resampling \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
@@ -124,7 +123,7 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
     else:
         model_type = 'multinomial'
 
-    LOG_DIR = os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/ht_tuning/results_split_{time_split}_resampling_{time_resampling}'
+    LOG_DIR = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/ht_tuning/results_split_{time_split}_resampling_{time_resampling}'
     X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling, num_class=num_class).create_dataset()
 
     tuner = RandomSearch(
@@ -144,7 +143,7 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         validation_data=(X_test, y_test)
     )
 
-    ht_info_file = open(os.path.dirname(os.path.abspath('run_script.py')) + f'/models/lstm/{model_type}/ht_tuning/results_split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
+    ht_info_file = open(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/lstm/{model_type}/ht_tuning/results_split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
     ht_info_file.write(f'This file contains information about the LSTM hyperparameters tuning \n')
     ht_info_file.write('--- \n')
     ht_info_file.write(f'Splitting time in minutes = {time_split} \n')
