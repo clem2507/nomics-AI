@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import datetime
 import itertools
 import numpy as np
@@ -48,6 +49,11 @@ def datetime_conversion(times, start):
         temp_time = start + datetime.timedelta(0, times[i])
         out.append(temp_time)
     return out
+
+
+def hours_conversion(num_hours):
+    frac, whole = math.modf(num_hours)
+    return f'{str(int(whole))}h{str(int(frac*60))}min'
 
 
 def block_print():
@@ -182,7 +188,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
 
     valid_count = 0
     for idx, row in classes_df.iterrows():
-        if row.label == 1:
+        if row.label != 0:
             valid_count += 1
     valid_hours = (valid_count*time_step) / 60
     if len(classes_df) > 0:
@@ -195,7 +201,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
             print('new start analysis time:', new_start_time)
             print('new end analysis time:', new_end_time)
             print('analysis duration:', (new_end_time-new_start_time))
-            print('valid hours in new bounds:', valid_hours)
+            print('valid time in new bounds:', hours_conversion(valid_hours))
             print('valid rate in new bounds:', valid_rate*100)
             print("not enough valid signal (< 4h) in first selected bounds, let's try with a wider tolerance")
             return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)

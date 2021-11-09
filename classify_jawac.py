@@ -12,7 +12,7 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from tensorflow.keras.models import load_model
 
-from utils.util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print
+from utils.util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion
 
 
 def analysis_classification(edf, model, num_class):
@@ -30,7 +30,7 @@ def analysis_classification(edf, model, num_class):
         time_split = 3.0
         # time_resampling in seconds
         time_resampling = 1.0
-        epochs = 30
+        epochs = 40
         model_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/{model.lower()}/multinomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
 
     # model loader
@@ -77,22 +77,22 @@ def analysis_classification(edf, model, num_class):
     valid_total = 0
     invalid_total = 0
     for label in classes:
-        if label[0] == 1:
-            valid_total += 1
         if label[0] == 0:
             invalid_total += 1
+        else:
+            valid_total += 1
     valid_mean = valid_total / len(classes)
     invalid_mean = invalid_total / len(classes)
 
     print('--------')
 
-    print('valid percentage:', (valid_mean * 100), '%')
-    print('invalid percentage:', (invalid_mean * 100), '%')
+    print('valid percentage:', round((valid_mean * 100), 2), '%')
+    print('invalid percentage:', round((invalid_mean * 100), 2), '%')
 
     print('--------')
 
-    print('valid hours:', ((valid_total * time_split) / 60), 'h')
-    print('invalid hours:', ((invalid_total * time_split) / 60), 'h')
+    print('valid hours:', hours_conversion((valid_total * time_split) / 60))
+    print('invalid hours:', hours_conversion((invalid_total * time_split) / 60))
 
     print('--------')
 
@@ -105,8 +105,8 @@ def analysis_classification(edf, model, num_class):
         print('analysis duration:', duration)
     else:
         print('analysis duration: Unknown')
-    print('valid hours in new bounds:', valid_hours, 'h')
-    print('valid rate in new bounds:', valid_rate*100, '%')
+    print('valid time in new bounds:', hours_conversion(valid_hours))
+    print('valid rate in new bounds:', round(valid_rate*100, 2), '%')
 
     print('--------')
 
@@ -131,7 +131,7 @@ def analysis_classification(edf, model, num_class):
         else:
             break
     title = title[::-1]
-    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid: {is_valid(valid_hours, valid_rate)}')
+    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid hours in bounds = {hours_conversion(valid_hours)} - Valid: {is_valid(valid_hours, valid_rate)}')
     ax.grid()
 
     curr_time = raw_data.__dict__['info']['meas_date']
@@ -160,7 +160,7 @@ def analysis_classification(edf, model, num_class):
     ax.legend(handles=legend_elements, loc='upper left')
 
     end = time.time()
-    print('execution time =', (end - start), 'sec')
+    print('execution time =', round((end - start), 2), 'sec')
     print('--------')
 
     # plt.savefig(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/invalid_plt.png')
@@ -190,11 +190,11 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     # invalid
-    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 2
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 2
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 2
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 2
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 2
     # valid
     # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'LSTM' --num_class 3
     # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'LSTM' --num_class 3
