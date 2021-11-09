@@ -15,14 +15,30 @@ if __name__ == '__main__':
     else:
         epochs = 10
 
+
+
+    # from classify_jawac import analysis_classification
+    # from random import shuffle
+    # from tqdm import tqdm
+    # directory = 'data/analysis'
+    # dir_names = os.listdir(directory)
+    # shuffle(dir_names)
+    # for i in tqdm(range(len(dir_names))):
+    #     if dir_names[i].startswith('2'):
+    #         analysis_classification(edf=f'{directory}/{dir_names[i]}/{dir_names[i]}.edf', model='lstm', num_class=2)
+
+
+
     # import mne
     # import pandas as pd
     # from matplotlib import pyplot as plt
     # from tqdm import tqdm
     # from utils.util import extract_data_from_line, string_datetime_conversion, block_print, enable_print
     #
+    # # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis'
     # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/valid_analysis_rest'
     # direct = sorted(os.listdir(d))
+    # direct = direct[::-1]
     # for i in tqdm(range(len(direct))):
     #     if direct[i].startswith('2'):
     #         # df_mk3 = pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_mk3_dfs/{direct[i]}')
@@ -37,8 +53,13 @@ if __name__ == '__main__':
     #         col_names = ['start', 'end', 'label']
     #         df_mk3 = pd.DataFrame(columns=col_names)
     #         for line in lines:
-    #             temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
-    #             df_mk3 = df_mk3.append(temp, ignore_index=True)
+    #             if line.split(sep=';')[-1][:-1] == 'Out of Range':
+    #                 if line.split(sep=';')[-2] == '1':
+    #                     temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
+    #                     df_mk3 = df_mk3.append(temp, ignore_index=True)
+    #             else:
+    #                 temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
+    #                 df_mk3 = df_mk3.append(temp, ignore_index=True)
     #
     #         edf_file = os.path.join(d, direct[i] + '/' + direct[i] + '.edf')
     #         block_print()
@@ -59,12 +80,16 @@ if __name__ == '__main__':
     #         # ax.plot(df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').index.tolist(), df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').data.tolist())
     #         ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
     #         ax.axhline(y=0, color='r', linewidth=1)
-    #         ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {direct[i][:-8]}')
+    #         ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {direct[i]}')
     #         ax.grid()
     #
     #         for idx, row in df_mk3.iterrows():
     #             if row.label == "Zone d'exclusion":
     #                 plt.axvspan(row.start, row.end, facecolor='b', alpha=0.2)
+    #
+    #         # for idx, row in df_mk3.iterrows():
+    #         #     if row.label == "Out of Range":
+    #                 # plt.axvspan(row.start, row.end, facecolor='r', alpha=0.2)
     #
     #         plt.show()
 

@@ -5,9 +5,8 @@ from data_loader.preprocessing import create_dataframes
 
 
 def run(directory):
-    full_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/{directory}'
     if os.path.exists(directory):
-        create_dataframes(directory=full_path)
+        create_dataframes(directory=directory)
     else:
         raise Exception('input directory does not exist')
 
@@ -25,7 +24,7 @@ def main(p):
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-    # python update_db.py --directory 'data/analysis'
+    # python update_db.py --directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/data/analysis'
 
     opt = parse_opt()
     main(p=opt)

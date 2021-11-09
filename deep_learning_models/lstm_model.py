@@ -87,11 +87,11 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     model_info_file.write('--- \n')
     # In fact, if we repeated this experiment over and over, each time drawing a new sample S, containing […] new examples, we would find that for approximately 95% of these experiments, the calculated interval would contain the true error. For this reason, we call this interval the 95% confidence interval estimate
     model_info_file.write(f'Radius of the CI = {interval} \n')
-    model_info_file.write(f'True classification of the model is likely between {accuracy-interval} % and {accuracy+interval} % \n')
+    model_info_file.write(f'True classification of the model is likely between {accuracy-interval} and {accuracy+interval} \n')
     model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
     model_info_file.write(f'Upper bound model classification accuracy = {upper_bound} \n')
     model_info_file.write('--- \n')
-    model_info_file.write(f'Final test accuracy = {accuracy} % \n')
+    model_info_file.write(f'Final test accuracy = {accuracy} \n')
     model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
     model_info_file.write('--- \n')
     model_info_file.close()

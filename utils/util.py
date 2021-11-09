@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from copy import copy
 from scipy import stats
 from keras import backend as K
 from datetime import datetime as dt
@@ -122,6 +123,10 @@ def remove_outlier(df, threshold):
 
 
 def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold):
+    classes_copy = copy(classes)
+    analysis_start_copy = copy(analysis_start)
+    analysis_end_copy = copy(analysis_end)
+    time_step_copy = copy(time_step)
     classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label'])
     curr_time = analysis_start
     for label in classes:
@@ -148,6 +153,9 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
                     break
                 else:
                     classes_df.drop(index=idx, inplace=True)
+
+        if threshold == 0:
+            break
 
         if 0 in classes_df.label.values and 1 in classes_df.label.values:
             if (classes_df.label.value_counts()[1] / len(classes_df)) > threshold:
@@ -177,7 +185,20 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
         if row.label == 1:
             valid_count += 1
     valid_hours = (valid_count*time_step) / 60
-    valid_rate = valid_count / len(classes_df)
+    if len(classes_df) > 0:
+        valid_rate = valid_count / len(classes_df)
+    else:
+        valid_rate = 0
+
+    if threshold != 0:
+        if not is_valid(valid_hours, valid_rate):
+            print('new start analysis time:', new_start_time)
+            print('new end analysis time:', new_end_time)
+            print('analysis duration:', (new_end_time-new_start_time))
+            print('valid hours in new bounds:', valid_hours)
+            print('valid rate in new bounds:', valid_rate*100)
+            print("not enough valid signal (< 4h) in first selected bounds, let's try with a wider tolerance")
+            return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)
     return valid_hours, valid_rate, new_start_time, new_end_time
 
 
@@ -217,6 +238,8 @@ def num_of_correct_pred(y_true, y_pred):
 
 
 def is_valid(valid_hours, valid_rate):
-    if valid_hours > 4 and valid_rate > 0.75:
+    if valid_hours > 6:
+        return True
+    elif valid_hours > 4 and valid_rate > 0.75:
         return True
     return False

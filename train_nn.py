@@ -24,8 +24,8 @@ def run(model, time_split, time_resampling, epochs, num_class):
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='LSTM', help='deep learning model architecture - either CNN or LSTM')
-    parser.add_argument('--time_split', type=int, default=3, help='time series time split window in minutes')
-    parser.add_argument('--time_resampling', type=int, default=1, help='signal resampling in Hz')
+    parser.add_argument('--time_split', type=float, default=3, help='time series time split window in minutes')
+    parser.add_argument('--time_resampling', type=float, default=1, help='signal resampling in Hz')
     parser.add_argument('--epochs', type=int, default=None, help='total number of epochs for training')
     parser.add_argument('--num_class', type=int, default=3, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
     return parser.parse_args()
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     # lstm
     # binomial
-    # python train_nn.py --model 'lstm' --time_split 1 --time_resampling 1 --epochs 5 --num_class 2
+    # python train_nn.py --model 'lstm' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2
     # multinomial
     # python train_nn.py --model 'lstm' --time_split 3 --time_resampling 1 --epochs 10 --num_class 3
 

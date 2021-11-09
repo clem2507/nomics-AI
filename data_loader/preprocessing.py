@@ -45,13 +45,12 @@ def load_data(time_split, time_resampling, num_class):
 
 def create_dataframes(directory):
     # analysis upload into dataframes
-    directory_path = os.path.dirname(directory)
-    dir_names = sorted(os.listdir(directory_path))
+    dir_names = sorted(os.listdir(directory))
     for i in tqdm(range(len(dir_names))):
         # make sure file name is not invalid (had issue with the .DS_Store file)
         if not dir_names[i].startswith('.'):
-            mk3_file = f'{directory_path}/{dir_names[i]}/{dir_names[i]}.mk3'
-            edf_file = f'{directory_path}/{dir_names[i]}/{dir_names[i]}.edf'
+            mk3_file = f'{directory}/{dir_names[i]}/{dir_names[i]}.mk3'
+            edf_file = f'{directory}/{dir_names[i]}/{dir_names[i]}.edf'
             if os.path.exists(mk3_file) and os.path.exists(edf_file):
                 if not os.path.exists(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}'):
                     os.mkdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}')

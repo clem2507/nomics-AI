@@ -12,7 +12,7 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from tensorflow.keras.models import load_model
 
-from utils.util import datetime_conversion, f1_m, analysis_cutting, is_valid
+from utils.util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print
 
 
 def analysis_classification(edf, model, num_class):
@@ -20,17 +20,17 @@ def analysis_classification(edf, model, num_class):
     start = time.time()
     if num_class == 2:
         # time_split in minutes
-        time_split = 1
+        time_split = 2.0
         # time_resampling in seconds
-        time_resampling = 1
+        time_resampling = 1.0
         epochs = 5
         model_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/{model.lower()}/binomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
     else:
         # time_split in minutes
-        time_split = 3
+        time_split = 3.0
         # time_resampling in seconds
-        time_resampling = 1
-        epochs = 10
+        time_resampling = 1.0
+        epochs = 30
         model_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/{model.lower()}/multinomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
 
     # model loader
@@ -42,10 +42,10 @@ def analysis_classification(edf, model, num_class):
     else:
         raise Exception('model should either be CNN or LSTM, found something else')
 
-    full_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + '/' + edf
-
     # edf file
-    raw_data = mne.io.read_raw_edf(full_path)
+    block_print()
+    raw_data = mne.io.read_raw_edf(edf)
+    enable_print()
     data, times = raw_data[:]
     times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])
     df_jawac = pd.DataFrame()
@@ -68,7 +68,7 @@ def analysis_classification(edf, model, num_class):
     for item in predictions:
         idx = np.argmax(item)
         if idx == 2:
-            if predictions[idx] < 0.8:
+            if item[idx] < 0.90:
                 idx = 1
         classes.append((idx, item[idx]))
 
@@ -94,7 +94,7 @@ def analysis_classification(edf, model, num_class):
 
     print('--------')
 
-    valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], time_split, threshold=0.8)
+    valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], time_split, threshold=0.75)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -105,6 +105,10 @@ def analysis_classification(edf, model, num_class):
         print('analysis duration: Unknown')
     print('valid hours in new bounds:', valid_hours, 'h')
     print('valid rate in new bounds:', valid_rate*100, '%')
+
+    print('--------')
+
+    print('is analysis valid:', is_valid(valid_hours, valid_rate))
 
     print('--------')
 
@@ -125,7 +129,7 @@ def analysis_classification(edf, model, num_class):
         else:
             break
     title = title[::-1]
-    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title}')
+    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid: {is_valid(valid_hours, valid_rate)}')
     ax.grid()
 
     curr_time = raw_data.__dict__['info']['meas_date']
@@ -160,11 +164,11 @@ def analysis_classification(edf, model, num_class):
     # plt.savefig(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/invalid_plt.png')
     plt.show()
 
-    return is_valid(duration, valid_hours, valid_rate)
+    return is_valid(valid_hours, valid_rate)
 
 
 def run(edf, model, num_class):
-    analysis_classification(edf=edf, model=model, num_class=num_class)
+    analysis_validity = analysis_classification(edf=edf, model=model, num_class=num_class)
 
 
 def parse_opt():
@@ -184,16 +188,18 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     # invalid
-    # python classify_jawac.py --edf 'data/invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf 'data/invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf 'data/invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 3
     # valid
-    # python classify_jawac.py --edf 'data/valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf 'data/valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf 'data/valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'LSTM' --num_class 3
     # TO CHECK
-    # python classify_jawac.py --edf 'data/valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'LSTM' --num_class 3
-    # python classify_jawac.py --edf 'data/valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'LSTM' --num_class 3
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'LSTM' --num_class 3
 
     opt = parse_opt()
     main(p=opt)
