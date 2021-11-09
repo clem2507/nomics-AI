@@ -1,6 +1,7 @@
 import os
 import mne
 import time
+import shutil
 import datetime
 import numpy as np
 import pandas as pd
@@ -86,6 +87,13 @@ def create_dataframes(directory):
                 df_jawac.insert(1, 'data', data[0])
                 df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
                 df_jawac.to_pickle(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+
+    dfs_directory = os.path.dirname(os.path.abspath('classify_jawac.py')) + '/data/edf_dfs'
+    dfs_names = sorted(os.listdir(dfs_directory))
+    for i in tqdm(range(len(dfs_names))):
+        if not dfs_names[i].startswith('.'):
+            if dfs_names[i] not in dir_names:
+                shutil.rmtree(dfs_directory + f'/{dfs_names[i]}')
 
 
 class Preprocessing:

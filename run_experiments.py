@@ -36,13 +36,16 @@ if __name__ == '__main__':
     # from utils.util import extract_data_from_line, string_datetime_conversion, block_print, enable_print
     #
     # # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis'
-    # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/valid_analysis_rest'
+    # # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/valid_analysis_rest'
+    # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/data/edf_dfs'
     # direct = sorted(os.listdir(d))
-    # direct = direct[::-1]
+    # # direct = direct[::-1]
     # for i in tqdm(range(len(direct))):
     #     if direct[i].startswith('2'):
-    #         # df_mk3 = pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_mk3_dfs/{direct[i]}')
-    #         # df_jawac = pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/dataset/valid_jawac_dfs/{direct[i][:-8]}_jawac.pkl')
+    #         # df_mk3 = pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/edf_dfs/{direct[i]}/{direct[i]}_mk3.pkl')
+    #         # df_jawac = pd.read_pickle(os.path.dirname(os.path.abspath('run_script.py')) + f'/data/edf_dfs/{direct[i]}/{direct[i]}_jawac.pkl')
+    #         # if 'Out of Range' not in df_mk3.label.tolist():
+    #         #     continue
     #
     #         mk3_file = os.path.join(d, direct[i] + '/' + direct[i] + '.mk3')
     #         data_mk3 = open(mk3_file)
@@ -83,17 +86,18 @@ if __name__ == '__main__':
     #         ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {direct[i]}')
     #         ax.grid()
     #
-    #         for idx, row in df_mk3.iterrows():
-    #             if row.label == "Zone d'exclusion":
-    #                 plt.axvspan(row.start, row.end, facecolor='b', alpha=0.2)
-    #
     #         # for idx, row in df_mk3.iterrows():
-    #         #     if row.label == "Out of Range":
-    #                 # plt.axvspan(row.start, row.end, facecolor='r', alpha=0.2)
+    #         #     if row.label == "Zone d'exclusion":
+    #         #         plt.axvspan(row.start, row.end, facecolor='b', alpha=0.2)
+    #
+    #         for idx, row in df_mk3.iterrows():
+    #             if row.label == "Out of Range":
+    #                 plt.axvspan(row.start, row.end, facecolor='r', alpha=0.2)
+    #                 flag = True
     #
     #         plt.show()
 
-    # os.path.abspath('classify_jawac.py')) + '/data/analysis'
+
 
     # train_cnn(time_split=1, time_resampling=0.1, epochs=epochs, num_class=num_class)
     # train_cnn(time_split=1, time_resampling=1, epochs=epochs, num_class=num_class)

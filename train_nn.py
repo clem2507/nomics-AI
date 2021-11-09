@@ -40,15 +40,15 @@ if __name__ == '__main__':
 
     # cnn
     # binomial
-    # python train_nn.py --model 'cnn' --time_split 1 --time_resampling 1 --epochs 5 --num_class 2
+    # python train_nn.py --model 'cnn' --time_split 3 --time_resampling 1 --epochs 5 --num_class 2
     # multinomial
-    # python train_nn.py --model 'cnn' --time_split 3 --time_resampling 1 --epochs 10 --num_class 3
+    # python train_nn.py --model 'cnn' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3
 
     # lstm
     # binomial
-    # python train_nn.py --model 'lstm' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2
+    # python train_nn.py --model 'lstm' --time_split 3 --time_resampling 1 --epochs 5 --num_class 2
     # multinomial
-    # python train_nn.py --model 'lstm' --time_split 3 --time_resampling 1 --epochs 10 --num_class 3
+    # python train_nn.py --model 'lstm' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3
 
     opt = parse_opt()
     main(p=opt)

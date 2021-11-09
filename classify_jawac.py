@@ -65,12 +65,14 @@ def analysis_classification(edf, model, num_class):
 
     predictions = model.predict(X_test_seq_pad)
     classes = []
-    for item in predictions:
+    for item in predictions[:-1]:
         idx = np.argmax(item)
         if idx == 2:
             if item[idx] < 0.90:
                 idx = 1
         classes.append((idx, item[idx]))
+    # make sure the last window of the time series data is classified as invalid (sometimes issue with the padding)
+    classes.append((0, 0))
 
     valid_total = 0
     invalid_total = 0
