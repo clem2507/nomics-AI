@@ -18,6 +18,7 @@ from utils.util import datetime_conversion, f1_m, analysis_cutting, is_valid, bl
 def analysis_classification(edf, model, num_class):
 
     start = time.time()
+
     if num_class == 2:
         # time_split in minutes
         time_split = 2.0
@@ -33,6 +34,21 @@ def analysis_classification(edf, model, num_class):
         epochs = 40
         model_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/{model.lower()}/multinomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
 
+    # edf file reading
+    block_print()
+    raw_data = mne.io.read_raw_edf(edf)
+    enable_print()
+
+    data, times = raw_data[:]
+    times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])
+    df_jawac = pd.DataFrame()
+    df_jawac.insert(0, 'times', times)
+    df_jawac.insert(1, 'data', data[0])
+    df_jawac = df_jawac.resample(str(time_resampling) + 'S', on='times').median()['data'].to_frame(name='data')
+    df_jawac.reset_index(inplace=True)
+
+    start_class = time.time()
+
     # model loader
     if model.lower() in ['cnn', 'lstm']:
         if os.path.exists(model_path):
@@ -41,18 +57,6 @@ def analysis_classification(edf, model, num_class):
             raise Exception('model path does not exist')
     else:
         raise Exception('model should either be CNN or LSTM, found something else')
-
-    # edf file
-    block_print()
-    raw_data = mne.io.read_raw_edf(edf)
-    enable_print()
-    data, times = raw_data[:]
-    times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])
-    df_jawac = pd.DataFrame()
-    df_jawac.insert(0, 'times', times)
-    df_jawac.insert(1, 'data', data[0])
-    df_jawac = df_jawac.resample(str(time_resampling) + 'S', on='times').median()['data'].to_frame(name='data')
-    df_jawac.reset_index(inplace=True)
 
     size = int((60 / time_resampling) * time_split)
     X_test_seq = np.array([df_jawac.loc[i:i + size - 1, :].data for i in range(0, len(df_jawac), size)], dtype=object)
@@ -160,17 +164,25 @@ def analysis_classification(edf, model, num_class):
     ax.legend(handles=legend_elements, loc='upper left')
 
     end = time.time()
-    print('execution time =', round((end - start), 2), 'sec')
+    print('classification execution time =', round((end - start_class), 2), 'sec')
+    print('total execution time =', round((end - start), 2), 'sec')
     print('--------')
 
-    # plt.savefig(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/invalid_plt.png')
-    plt.show()
+    dictionary = {'percentage_signal_valid': round((valid_mean * 100), 2), 'percentage_signal_invalid': round((invalid_mean * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * time_split) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * time_split) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(valid_hours, valid_rate), 'plot': plt}
 
-    return is_valid(valid_hours, valid_rate)
+    # plt.savefig(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/invalid_plt.png')
+    # plt.show()
+
+    return dictionary
 
 
 def run(edf, model, num_class):
-    analysis_validity = analysis_classification(edf=edf, model=model, num_class=num_class)
+    out_dic = analysis_classification(edf=edf, model=model, num_class=num_class)
+    print('is analysis valid:', out_dic['is_valid'])
+    print('--------')
+    print(out_dic)
+    print('--------')
+    out_dic['plot'].show()
 
 
 def parse_opt():
@@ -178,7 +190,7 @@ def parse_opt():
     # edf file path or object as input??
     parser.add_argument('--edf', type=str, default='', help='edf file path for time series extraction')
     parser.add_argument('--model', type=str, default='LSTM', help='deep learning model architecture - either CNN or LSTM')
-    parser.add_argument('--num_class', type=int, default=3, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
+    parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
     return parser.parse_args()
 
 
@@ -190,8 +202,8 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     # invalid
-    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 2
     # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 2
+    # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 2
     # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 2
     # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 2
     # python classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 2
