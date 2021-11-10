@@ -1,8 +1,8 @@
 import os
 import argparse
 
-from models.cnn_model import train_cnn
-from models.lstm_model import train_lstm
+from learning_models.cnn_model import train_cnn
+from learning_models.lstm_model import train_lstm
 from training.data_loader.preprocessing import create_dataframes
 
 

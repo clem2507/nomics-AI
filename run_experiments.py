@@ -1,9 +1,9 @@
 import os
 
-from training.models.cnn_model import train_cnn
-from training.models.lstm_model import train_lstm
-from training.models.cnn_model import hyperparameters_tuning as ht_cnn
-from training.models.lstm_model import hyperparameters_tuning as ht_lstm
+from training.learning_models.cnn_model import train_cnn
+from training.learning_models.lstm_model import train_lstm
+from training.learning_models.cnn_model import hyperparameters_tuning as ht_cnn
+from training.learning_models.lstm_model import hyperparameters_tuning as ht_lstm
 
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
