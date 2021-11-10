@@ -1,9 +1,9 @@
 import os
 
-from deep_learning_models.cnn_model import train_cnn
-from deep_learning_models.lstm_model import train_lstm
-from deep_learning_models.cnn_model import hyperparameters_tuning as ht_cnn
-from deep_learning_models.lstm_model import hyperparameters_tuning as ht_lstm
+from training.models.cnn_model import train_cnn
+from training.models.lstm_model import train_lstm
+from training.models.cnn_model import hyperparameters_tuning as ht_cnn
+from training.models.lstm_model import hyperparameters_tuning as ht_lstm
 
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # import pandas as pd
     # from matplotlib import pyplot as plt
     # from tqdm import tqdm
-    # from utils.util import extract_data_from_line, string_datetime_conversion, block_print, enable_print
+    # from util import extract_data_from_line, string_datetime_conversion, block_print, enable_print
     #
     # # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis'
     # # d = '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/valid_analysis_rest'
@@ -120,7 +120,5 @@ if __name__ == '__main__':
     # train_lstm(time_split=5, time_resampling=1, epochs=epochs, num_class=num_class)
 
     # ht_cnn(time_split=1, time_resampling=1, max_trials=10, epochs=epochs, batch_size=32, num_class=num_class)
-    # test_sequences(model_path=os.path.dirname(os.path.abspath('classify_jawac.py')) + '/models/cnn/saved_model')
 
     # ht_lstm(time_split=1, time_resampling=1, max_trials=20, epochs=epochs, batch_size=32, num_class=num_class)
-    # test_sequences(model_path=os.path.dirname(os.path.abspath('classify_jawac.py')) + '/models/lstm/saved_model')

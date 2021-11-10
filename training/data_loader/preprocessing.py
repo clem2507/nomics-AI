@@ -13,7 +13,7 @@ from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 
-from utils.util import extract_data_from_line, string_datetime_conversion, remove_outlier, occurrences_counter, check_nan, block_print, enable_print
+from util import extract_data_from_line, string_datetime_conversion, occurrences_counter, check_nan, block_print, enable_print
 
 
 def load_data(time_split, time_resampling, num_class):
@@ -24,11 +24,11 @@ def load_data(time_split, time_resampling, num_class):
     print('data loading...')
 
     if num_class == 2:
-        X = np.loadtxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/X.txt')
-        y = np.loadtxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/y.txt')
+        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/X.txt')
+        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/y.txt')
     else:
-        X = np.loadtxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/multinomial/split_{time_split}_resampling_{time_resampling}/X.txt')
-        y = np.loadtxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/multinomial/split_{time_split}_resampling_{time_resampling}/y.txt')
+        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/multinomial/split_{time_split}_resampling_{time_resampling}/X.txt')
+        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/multinomial/split_{time_split}_resampling_{time_resampling}/y.txt')
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
@@ -53,8 +53,8 @@ def create_dataframes(directory):
             mk3_file = f'{directory}/{dir_names[i]}/{dir_names[i]}.mk3'
             edf_file = f'{directory}/{dir_names[i]}/{dir_names[i]}.edf'
             if os.path.exists(mk3_file) and os.path.exists(edf_file):
-                if not os.path.exists(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}'):
-                    os.mkdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}')
+                if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/data/edf_dfs/{dir_names[i]}'):
+                    os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/data/edf_dfs/{dir_names[i]}')
                 else:
                     continue
                 data_mk3 = open(mk3_file)
@@ -75,7 +75,7 @@ def create_dataframes(directory):
                 if len(df_mk3) < 1:
                     continue
                 else:
-                    df_mk3.to_pickle(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
+                    df_mk3.to_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
 
                 block_print()
                 raw_data = mne.io.read_raw_edf(edf_file)
@@ -86,9 +86,9 @@ def create_dataframes(directory):
                 df_jawac.insert(0, 'times', times)
                 df_jawac.insert(1, 'data', data[0])
                 df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
-                df_jawac.to_pickle(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+                df_jawac.to_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
 
-    dfs_directory = os.path.dirname(os.path.abspath('classify_jawac.py')) + '/data/edf_dfs'
+    dfs_directory = os.path.dirname(os.path.abspath('util.py')) + '/data/edf_dfs'
     dfs_names = sorted(os.listdir(dfs_directory))
     for i in tqdm(range(len(dfs_names))):
         if not dfs_names[i].startswith('.'):
@@ -110,11 +110,11 @@ class Preprocessing:
         self.num_class = num_class
 
     def split_dataframe(self):
-        dir_names = sorted(os.listdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/data/edf_dfs'))
+        dir_names = sorted(os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/data/edf_dfs'))
         for i in tqdm(range(len(dir_names))):
             if not dir_names[i].startswith('.'):
-                df_mk3 = pd.read_pickle(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
-                df_jawac = pd.read_pickle(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+                df_mk3 = pd.read_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
+                df_jawac = pd.read_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
                 if 'Out of Range' in df_mk3.label.tolist():
                     self.invalid_mk3_df_list.append(df_mk3)
                     self.invalid_jawac_df_list.append(df_jawac)
@@ -184,11 +184,11 @@ class Preprocessing:
 
         # create directory
         if self.num_class == 2:
-            os.mkdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
-            df_info_file = open(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
+            os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
         else:
-            os.mkdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
-            df_info_file = open(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
+            os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
 
         df_info_file.write('This file contains information about the content of the X.txt file \n')
         df_info_file.write('--- \n')
@@ -221,20 +221,20 @@ class Preprocessing:
         split_flag = False
         dir_path = f'split_{self.time_split}_resampling_{self.time_resampling}'
         if self.num_class == 2:
-            if dir_path in os.listdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/data/samples/binomial'):
-                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
-                # TODO uncomment after experiments
-                # self.split_dataframe()
-                # split_flag = True
+            if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/data/samples/binomial'):
+                # TODO uncomment for experiments
+                # X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+                self.split_dataframe()
+                split_flag = True
             else:
                 self.split_dataframe()
                 split_flag = True
         else:
-            if dir_path in os.listdir(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/data/samples/multinomial'):
-                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
-                # TODO uncomment after experiments
-                # self.split_dataframe()
-                # split_flag = True
+            if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/data/samples/multinomial'):
+                # TODO uncomment for experiments
+                # X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+                self.split_dataframe()
+                split_flag = True
             else:
                 self.split_dataframe()
                 split_flag = True
@@ -258,11 +258,11 @@ class Preprocessing:
 
             # X and y variables saving
             if self.num_class == 2:
-                np.savetxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
-                np.savetxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
             else:
-                np.savetxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
-                np.savetxt(os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 

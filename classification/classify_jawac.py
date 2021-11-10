@@ -12,7 +12,7 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from tensorflow.keras.models import load_model
 
-from utils.util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion
+from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion
 
 
 def analysis_classification(edf, model, num_class):
@@ -25,14 +25,14 @@ def analysis_classification(edf, model, num_class):
         # time_resampling in seconds
         time_resampling = 1.0
         epochs = 5
-        model_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/{model.lower()}/binomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}/binomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
     else:
         # time_split in minutes
         time_split = 3.0
         # time_resampling in seconds
         time_resampling = 1.0
         epochs = 40
-        model_path = os.path.dirname(os.path.abspath('classify_jawac.py')) + f'/models/{model.lower()}/multinomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}/multinomial/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
 
     # edf file reading
     block_print()
@@ -170,7 +170,7 @@ def analysis_classification(edf, model, num_class):
 
     dictionary = {'percentage_signal_valid': round((valid_mean * 100), 2), 'percentage_signal_invalid': round((invalid_mean * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * time_split) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * time_split) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(valid_hours, valid_rate), 'plot': plt}
 
-    # plt.savefig(os.path.dirname(os.path.abspath('classify_jawac.py')) + '/invalid_plt.png')
+    # plt.savefig(os.path.dirname(os.path.abspath('util.py')) + '/invalid_plt.png')
     # plt.show()
 
     return dictionary
@@ -189,7 +189,7 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     # edf file path or object as input??
     parser.add_argument('--edf', type=str, default='', help='edf file path for time series extraction')
-    parser.add_argument('--model', type=str, default='LSTM', help='deep learning model architecture - either CNN or LSTM')
+    parser.add_argument('--model', type=str, default='LSTM', help='deep training model architecture - either CNN or LSTM')
     parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
     return parser.parse_args()
 
