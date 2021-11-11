@@ -8,6 +8,9 @@ from training.data_loader.preprocessing import create_dataframes
 
 def run(model, analysis_directory, time_split, time_resampling, epochs, num_class):
 
+    time_split = float(time_split)
+    time_resampling = float(time_resampling)
+
     print(analysis_directory)
     if os.path.exists(analysis_directory):
         create_dataframes(directory=analysis_directory)

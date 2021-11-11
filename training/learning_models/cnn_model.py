@@ -1,9 +1,10 @@
 import os
-import sys
+import statistics
 import numpy as np
 import keras_tuner as kt
 
 from math import sqrt
+from matplotlib import pyplot as plt
 from statsmodels.stats.proportion import proportion_confint
 from keras_tuner.tuners import RandomSearch
 from tensorflow.keras import Sequential
@@ -12,10 +13,8 @@ from tensorflow.keras.models import save_model
 from sklearn.metrics import confusion_matrix
 from sklearn.utils import shuffle
 
-sys.path.append('../')
-
 from training.data_loader.preprocessing import Preprocessing
-from util import plot_confusion_matrix, f1_m, num_of_correct_pred
+from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
 
 
 def evaluate_model(time_split, time_resampling, epochs, num_class):
@@ -38,15 +37,16 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
         model.add(Dense(n_outputs, activation='softmax'))
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     print(model.summary())
+    time_callback = TimingCallback()
     # fit network
-    history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose)
+    history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback])
 
-    test_loss_history = history.history['loss']
-    test_accuracy_history = history.history['accuracy']
-    test_f1_history = history.history['f1_m']
-    validation_loss_history = history.history['val_loss']
+    training_accuracy_history = history.history['accuracy']
+    training_f1_history = history.history['f1_m']
+    training_loss_history = history.history['loss']
     validation_accuracy_history = history.history['val_accuracy']
     validation_f1_history = history.history['val_f1_m']
+    validation_loss_history = history.history['val_loss']
 
     # evaluate model
     _, accuracy, *r = model.evaluate(X_test, y_test, batch_size=batch_size, verbose=verbose)
@@ -77,19 +77,23 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
         os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
     cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
+    cm_plt.close()
     # TODO Change the file path to make it depend on the current time it has been created??
     filepath = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
     model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {num_class} classes CNN model accuracy using a {time_split} minutes signal time split and {time_resampling} minutes median data resampling \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
-    model_info_file.write(f'Test loss history = {test_loss_history} \n')
-    model_info_file.write(f'Test accuracy history = {test_accuracy_history} \n')
-    model_info_file.write(f'Test f1_score history = {test_f1_history} \n')
+    model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
+    model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(time_callback.logs)} \n')
     model_info_file.write('--- \n')
-    model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
+    model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
+    model_info_file.write(f'Training f1 score history = {training_f1_history} \n')
+    model_info_file.write(f'Training loss history = {training_loss_history} \n')
+    model_info_file.write('--- \n')
     model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
-    model_info_file.write(f'Validation f1_score history = {validation_f1_history} \n')
+    model_info_file.write(f'Validation f1 score history = {validation_f1_history} \n')
+    model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
     model_info_file.write('--- \n')
     # In fact, if we repeated this experiment over and over, each time drawing a new sample S, containing […] new examples, we would find that for approximately 95% of these experiments, the calculated interval would contain the true error. For this reason, we call this interval the 95% confidence interval estimate
     model_info_file.write(f'Radius of the CI = {interval} \n')
@@ -97,11 +101,46 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
     model_info_file.write(f'Upper bound model classification accuracy = {upper_bound} \n')
     model_info_file.write('--- \n')
-    model_info_file.write(f'Final test accuracy = {accuracy} \n')
+    model_info_file.write(f'Test accuracy = {accuracy} \n')
     model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
     model_info_file.write('--- \n')
     model_info_file.close()
+
+    x = list(range(1, epochs + 1))
+
+    figure, axes = plt.subplots(nrows=3, ncols=1)
+
+    axes[0].plot(x, training_accuracy_history, label='train acc')
+    axes[0].plot(x, validation_accuracy_history, label='val acc')
+    axes[0].set_title('Training and validation accuracy')
+    axes[0].set_xlabel('epochs')
+    axes[0].set_ylabel('accuracy')
+    axes[0].legend(loc='best')
+
+    axes[1].plot(x, training_f1_history, label='train f1')
+    axes[1].plot(x, validation_f1_history, label='val f1')
+    axes[1].set_title('Training and validation f1 score')
+    axes[1].set_xlabel('epochs')
+    axes[1].set_ylabel('f1 score')
+    axes[1].legend(loc='best')
+
+    axes[2,].plot(x, training_loss_history, label='train loss')
+    axes[2].plot(x, validation_loss_history, label='val loss')
+    axes[2].set_title('Training and validation loss')
+    axes[2].set_xlabel('epochs')
+    axes[2].set_ylabel('loss')
+    axes[2].legend(loc='best')
+
+    figure.tight_layout()
+    figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
+    plt.close(fig=figure)
+
     save_model(model, filepath)
+
+    figure.set_figheight(20)
+    figure.set_figwidth(14)
+    figure.tight_layout()
+
     return accuracy
 
 
@@ -167,6 +206,8 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
 
 
 def train_cnn(time_split, time_resampling, epochs, num_class):
+    time_split = float(time_split)
+    time_resampling = float(time_resampling)
     score = evaluate_model(time_split, time_resampling, epochs, num_class)
     score = score * 100.0
     print('score:', score, '%')
