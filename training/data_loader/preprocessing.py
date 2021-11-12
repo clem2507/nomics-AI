@@ -7,7 +7,6 @@ import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import statistics as stat
 
 from matplotlib import pyplot as plt
 from tqdm import tqdm
@@ -21,11 +20,6 @@ from util import extract_data_from_line, string_datetime_conversion, occurrences
 
 
 def load_data(time_split, time_resampling, num_class):
-    print(f'{time_split} minutes signal time split')
-    print(f'{time_resampling} minutes data resampling')
-    print(f'{num_class} classes classification')
-    print('-----')
-    print('data loading...')
 
     if num_class == 2:
         X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/X.txt')
@@ -163,26 +157,11 @@ class Preprocessing:
                     temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
 
         max_length = int(self.time_split * (60 / self.time_resampling))
-        print(f'dataset df splitting in samples of length {max_length}...')
-        div, step, step_num = 10, 0, 0
-        step_max = int(len(temp_dataset_df) / div)
-        curr_time = time.time()
-        time_list = []
-        for idx, row in temp_dataset_df.iterrows():
-            temp = [row[0][i:i + max_length] for i in range(0, len(row[0]), max_length)][:-1]
+        for idx in tqdm(range(len(temp_dataset_df))):
+            temp = [temp_dataset_df.iloc[idx][0][i:i + max_length] for i in range(0, len(temp_dataset_df.iloc[idx][0]), max_length)][:-1]
             for arr in temp:
-                out = [arr, row.label]
+                out = [arr, temp_dataset_df.iloc[idx].label]
                 self.dataset_df = self.dataset_df.append(pd.Series(out, index=self.dataset_df.columns), ignore_index=True)
-            step += 1
-            if step > step_max:
-                step = 0
-                step_num += 1
-                time_list.append(time.time() - curr_time)
-                print(f'progress --> {step_num}/{div} | time: {round(time.time() - curr_time, 2)} sec | est. rem. time: {round((stat.mean(time_list)) * (div - step_num), 2)} sec / {round(((stat.mean(time_list)) * (div - step_num)) / 60, 2)} min |')
-                curr_time = time.time()
-            # print(f'{round(time.time() - curr_time, 2)} sec', end='\r')
-        time_list.append(time.time() - curr_time)
-        print(f'progress --> {div}/{div} | total time: {round(sum(time_list) / 60, 2)} min')
 
         print('-----')
 
@@ -223,6 +202,7 @@ class Preprocessing:
 
     def create_dataset(self):
         start_time = time.time()
+        print('-----')
         print(f'{self.time_split} minutes signal time split')
         print(f'{self.time_resampling} minutes data resampling')
         print(f'{self.num_class} classes classification')
@@ -231,8 +211,8 @@ class Preprocessing:
         dir_path = f'split_{self.time_split}_resampling_{self.time_resampling}'
         if self.num_class == 2:
             if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/training/data/samples/binomial'):
-                # TODO uncomment for experiments
                 X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+                # TODO uncomment after experiments
                 # self.split_dataframe()
                 # split_flag = True
             else:
@@ -240,8 +220,8 @@ class Preprocessing:
                 split_flag = True
         else:
             if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/training/data/samples/multinomial'):
-                # TODO uncomment for experiments
                 X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+                # TODO uncomment after experiments
                 # self.split_dataframe()
                 # split_flag = True
             else:

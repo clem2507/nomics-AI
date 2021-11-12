@@ -13,6 +13,7 @@ if __name__ == '__main__':
     num_class = 3
     epochs = 50
 
+
     # Preprocessing(time_split=1, time_resampling=0.1, num_class=num_class).create_dataset()
     # Preprocessing(time_split=1, time_resampling=1, num_class=num_class).create_dataset()
     # Preprocessing(time_split=1, time_resampling=3, num_class=num_class).create_dataset()
@@ -27,7 +28,6 @@ if __name__ == '__main__':
     # Preprocessing(time_split=3, time_resampling=1, num_class=num_class).create_dataset()
     # Preprocessing(time_split=3, time_resampling=3, num_class=num_class).create_dataset()
     # Preprocessing(time_split=3, time_resampling=5, num_class=num_class).create_dataset()
-
 
 
     train_cnn(time_split=1, time_resampling=0.1, epochs=epochs, num_class=num_class)
@@ -59,7 +59,6 @@ if __name__ == '__main__':
     train_lstm(time_split=3, time_resampling=1, epochs=epochs, num_class=num_class)
     train_lstm(time_split=3, time_resampling=3, epochs=epochs, num_class=num_class)
     train_lstm(time_split=3, time_resampling=5, epochs=epochs, num_class=num_class)
-
 
 
     # ht_cnn(time_split=3, time_resampling=3, max_trials=20, epochs=epochs, batch_size=32, num_class=num_class)
