@@ -1,5 +1,6 @@
 import os
 import mne
+import sys
 import time
 import shutil
 import datetime
@@ -8,10 +9,13 @@ import pandas as pd
 import tensorflow as tf
 import statistics as stat
 
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
+
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 
 from util import extract_data_from_line, string_datetime_conversion, occurrences_counter, check_nan, block_print, enable_print
 
@@ -105,8 +109,8 @@ class Preprocessing:
         self.valid_mk3_df_list = []
         self.dataset_df = pd.DataFrame(columns=['data', 'label'])
         # time_split and resampling time_resampling in minutes
-        self.time_split = time_split
-        self.time_resampling = time_resampling
+        self.time_split = float(time_split)
+        self.time_resampling = float(time_resampling)
         self.num_class = num_class
 
     def split_dataframe(self):
@@ -190,7 +194,7 @@ class Preprocessing:
             os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
             df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
 
-        df_info_file.write('This file contains information about the content of the X.txt file \n')
+        df_info_file.write('This file contains information about the content of the directory \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'Splitting time in minutes = {self.time_split} \n')
         df_info_file.write(f'Resampling time in seconds = {self.time_resampling} \n')
@@ -209,7 +213,7 @@ class Preprocessing:
                 df_info_file.write(f'Num of awake samples = {self.dataset_df.label.value_counts()[2]} \n')
             else:
                 df_info_file.write('Num of awake samples = 0 \n')
-        df_info_file.write('---')
+        df_info_file.write('--- \n')
         df_info_file.close()
 
         self.dataset_df = self.dataset_df[check_nan(self.dataset_df['data'].values)]
@@ -218,6 +222,11 @@ class Preprocessing:
         print('-----')
 
     def create_dataset(self):
+        start_time = time.time()
+        print(f'{self.time_split} minutes signal time split')
+        print(f'{self.time_resampling} minutes data resampling')
+        print(f'{self.num_class} classes classification')
+        print('-----')
         split_flag = False
         dir_path = f'split_{self.time_split}_resampling_{self.time_resampling}'
         if self.num_class == 2:
@@ -244,6 +253,24 @@ class Preprocessing:
             X = tf.keras.preprocessing.sequence.pad_sequences(X, dtype='float64', padding='post')
             y = to_categorical(np.array(self.dataset_df['label'].tolist()))
 
+            occ_counter = occurrences_counter(y)
+
+            if self.num_class == 2:
+                x_values = ['Invalid', 'Valid']
+                y_values = [occ_counter[0], occ_counter[1]]
+                dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/occ_bar_plt.png'
+            else:
+                x_values = ['Invalid', 'Valid', 'Awake']
+                y_values = [occ_counter[0], occ_counter[1], occ_counter[2]]
+                dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/occ_bar_plt.png'
+
+            plt.bar(x_values, y_values)
+            plt.title('Classes occurrences before balancing')
+            plt.xlabel('classes')
+            plt.ylabel('count')
+            plt.savefig(dir_path)
+            plt.close()
+
             print('before balancing dataset:', occurrences_counter(y))
 
             oversample = SMOTE()
@@ -266,11 +293,22 @@ class Preprocessing:
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
+            end_time = time.time()
+            if self.num_class == 2:
+                df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'a')
+            else:
+                df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'a')
+            df_info_file.write(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min \n')
+            df_info_file.write('---')
+            df_info_file.close()
+
             print('----')
             print(X_train.shape)
             print(X_test.shape)
             print(y_train.shape)
             print(y_test.shape)
+            print('----')
+            print(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min')
             print('----')
 
         return X_train, y_train, X_test, y_test

@@ -1,4 +1,5 @@
 import os
+import sys
 import statistics
 import numpy as np
 import keras_tuner as kt
@@ -13,7 +14,10 @@ from tensorflow.keras.models import save_model
 from sklearn.metrics import confusion_matrix
 from sklearn.utils import shuffle
 
-from training.data_loader.preprocessing import Preprocessing
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
+
+from preprocessing import Preprocessing
 from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
 
 
@@ -23,12 +27,16 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, batch_size = 0.1, 1, 32
     model = Sequential()
-    model.add(Conv1D(filters=96, kernel_size=5, activation='relu', input_shape=(n_timesteps, n_features)))
-    model.add(Conv1D(filters=128, kernel_size=3, activation='relu'))
-    model.add(Dropout(0.4))
+    model.add(Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(n_timesteps, n_features)))
+    # model.add(Conv1D(filters=96, kernel_size=3, activation='relu', input_shape=(n_timesteps, n_features)))
+    model.add(Conv1D(filters=64, kernel_size=3, activation='relu'))
+    # model.add(Conv1D(filters=128, kernel_size=3, activation='relu'))
+    model.add(Dropout(0.5))
+    # model.add(Dropout(0.4))
     model.add(MaxPooling1D(pool_size=2))
     model.add(Flatten())
-    model.add(Dense(416, activation='relu'))
+    model.add(Dense(100, activation='relu'))
+    # model.add(Dense(416, activation='relu'))
     if num_class == 2:
         # sigmoid activation function better than softmax for binary classification
         model.add(Dense(n_outputs, activation='sigmoid'))
@@ -76,6 +84,8 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
         os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}')
     if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
         os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht')
     cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
     cm_plt.close()
     # TODO Change the file path to make it depend on the current time it has been created??
@@ -116,6 +126,7 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     axes[0].set_xlabel('epochs')
     axes[0].set_ylabel('accuracy')
     axes[0].legend(loc='best')
+    axes[0].grid()
 
     axes[1].plot(x, training_f1_history, label='train f1')
     axes[1].plot(x, validation_f1_history, label='val f1')
@@ -123,22 +134,24 @@ def evaluate_model(time_split, time_resampling, epochs, num_class):
     axes[1].set_xlabel('epochs')
     axes[1].set_ylabel('f1 score')
     axes[1].legend(loc='best')
+    axes[1].grid()
 
-    axes[2,].plot(x, training_loss_history, label='train loss')
+    axes[2].plot(x, training_loss_history, label='train loss')
     axes[2].plot(x, validation_loss_history, label='val loss')
     axes[2].set_title('Training and validation loss')
     axes[2].set_xlabel('epochs')
     axes[2].set_ylabel('loss')
     axes[2].legend(loc='best')
+    axes[2].grid()
 
+    figure.set_figheight(17)
+    figure.set_figwidth(12)
     figure.tight_layout()
     figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
     plt.close(fig=figure)
 
     save_model(model, filepath)
 
-    figure.set_figheight(20)
-    figure.set_figwidth(14)
     figure.tight_layout()
 
     return accuracy

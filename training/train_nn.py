@@ -3,7 +3,7 @@ import argparse
 
 from learning_models.cnn_model import train_cnn
 from learning_models.lstm_model import train_lstm
-from training.data_loader.preprocessing import create_dataframes
+from data_loader.preprocessing import create_dataframes
 
 
 def run(model, analysis_directory, time_split, time_resampling, epochs, num_class):
@@ -51,15 +51,15 @@ if __name__ == '__main__':
 
     # cnn
     # binomial
-    # python train_nn.py --model 'cnn' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2
+    # python training/train_nn.py --model 'cnn' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2
     # multinomial
-    # python train_nn.py --model 'cnn' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3
+    # python training/train_nn.py --model 'cnn' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3
 
     # lstm
     # binomial
-    # python train_nn.py --model 'lstm' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2
+    # python training/train_nn.py --model 'lstm' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2
     # multinomial
-    # python train_nn.py --model 'lstm' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3
+    # python training/train_nn.py --model 'lstm' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3
 
     opt = parse_opt()
     main(p=opt)
