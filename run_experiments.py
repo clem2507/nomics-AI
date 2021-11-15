@@ -10,8 +10,9 @@ from training.data_loader.preprocessing import Preprocessing
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-    num_class = 3
-    epochs = 50
+    num_class = 2
+    epochs = 5
+    baseline_model = True
 
 
     # Preprocessing(time_split=1, time_resampling=0.1, num_class=num_class).create_dataset()
@@ -30,36 +31,49 @@ if __name__ == '__main__':
     # Preprocessing(time_split=3, time_resampling=5, num_class=num_class).create_dataset()
 
 
-    train_cnn(time_split=1, time_resampling=0.1, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=1, time_resampling=1, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=1, time_resampling=3, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=1, time_resampling=5, epochs=epochs, num_class=num_class)
+    train_cnn(time_split=1, time_resampling=0.1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=1, time_resampling=0.2, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=1, time_resampling=0.5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=1, time_resampling=1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=1, time_resampling=3, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=1, time_resampling=5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
 
-    train_cnn(time_split=2, time_resampling=0.1, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=2, time_resampling=1, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=2, time_resampling=3, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=2, time_resampling=5, epochs=epochs, num_class=num_class)
+    train_cnn(time_split=2, time_resampling=0.1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=2, time_resampling=0.2, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=2, time_resampling=0.5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=2, time_resampling=1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=2, time_resampling=3, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=2, time_resampling=5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
 
-    train_cnn(time_split=3, time_resampling=0.1, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=3, time_resampling=1, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=3, time_resampling=3, epochs=epochs, num_class=num_class)
-    train_cnn(time_split=3, time_resampling=5, epochs=epochs, num_class=num_class)
+    train_cnn(time_split=3, time_resampling=0.1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=3, time_resampling=0.2, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=3, time_resampling=0.5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=3, time_resampling=1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=3, time_resampling=3, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_cnn(time_split=3, time_resampling=5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
 
-    train_lstm(time_split=1, time_resampling=0.1, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=1, time_resampling=1, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=1, time_resampling=3, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=1, time_resampling=5, epochs=epochs, num_class=num_class)
+    train_lstm(time_split=1, time_resampling=0.1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=1, time_resampling=0.2, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=1, time_resampling=0.5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=1, time_resampling=1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=1, time_resampling=3, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=1, time_resampling=5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
 
-    train_lstm(time_split=2, time_resampling=0.1, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=2, time_resampling=1, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=2, time_resampling=3, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=2, time_resampling=5, epochs=epochs, num_class=num_class)
+    train_lstm(time_split=2, time_resampling=0.1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=2, time_resampling=0.2, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=2, time_resampling=0.5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=2, time_resampling=1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=2, time_resampling=3, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=2, time_resampling=5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
 
-    train_lstm(time_split=3, time_resampling=0.1, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=3, time_resampling=1, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=3, time_resampling=3, epochs=epochs, num_class=num_class)
-    train_lstm(time_split=3, time_resampling=5, epochs=epochs, num_class=num_class)
+    train_lstm(time_split=3, time_resampling=0.1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=3, time_resampling=0.2, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=3, time_resampling=0.5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=3, time_resampling=1, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=3, time_resampling=3, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+    train_lstm(time_split=3, time_resampling=5, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
 
 
-    # ht_cnn(time_split=3, time_resampling=3, max_trials=20, epochs=epochs, batch_size=32, num_class=num_class)
-    # ht_lstm(time_split=3, time_resampling=3, max_trials=20, epochs=epochs, batch_size=32, num_class=num_class)
+    # ht_cnn(time_split=1, time_resampling=1, max_trials=20, epochs=epochs, batch_size=32, num_class=num_class)
+    #
+    # ht_lstm(time_split=1, time_resampling=1, max_trials=20, epochs=epochs, batch_size=64, num_class=num_class)

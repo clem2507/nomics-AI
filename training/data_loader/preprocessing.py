@@ -167,10 +167,12 @@ class Preprocessing:
 
         # create directory
         if self.num_class == 2:
-            os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}'):
+                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
             df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
         else:
-            os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}'):
+                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
             df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
 
         df_info_file.write('This file contains information about the content of the directory \n')
