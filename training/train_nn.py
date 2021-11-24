@@ -6,10 +6,12 @@ from learning_models.lstm_model import train_lstm
 from data_loader.preprocessing import create_dataframes
 
 
-def run(model, analysis_directory, time_split, time_resampling, epochs, num_class, baseline_model):
+def run(model, analysis_directory, time_split, time_resampling, epochs, num_class, baseline_model, data_balancing):
 
     time_split = float(time_split)
     time_resampling = float(time_resampling)
+
+    analysis_directory = os.path.dirname(os.path.abspath('util.py')) + '/' + analysis_directory
 
     print(analysis_directory)
     if os.path.exists(analysis_directory):
@@ -21,12 +23,12 @@ def run(model, analysis_directory, time_split, time_resampling, epochs, num_clas
         if num_class == 2:
             epochs = 5
         else:
-            epochs = 10
+            epochs = 50
 
     if model.lower() == 'lstm':
-        train_lstm(time_split=time_split, time_resampling=time_resampling, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+        train_lstm(time_split=time_split, time_resampling=time_resampling, epochs=epochs, num_class=num_class, baseline_model=baseline_model, data_balancing=data_balancing)
     elif model.lower == 'cnn':
-        train_cnn(time_split=time_split, time_resampling=time_resampling, epochs=epochs, num_class=num_class, baseline_model=baseline_model)
+        train_cnn(time_split=time_split, time_resampling=time_resampling, epochs=epochs, num_class=num_class, baseline_model=baseline_model, data_balancing=data_balancing)
     else:
         raise Exception('model architecture type does not exist, please choose between LSTM and CNN')
 
@@ -40,6 +42,7 @@ def parse_opt():
     parser.add_argument('--epochs', type=int, default=None, help='total number of epochs for training')
     parser.add_argument('--num_class', type=int, default=3, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
     parser.add_argument('--baseline_model', type=bool, default=False, help='neural networks hyperparameters, if false, basic model used, otherwise tuned model used')
+    parser.add_argument('--data_balancing', type=bool, default=True, help='dataset instances balancing, if false, no data balancing is performed among the different classes, otherwise balancing is applied')
     return parser.parse_args()
 
 
@@ -52,15 +55,15 @@ if __name__ == '__main__':
 
     # cnn
     # binomial
-    # python training/train_nn.py --model 'cnn' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2 --baseline_model False
+    # python training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2 --baseline_model False --data_balancing False
     # multinomial
-    # python training/train_nn.py --model 'cnn' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False
+    # python training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False --data_balancing False
 
     # lstm
     # binomial
-    # python training/train_nn.py --model 'lstm' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2 --baseline_model False
+    # python training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2 --baseline_model False --data_balancing False
     # multinomial
-    # python training/train_nn.py --model 'lstm' --analysis_directory '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/thesis_nomics/training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False
+    # python training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False --data_balancing False
 
     opt = parse_opt()
     main(p=opt)

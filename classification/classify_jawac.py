@@ -18,23 +18,23 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion
 
 
-def analysis_classification(edf, model, num_class):
+def analysis_classification(edf, model, num_class, out_graph):
     start = time.time()
 
     if num_class == 2:
         # time_split in minutes
         time_split = 1.0
         # time_resampling in seconds
-        time_resampling = 3.0
+        time_resampling = 1.0
         epochs = 5
-        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}/binomial/ht_tuning/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/balanced/{model.lower()}/binomial/ht_tuning/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
     else:
         # time_split in minutes
         time_split = 3.0
         # time_resampling in seconds
         time_resampling = 1.0
         epochs = 50
-        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}/multinomial/ht_tuning/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/balanced/{model.lower()}/multinomial/ht_tuning/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
 
     # edf file reading
     block_print()
@@ -121,71 +121,74 @@ def analysis_classification(edf, model, num_class):
 
     print('--------')
 
-    # graph
-    fig, ax = plt.subplots()
-    fig.set_size_inches(18.5, 10.5)
+    dictionary = {'percentage_signal_valid': round((valid_mean * 100), 2), 'percentage_signal_invalid': round((invalid_mean * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * time_split) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * time_split) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(valid_hours, valid_rate)}
 
-    # ax.plot(df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').index.tolist(), df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').data.tolist())
-    ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-    ax.axhline(y=0, color='r', linewidth=1)
-    if new_start is not None and new_end is not None:
-        ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
-        ax.axvline(x=new_end, color='k', linewidth=2, linestyle='--')
-    title = ''
-    for c in reversed(edf[:-4]):
-        if c != '/':
-            title += c
+    if out_graph:
+        # graph
+        fig, ax = plt.subplots()
+        fig.set_size_inches(18.5, 10.5)
+
+        # ax.plot(df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').index.tolist(), df_jawac.resample(str(graph_time_resampling)+'S').median()['data'].to_frame(name='data').data.tolist())
+        ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
+        ax.axhline(y=0, color='r', linewidth=1)
+        if new_start is not None and new_end is not None:
+            ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
+            ax.axvline(x=new_end, color='k', linewidth=2, linestyle='--')
+        title = ''
+        for c in reversed(edf[:-4]):
+            if c != '/':
+                title += c
+            else:
+                break
+        title = title[::-1]
+        ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid hours in bounds = {hours_conversion(valid_hours)} - Valid: {is_valid(valid_hours, valid_rate)}')
+        ax.grid()
+
+        curr_time = raw_data.__dict__['info']['meas_date']
+        for label in classes:
+            if label[0] == 0:
+                # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.3*label[1])
+                plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.25)
+            elif label[0] == 1:
+                # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.3*label[1])
+                plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.25)
+            elif label[0] == 2:
+                # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='b', alpha=0.3*label[1])
+                plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='b', alpha=0.25)
+            curr_time += datetime.timedelta(minutes=time_split)
+
+        if num_class == 2:
+            legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
+                               Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
+                               Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
         else:
-            break
-    title = title[::-1]
-    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid hours in bounds = {hours_conversion(valid_hours)} - Valid: {is_valid(valid_hours, valid_rate)}')
-    ax.grid()
+            legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
+                               Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
+                               Patch(facecolor='b', edgecolor='w', label='awake area', alpha=0.2),
+                               Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
 
-    curr_time = raw_data.__dict__['info']['meas_date']
-    for label in classes:
-        if label[0] == 0:
-            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.3*label[1])
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='r', alpha=0.25)
-        elif label[0] == 1:
-            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.3*label[1])
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='g', alpha=0.25)
-        elif label[0] == 2:
-            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='b', alpha=0.3*label[1])
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=time_split), facecolor='b', alpha=0.25)
-        curr_time += datetime.timedelta(minutes=time_split)
+        ax.legend(handles=legend_elements, loc='best')
 
-    if num_class == 2:
-        legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
-                           Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
-                           Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
-    else:
-        legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
-                           Patch(facecolor='g', edgecolor='w', label='valid area', alpha=0.2),
-                           Patch(facecolor='b', edgecolor='w', label='awake area', alpha=0.2),
-                           Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
+        dictionary['plot'] = plt
 
-    ax.legend(handles=legend_elements, loc='upper left')
+        # plt.savefig(os.path.dirname(os.path.abspath('util.py')) + '/valid_plt_out.png')
+        plt.show()
 
     end = time.time()
     print('classification execution time =', round((end - start_class), 2), 'sec')
     print('total execution time =', round((end - start), 2), 'sec')
     print('--------')
 
-    dictionary = {'percentage_signal_valid': round((valid_mean * 100), 2), 'percentage_signal_invalid': round((invalid_mean * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * time_split) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * time_split) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(valid_hours, valid_rate), 'plot': plt}
-
-    # plt.savefig(os.path.dirname(os.path.abspath('util.py')) + '/invalid_plt.png')
-    # plt.show()
 
     return dictionary
 
 
-def run(edf, model, num_class):
-    out_dic = analysis_classification(edf=edf, model=model, num_class=num_class)
+def run(edf, model, num_class, out_graph):
+    out_dic = analysis_classification(edf=edf, model=model, num_class=num_class, out_graph=out_graph)
     print('is analysis valid:', out_dic['is_valid'])
     print('--------')
     print(out_dic)
     print('--------')
-    out_dic['plot'].show()
 
 
 def parse_opt():
@@ -194,6 +197,7 @@ def parse_opt():
     parser.add_argument('--edf', type=str, default='', help='edf file path for time series extraction')
     parser.add_argument('--model', type=str, default='LSTM', help='deep training model architecture - either CNN or LSTM')
     parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
+    parser.add_argument('--out_graph', type=bool, default=False, help='true to show the output graph, false to skip it')
     return parser.parse_args()
 
 
@@ -205,18 +209,19 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     # invalid
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'CNN' --num_class 2
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'CNN' --num_class 2
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'CNN' --num_class 2
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'CNN' --num_class 2
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'CNN' --num_class 2
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 2 --out_graph True
     # valid
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'CNN' --num_class 3
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'CNN' --num_class 3
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'CNN' --num_class 3
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_02_23_16_07_121-SER-12-151(R1)_NL_50y/2019_01_02_23_16_07_121-SER-12-151(R1)_NL_50y.edf' --model 'CNN' --num_class 3 --out_graph True
     # TO CHECK
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'CNN' --num_class 3
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'CNN' --num_class 3
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'CNN' --num_class 3 --out_graph True
 
     opt = parse_opt()
     main(p=opt)

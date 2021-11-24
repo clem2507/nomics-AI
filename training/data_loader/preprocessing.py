@@ -19,14 +19,21 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 from util import extract_data_from_line, string_datetime_conversion, occurrences_counter, check_nan, block_print, enable_print
 
 
-def load_data(time_split, time_resampling, num_class):
+def load_data(time_split, time_resampling, num_class, data_balancing):
+
+    print('load data...')
+
+    if data_balancing:
+        is_balanced = 'balanced'
+    else:
+        is_balanced = 'unbalanced'
 
     if num_class == 2:
-        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/X.txt')
-        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{time_split}_resampling_{time_resampling}/y.txt')
+        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/binomial/split_{time_split}_resampling_{time_resampling}/X.txt')
+        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/binomial/split_{time_split}_resampling_{time_resampling}/y.txt')
     else:
-        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{time_split}_resampling_{time_resampling}/X.txt')
-        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{time_split}_resampling_{time_resampling}/y.txt')
+        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/multinomial/split_{time_split}_resampling_{time_resampling}/X.txt')
+        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/multinomial/split_{time_split}_resampling_{time_resampling}/y.txt')
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
@@ -96,16 +103,20 @@ def create_dataframes(directory):
 
 class Preprocessing:
 
-    def __init__(self, time_split, time_resampling, num_class):
+    def __init__(self, time_split, time_resampling, num_class, data_balancing):
         self.invalid_jawac_df_list = []
         self.invalid_mk3_df_list = []
         self.valid_jawac_df_list = []
         self.valid_mk3_df_list = []
         self.dataset_df = pd.DataFrame(columns=['data', 'label'])
-        # time_split and resampling time_resampling in minutes
         self.time_split = float(time_split)
         self.time_resampling = float(time_resampling)
         self.num_class = num_class
+        self.data_balancing = data_balancing
+        if self.data_balancing:
+            self.is_balanced = 'balanced'
+        else:
+            self.is_balanced = 'unbalanced'
 
     def split_dataframe(self):
         dir_names = sorted(os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/training/data/edf_dfs'))
@@ -167,13 +178,13 @@ class Preprocessing:
 
         # create directory
         if self.num_class == 2:
-            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}'):
-                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
-            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
+            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}'):
+                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
         else:
-            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}'):
-                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
-            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
+            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}'):
+                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}')
+            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'w')
 
         df_info_file.write('This file contains information about the content of the directory \n')
         df_info_file.write('--- \n')
@@ -208,12 +219,13 @@ class Preprocessing:
         print(f'{self.time_split} minutes signal time split')
         print(f'{self.time_resampling} minutes data resampling')
         print(f'{self.num_class} classes classification')
+        print(f'data balancing: {self.data_balancing}')
         print('-----')
         split_flag = False
         dir_path = f'split_{self.time_split}_resampling_{self.time_resampling}'
         if self.num_class == 2:
-            if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/training/data/samples/binomial'):
-                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+            if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial'):
+                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class, data_balancing=self.data_balancing)
                 # TODO uncomment after experiments
                 # self.split_dataframe()
                 # split_flag = True
@@ -221,8 +233,8 @@ class Preprocessing:
                 self.split_dataframe()
                 split_flag = True
         else:
-            if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/training/data/samples/multinomial'):
-                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class)
+            if dir_path in os.listdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial'):
+                X_train, y_train, X_test, y_test = load_data(time_split=self.time_split, time_resampling=self.time_resampling, num_class=self.num_class, data_balancing=self.data_balancing)
                 # TODO uncomment after experiments
                 # self.split_dataframe()
                 # split_flag = True
@@ -240,11 +252,11 @@ class Preprocessing:
             if self.num_class == 2:
                 x_values = ['Invalid', 'Valid']
                 y_values = [occ_counter[0], occ_counter[1]]
-                dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/occ_bar_plt.png'
+                dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}/occ_bar_plt.png'
             else:
                 x_values = ['Invalid', 'Valid', 'Awake']
                 y_values = [occ_counter[0], occ_counter[1], occ_counter[2]]
-                dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/occ_bar_plt.png'
+                dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/occ_bar_plt.png'
 
             plt.bar(x_values, y_values)
             plt.title('Classes occurrences before balancing')
@@ -255,11 +267,12 @@ class Preprocessing:
 
             print('before balancing dataset:', occurrences_counter(y))
 
-            oversample = SMOTE()
-            X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
+            if self.data_balancing:
+                oversample = SMOTE()
+                X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
 
-            if self.num_class == 2:
-                y = to_categorical(y)
+                if self.num_class == 2:
+                    y = to_categorical(y)
 
             print('after balancing dataset:', occurrences_counter(y))
 
@@ -267,19 +280,19 @@ class Preprocessing:
 
             # X and y variables saving
             if self.num_class == 2:
-                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
-                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
             else:
-                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
-                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/X.txt', X.reshape(X.shape[0], -1))
+                np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/y.txt', y)
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
             end_time = time.time()
             if self.num_class == 2:
-                df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'a')
+                df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'a')
             else:
-                df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'a')
+                df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.time_split}_resampling_{self.time_resampling}/info.txt', 'a')
             df_info_file.write(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min \n')
             df_info_file.write('---')
             df_info_file.close()

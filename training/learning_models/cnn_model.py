@@ -21,8 +21,8 @@ from preprocessing import Preprocessing
 from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
 
 
-def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_model):
-    X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling, num_class=num_class).create_dataset()
+def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_model, data_balancing):
+    X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling, num_class=num_class, data_balancing=data_balancing).create_dataset()
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, batch_size = 0.1, 1, 32
@@ -86,18 +86,23 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     else:
         model_param = 'ht_tuning'
 
+    if data_balancing:
+        is_balanced = 'balanced'
+    else:
+        is_balanced = 'unbalanced'
+
     # Save the model
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}')
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht')
-    cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}')
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht')
+    cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
     cm_plt.close()
     # TODO Change the file path to make it depend on the current time it has been created??
-    filepath = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
-    model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
+    filepath = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
+    model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {num_class} classes CNN model accuracy using a {time_split} minutes signal time split and {time_resampling} minutes median data resampling \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
@@ -112,7 +117,6 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     model_info_file.write(f'Validation f1 score history = {validation_f1_history} \n')
     model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
     model_info_file.write('--- \n')
-    # In fact, if we repeated this experiment over and over, each time drawing a new sample S, containing […] new examples, we would find that for approximately 95% of these experiments, the calculated interval would contain the true error. For this reason, we call this interval the 95% confidence interval estimate
     model_info_file.write(f'Radius of the CI = {interval} \n')
     model_info_file.write(f'True classification of the model is likely between {accuracy - interval} and {accuracy + interval} \n')
     model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
@@ -151,10 +155,10 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     axes[2].legend(loc='best')
     axes[2].grid()
 
-    figure.set_figheight(17)
-    figure.set_figwidth(12)
+    figure.set_figheight(10)
+    figure.set_figwidth(6)
     figure.tight_layout()
-    figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
+    figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
     plt.close(fig=figure)
 
     save_model(model, filepath)
@@ -164,7 +168,7 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     return accuracy
 
 
-def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batch_size, num_class):
+def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batch_size, num_class, data_balancing):
     def build_model(hp):
         n_timesteps, n_features, n_outputs = int(time_split * (60 / time_resampling)), 1, num_class
         model = Sequential()
@@ -188,7 +192,12 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
     else:
         model_type = 'multinomial'
 
-    LOG_DIR = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/ht_tuning/results/split_{time_split}_resampling_{time_resampling}'
+    if data_balancing:
+        is_balanced = 'balanced'
+    else:
+        is_balanced = 'unbalanced'
+
+    LOG_DIR = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/ht_tuning/results/split_{time_split}_resampling_{time_resampling}'
     X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling, num_class=num_class).create_dataset()
 
     tuner = RandomSearch(
@@ -208,7 +217,7 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         validation_data=(X_test, y_test)
     )
 
-    ht_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{model_type}/ht_tuning/results/split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
+    ht_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/ht_tuning/results/split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
     ht_info_file.write(f'This file contains information about the CNN hyperparameters tuning \n')
     ht_info_file.write('--- \n')
     ht_info_file.write(f'Splitting time in minutes = {time_split} \n')
@@ -225,10 +234,10 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
     print('successfully saved!')
 
 
-def train_cnn(time_split, time_resampling, epochs, num_class, baseline_model):
+def train_cnn(time_split, time_resampling, epochs, num_class, baseline_model, data_balancing):
     time_split = float(time_split)
     time_resampling = float(time_resampling)
-    score = evaluate_model(time_split, time_resampling, epochs, num_class, baseline_model)
+    score = evaluate_model(time_split, time_resampling, epochs, num_class, baseline_model, data_balancing)
     score = score * 100.0
     print('score:', score, '%')
     print('-----')
