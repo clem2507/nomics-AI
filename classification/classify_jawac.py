@@ -25,12 +25,12 @@ def analysis_classification(edf, model, num_class, out_graph):
         # time_split in minutes
         time_split = 1.0
         # time_resampling in seconds
-        time_resampling = 1.0
+        time_resampling = 3.0
         epochs = 5
         model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/balanced/{model.lower()}/binomial/ht_tuning/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
     else:
         # time_split in minutes
-        time_split = 3.0
+        time_split = 1.0
         # time_resampling in seconds
         time_resampling = 1.0
         epochs = 50
@@ -209,19 +209,21 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     # invalid
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 2 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 2 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 2 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 2 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y/2019_01_08_16_38_57_121-SER-14-369(R1)_FR_79y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y/2019_01_08_22_13_32_121-SER-15-407(R1)_FR_38y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y/2019_06_25_23_19_54_121-SER-17-575(R1)_FR_55y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y/2019_01_13_22_11_13_121-SER-14-346(R1)_FR_56y.edf' --model 'LSTM' --num_class 2 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_invalid_analysis/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y/2019_03_14_20_37_18_121-SER-15-420(R1)_FR_40y.edf' --model 'LSTM' --num_class 2 --out_graph True
     # valid
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'CNN' --num_class 3 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'CNN' --num_class 3 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'CNN' --num_class 3 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_02_23_16_07_121-SER-12-151(R1)_NL_50y/2019_01_02_23_16_07_121-SER-12-151(R1)_NL_50y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y/2019_01_07_18_19_45_121-SER-13-271(R1)_FR_58y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_31_23_56_20_121-SER-14-372(R2)_FR/2019_01_31_23_56_20_121-SER-14-372(R2)_FR.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y/2019_01_30_00_55_05_121-SER-16-495(R1)_FR_69y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_02_23_16_07_121-SER-12-151(R1)_NL_50y/2019_01_02_23_16_07_121-SER-12-151(R1)_NL_50y.edf' --model 'CNN' --num_class 3 --out_graph True
     # TO CHECK
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'CNN' --num_class 3 --out_graph True
-    # python classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_03_19_57_59_121-SER-16-463(R2)_NL/2019_01_03_19_57_59_121-SER-16-463(R2)_NL.edf' --model 'CNN' --num_class 3 --out_graph True
+    # python3 classification/classify_jawac.py --edf '/Users/clemdetry/Documents/UM/Third year/Nomics Thesis/data/all_valid_analysis/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y/2019_01_07_15_53_00_121-SER-10-130(R3)_FR_36y.edf' --model 'CNN' --num_class 3 --out_graph True
+    # analysis
+    # python3 classification/classify_jawac.py --edf 'training/data/analysis/2000_01_01_10_06_33_121-SER-14-323(R1)_FR_73y/2000_01_01_10_06_33_121-SER-14-323(R1)_FR_73y.edf' --model 'LSTM' --num_class 2 --out_graph True
 
     opt = parse_opt()
     main(p=opt)

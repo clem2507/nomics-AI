@@ -55,15 +55,15 @@ if __name__ == '__main__':
 
     # cnn
     # binomial
-    # python training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2 --baseline_model False --data_balancing False
-    # multinomial
-    # python training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False --data_balancing False
+    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --time_split 1 --time_resampling 3 --epochs 5 --num_class 2 --baseline_model False --data_balancing True
+    # multinomia
+    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --time_split 1 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False --data_balancing True
 
     # lstm
     # binomial
-    # python training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --time_split 2 --time_resampling 1 --epochs 5 --num_class 2 --baseline_model False --data_balancing False
+    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --time_split 1 --time_resampling 3 --epochs 5 --num_class 2 --baseline_model False --data_balancing True
     # multinomial
-    # python training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --time_split 3 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False --data_balancing False
+    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --time_split 1 --time_resampling 1 --epochs 30 --num_class 3 --baseline_model False --data_balancing True
 
     opt = parse_opt()
     main(p=opt)
