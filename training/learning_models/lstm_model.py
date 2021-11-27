@@ -21,8 +21,25 @@ from preprocessing import Preprocessing
 from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
 
 
-def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_model, data_balancing):
-    X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling, num_class=num_class, data_balancing=data_balancing).create_dataset()
+def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, baseline_model, data_balancing):
+    """
+    Method used to create and evaluate a LSTM model on data
+
+    Parameters:
+
+    -segmentation_value: window segmentation value in minute
+    -downsampling_value: signal downsampling value in second
+    -epochs: number of epochs to train the model
+    -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
+    -baseline_model: true if baseline architecture model is desired, false otherwise
+    -data_balancing: true if balanced data is needed, false otherwise
+
+    Returns:
+
+    -accuracy: model accuracy on the testing set
+    """
+
+    X_train, y_train, X_test, y_test = Preprocessing(segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing).create_dataset()
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     X_train, y_train = shuffle(X_train, y_train)
     model = Sequential()
@@ -37,15 +54,19 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     if num_class == 2:
         # sigmoid activation function better than softmax for binary classification
         model.add(Dense(n_outputs, activation='sigmoid'))
+        # binary crossentropy loss function better than categorical crossentropy for binary classification
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     else:
+        # softmax activation function better than sigmoid for multinomial classification
         model.add(Dense(n_outputs, activation='softmax'))
+        # categorical crossentropy loss function better than binary crossentropy for binary classification
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     print(model.summary())
     time_callback = TimingCallback()
     # fit network
     history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback])
 
+    # metrics history epochs after epochs
     training_accuracy_history = history.history['accuracy']
     training_f1_history = history.history['f1_m']
     training_loss_history = history.history['loss']
@@ -59,23 +80,25 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     predictions = model.predict(X_test)
     classes = np.argmax(predictions, axis=1)
 
-    int_y_test = []
+    int_y_test = []    # predicted label list
+    # loop that runs through the list of model predictions to keep the highest predicted probability values
     for item in y_test:
         int_y_test.append(np.argmax(item))
 
-    # for 95 % confidence interval
+    # 95 % confidence interval computation
     interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
     lower_bound, upper_bound = proportion_confint(num_of_correct_pred(y_true=int_y_test, y_pred=classes), len(classes), 0.05)
 
+    # confustion matrix np array creation based on the prediction made by the model on the test data
     cm = confusion_matrix(y_true=int_y_test, y_pred=classes)
 
     if num_class == 2:
-        names = ['Invalid', 'Valid']
-        cm_plt = plot_confusion_matrix(cm=cm, classes=names, title='Confusion Matrix')
-        model_type = 'binomial'
+        # confusion matrix plot
+        cm_plt = plot_confusion_matrix(cm=cm, classes=['Invalid', 'Valid'], title='Confusion Matrix')
+        model_type = 'binary'
     else:
-        names = ['Invalid', 'Valid', 'Awake']
-        cm_plt = plot_confusion_matrix(cm=cm, classes=names, title='Confusion Matrix')
+        # confusion matrix plot
+        cm_plt = plot_confusion_matrix(cm=cm, classes=['Invalid', 'Valid', 'Awake'], title='Confusion Matrix')
         model_type = 'multinomial'
 
     if baseline_model:
@@ -88,19 +111,18 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     else:
         is_balanced = 'unbalanced'
 
-    # Save the model
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}')
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs')
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/ht')
-    cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/cm_plt.png', bbox_inches='tight')
+    # directories creation
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}')
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs')
+    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/ht'):
+        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/ht')
+    cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/cm_plt.png', bbox_inches='tight')
     cm_plt.close()
-    # TODO Change the file path to make it depend on the current time it has been created??
-    filepath = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/saved_model'
-    model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/info.txt', 'w')
-    model_info_file.write(f'This file contains information about the {num_class} classes LSTM model accuracy using a {time_split} minutes signal time split and {time_resampling} minutes median data resampling \n')
+    filepath = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/saved_model'
+    model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/info.txt', 'w')
+    model_info_file.write(f'This file contains information about the {num_class} classes LSTM model accuracy using a {segmentation_value} minutes signal time split and {downsampling_value} minutes median data resampling \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
     model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
@@ -124,6 +146,7 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     model_info_file.write('--- \n')
     model_info_file.close()
 
+    # chart with the learning curves creation
     figure, axes = plt.subplots(nrows=3, ncols=1)
 
     x = list(range(1, epochs+1))
@@ -155,24 +178,43 @@ def evaluate_model(time_split, time_resampling, epochs, num_class, baseline_mode
     figure.set_figheight(10)
     figure.set_figwidth(6)
     figure.tight_layout()
-    figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{time_split}_resampling_{time_resampling}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
+    # plot save
+    figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
     plt.close(fig=figure)
 
+    # save of the model weights
     save_model(model, filepath)
 
     return accuracy
 
 
-def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batch_size, num_class, data_balancing):
+def hyperparameters_tuning(segmentation_value, downsampling_value, max_trials, epochs, batch_size, num_class, data_balancing):
+    """
+    Method used to launch the hyperparameters tuning of the LSTM model
+
+    Parameters:
+
+    -segmentation_value: window segmentation value in minute
+    -downsampling_value: signal downsampling value in second
+    -max_trials: number total of trials before outputting the best model
+    -epochs: number of epochs to train the model
+    -batch_size: number of instances from the training dataset used in the estimate of the error gradient
+    -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
+    -data_balancing: true if balanced data is needed, false otherwise
+
+    Returns:
+
+    -accuracy: model accuracy on the testing set
+    """
+
     def build_model(hp):
-        n_timesteps, n_features, n_outputs = int(time_split * (60 / time_resampling)), 1, num_class
+        n_timesteps, n_features, n_outputs = int(segmentation_value * (60 / downsampling_value)), 1, num_class
         model = Sequential()
         model.add(LSTM(hp.Int('input_units', min_value=32, max_value=544, step=64), input_shape=(n_timesteps, n_features)))
         model.add(Dropout(hp.Float('dropout_rate', min_value=0.1, max_value=0.5, step=0.1)))
         for i in range(hp.Int('n_layers', min_value=1, max_value=3, step=1)):
             model.add(Dense(hp.Int(f'dense_{i}_units', min_value=32, max_value=544, step=64), activation='relu'))
         if num_class == 2:
-            # sigmoid activation function better than softmax for binary classification
             model.add(Dense(n_outputs, activation='sigmoid'))
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
         else:
@@ -181,7 +223,7 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         return model
 
     if num_class == 2:
-        model_type = 'binomial'
+        model_type = 'binary'
     else:
         model_type = 'multinomial'
 
@@ -190,8 +232,8 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
     else:
         is_balanced = 'unbalanced'
 
-    LOG_DIR = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/ht_tuning/results/split_{time_split}_resampling_{time_resampling}'
-    X_train, y_train, X_test, y_test = Preprocessing(time_split=time_split, time_resampling=time_resampling, num_class=num_class).create_dataset()
+    LOG_DIR = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/ht_tuning/results/split_{segmentation_value}_resampling_{downsampling_value}'
+    X_train, y_train, X_test, y_test = Preprocessing(segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class).create_dataset()
 
     tuner = RandomSearch(
         build_model,
@@ -210,11 +252,11 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
         validation_data=(X_test, y_test)
     )
 
-    ht_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/ht_tuning/results/split_{time_split}_resampling_{time_resampling}/info.txt', 'w')
+    ht_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/ht_tuning/results/split_{segmentation_value}_resampling_{downsampling_value}/info.txt', 'w')
     ht_info_file.write(f'This file contains information about the LSTM hyperparameters tuning \n')
     ht_info_file.write('--- \n')
-    ht_info_file.write(f'Splitting time in minutes = {time_split} \n')
-    ht_info_file.write(f'Resampling time in seconds = {time_resampling} \n')
+    ht_info_file.write(f'Splitting time in minutes = {segmentation_value} \n')
+    ht_info_file.write(f'Resampling time in seconds = {downsampling_value} \n')
     ht_info_file.write('--- \n')
     ht_info_file.write(f'Num of epochs = {epochs} \n')
     ht_info_file.write(f'Batch size = {batch_size} \n')
@@ -227,10 +269,23 @@ def hyperparameters_tuning(time_split, time_resampling, max_trials, epochs, batc
     print('successfully saved!')
 
 
-def train_lstm(time_split, time_resampling, epochs, num_class, baseline_model, data_balancing):
-    time_split = float(time_split)
-    time_resampling = float(time_resampling)
-    score = evaluate_model(time_split, time_resampling, epochs, num_class, baseline_model, data_balancing)
+def train_lstm(segmentation_value, downsampling_value, epochs, num_class, baseline_model, data_balancing):
+    """
+    Callable method to start the training of the LSTM model
+
+    Parameters:
+
+    -segmentation_value: window segmentation value in minute
+    -downsampling_value: signal downsampling value in second
+    -epochs: number of epochs to train the model
+    -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
+    -baseline_model: true if baseline architecture model is desired, false otherwise
+    -data_balancing: true if balanced data is needed, false otherwise
+    """
+
+    segmentation_value = float(segmentation_value)
+    downsampling_value = float(downsampling_value)
+    score = evaluate_model(segmentation_value, downsampling_value, epochs, num_class, baseline_model, data_balancing)
     score = score * 100.0
     print('score:', score, '%')
     print('-----')

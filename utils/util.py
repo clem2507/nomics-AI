@@ -15,16 +15,41 @@ from keras.callbacks import Callback
 from datetime import datetime as dt
 
 
-def convert_string_to_time(start_time, start_date):
-    temp_list = list(start_time)
+def convert_string_to_time(time, date):
+    """
+    Method used to convert string time to time dtype
+
+    Parameters:
+
+    -time: input time to be converted
+    -date: input date to be converted
+
+    Returns:
+
+    -out_time: output time in correct format
+    """
+
+    temp_list = list(time)
     temp_list[len(temp_list) - 4] = '.'
-    start_time = ''.join(temp_list)
-    date_time = start_date + ' ' + start_time
+    out_time = ''.join(temp_list)
+    out_time = date + ' ' + out_time
     form = '%d.%m.%y %H:%M:%S.%f'
-    return dt.strptime(date_time, form)
+    return dt.strptime(out_time, form)
 
 
 def extract_data_from_line(line):
+    """
+    Method used to extract the essential information from a mk3 label line
+
+    Parameters:
+
+    -line: mk3 labelling line
+
+    Returns:
+
+    -out: list with the important information to keep from the line
+    """
+
     out = []
     temp = line.split(';')
     # start date and time
@@ -37,6 +62,20 @@ def extract_data_from_line(line):
 
 
 def string_datetime_conversion(times, start_time, start_date):
+    """
+    Function that converts a list of string times to a list of date time dtype
+
+    Parameters:
+
+    -times: list containing the time in string format
+    -start_time: start time of the first recorded data point
+    -start_date: start date of the first recorded data point
+
+    Returns:
+
+    -out: list with date time values
+    """
+
     out = []
     start_datetime = convert_string_to_time(start_time, start_date)
     for i in range(len(times)):
@@ -46,6 +85,19 @@ def string_datetime_conversion(times, start_time, start_date):
 
 
 def datetime_conversion(times, start):
+    """
+    Function that converts a list of string times to a list of date time dtype
+
+    Parameters:
+
+    -times: list containing the time in string format
+    -start: start date time of the first recorded data point
+
+    Returns:
+
+    -out: list with date time values
+    """
+
     out = []
     for i in range(len(times)):
         temp_time = start + datetime.timedelta(0, times[i])
@@ -54,19 +106,52 @@ def datetime_conversion(times, start):
 
 
 def hours_conversion(num_hours):
+    """
+    Method used to convert a number of hours to hours with minut format
+    ex: 1.8h -> 1h48min
+
+    Parameters:
+
+    -num_hours: total number of hours
+
+    Returns:
+
+    total number of hours with minutes
+    """
+
     frac, whole = math.modf(num_hours)
     return f'{str(int(whole))}h{str(int(frac * 60))}min'
 
 
 def block_print():
+    """
+    Function that stops print statement until enable_print() is called back
+    """
+
     sys.stdout = open(os.devnull, 'w')
 
 
 def enable_print():
+    """
+    Function that enables print statement again
+    """
+
     sys.stdout = sys.__stdout__
 
 
 def check_nan(values):
+    """
+    Method used to find nan values in dataframes series and delete these rows
+
+    Parameters:
+
+    -values: series with the time series data point
+
+    Returns:
+
+    -out: new series without nan values
+    """
+
     out = []
     for arr in values:
         if np.isnan(np.sum(arr)):
@@ -76,15 +161,23 @@ def check_nan(values):
     return pd.Series(out)
 
 
-def encoder(df):
-    for i in range(len(df['label'])):
-        if df.at[i, 'label'] == 'Out of Range':
-            df.at[i, 'label'] = 0
-        else:
-            df.at[i, 'label'] = 1
-
-
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
+    """
+    Confustion matrix plotter function
+
+    Parameters:
+
+    -cm: confusion matrix numpy array
+    -classes: classes names
+    -normalize: true if normalized values are desired inside the confusion matrix, otherwise false
+    -title: plot title
+    -cmap: color of the map
+
+    Returns:
+
+    -plt: plot containing the confusion matrix
+    """
+
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
@@ -113,6 +206,18 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
 
 
 def occurrences_counter(arr):
+    """
+    Function that counts the total number of different classes
+
+    Parameters:
+
+    -arr: array with classes values
+
+    Returns:
+
+    -out: dictionary with the classes occurence values
+    """
+
     out = {}
     for label in arr:
         idx = np.argmax(label)
@@ -123,14 +228,26 @@ def occurrences_counter(arr):
     return out
 
 
-def remove_outlier(df, threshold):
-    df['z_score'] = stats.zscore(df.data)
-    df.drop(df.loc[df['z_score'].abs() > threshold].index.tolist(), inplace=True)
-    df = df.drop(labels='z_score', axis=1)
-    return df
-
-
 def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold):
+    """
+    Method that computes new analysis bounds based on the different segmented windows label
+
+    Parameters:
+
+    -classes: analysis predicted classes
+    -analysis_start: analysis start time
+    -analysis_end: analysis end time
+    -time_step: segmentation time step in minutes
+    -threshold: minimum threshold validity of the signal before stopping the reduction of the bounds
+
+    Returns:
+
+    -valid_hours: total number of valid hours in the new selected bounds
+    -valid_rate: valid hours rate inside the new selected bounds
+    -new_start_time: time of the new starting bound
+    -new_end_time: time of the new ending bound
+    """
+
     classes_copy = copy(classes)
     analysis_start_copy = copy(analysis_start)
     analysis_end_copy = copy(analysis_end)
@@ -190,7 +307,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
 
     valid_count = 0
     for idx, row in classes_df.iterrows():
-        if row.label != 0:
+        if row.label == 1:
             valid_count += 1
     valid_hours = (valid_count * time_step) / 60
     if len(classes_df) > 0:
@@ -211,6 +328,19 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
 
 
 def recall_m(y_true, y_pred):
+    """
+    Method that computes the recall based on predicted and true labels
+
+    Parameters:
+
+    -y_true: true labels list of x instances
+    -y_pred: predicted labels list of x instances
+
+    Returns:
+
+    -recall: measurement of the recall
+    """
+
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
     recall = true_positives / (possible_positives + K.epsilon())
@@ -218,6 +348,19 @@ def recall_m(y_true, y_pred):
 
 
 def precision_m(y_true, y_pred):
+    """
+    Method that computes the precision based on predicted and true labels
+
+    Parameters:
+
+    -y_true: true labels list of x instances
+    -y_pred: predicted labels list of x instances
+
+    Returns:
+
+    -precision: measurement of the precision
+    """
+
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
     precision = true_positives / (predicted_positives + K.epsilon())
@@ -225,19 +368,38 @@ def precision_m(y_true, y_pred):
 
 
 def f1_m(y_true, y_pred):
+    """
+    Method that computes the f1 score based on predicted and true labels
+
+    Parameters:
+
+    -y_true: true labels list of x instances
+    -y_pred: predicted labels list of x instances
+
+    Returns:
+
+    -recall: measurement of the f1 score
+    """
+
     precision = precision_m(y_true, y_pred)
     recall = recall_m(y_true, y_pred)
     return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
 
-def binary_y_format_revert(y):
-    out = []
-    for arr in y:
-        out.append(np.argmax(arr))
-    return np.array(out)
-
-
 def num_of_correct_pred(y_true, y_pred):
+    """
+    Method that computes the total number of correct predictions made by the classifier
+
+    Parameters:
+
+    -y_true: true labels list of x instances
+    -y_pred: predicted labels list of x instances
+
+    Returns:
+
+    -count: the total count of correct predictions
+    """
+
     count = 0
     for i in range(len(y_pred)):
         if y_true[i] == y_pred[i]:
@@ -246,6 +408,23 @@ def num_of_correct_pred(y_true, y_pred):
 
 
 def is_valid(valid_hours, valid_rate):
+    """
+    Function that takes the decision about the validity of an analysis based on its total number of valid hours and rate
+    
+    If more than 6 hours of validity available, analysis is directy valid
+    If the validity time is between 4 and 6 hours, it must have at least 75% within the limits
+    If less than 4 hours, directly classified as invalid
+
+    Parameters:
+
+    -valid_hours: total number of valid hours
+    -valid_rate: total rate of valid hours
+
+    Returns:
+
+    True if the entire analysis is valid, false otherwise
+    """
+
     if valid_hours > 6:
         return True
     elif valid_hours > 4 and valid_rate > 0.75:
@@ -254,6 +433,10 @@ def is_valid(valid_hours, valid_rate):
 
 
 class TimingCallback(Callback):
+    """
+    Class used to save the training computation time after each epoch
+    """
+
     def __init__(self):
         super().__init__()
         self.start_time = None
