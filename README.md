@@ -2,6 +2,9 @@
 
 # Multinomial Classification Of Human Sleep Physiological Signal Data
 ### Maastricht University - BSc Thesis in Collaboration with Nomics Sleep & Care
+> September 2021 -> December 2021
+
+
 > Author: Clément Detry
 
 ## Introduction
@@ -61,7 +64,7 @@ The advantage of using the LSTM model is its ability to learn and remember the i
 
 ## Experiments, Results, Interpretations 
 
---> Please check these sections in the full version of the [paper](https://github.com/clem2507/thesis_nomics/files/7612428/clement_detry_paper_v2.pdf)
+-> Please check these sections in the full version of the [paper](https://github.com/clem2507/thesis_nomics/files/7612428/clement_detry_paper_v2.pdf)
 
 ## How to run the classification tool?
 
