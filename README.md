@@ -34,7 +34,7 @@ In order to have consistent input data for machine learning, it is advisable to 
   <img width="472" alt="Screenshot 2021-11-27 at 23 03 45" src="https://user-images.githubusercontent.com/43852207/143721891-3bf19bda-739b-4464-8955-c64444e37a60.png">
 </p>
 
-The entire implementation can be found inside the [preprocessing.py](https://github.com/clem2507/thesis_nomics/blob/main/training/data_loader/preprocessing.py) file. Now that the data is ready to be processed, the deep learning models can come into play.
+The entire implementation can be found inside the _preprocessing.py_ file. Now that the data is ready to be processed, the deep learning models can come into play.
 
 ### Convolutional Neural Network (CNN)
 
@@ -49,7 +49,7 @@ The first approach is to use the well-known CNN classification technique. In the
   <img src="https://user-images.githubusercontent.com/43852207/140625099-a3b752d7-290f-4f2c-9abb-baa92fc8834b.png" width="400" height="200">
 </p>
 
-The main pros of using the CNN for such a classification is its noise resistance as well as its ability to extract deep features independent from time. The CNN model is implemented using [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) sequential architecture inside the [cnn_model.py](https://github.com/clem2507/thesis_nomics/blob/main/training/learning_models/cnn_model.py) file. With the objective of achieving the best results, a version of the keras tuner is included to find the best hyperparameters after performing random search.
+The main pros of using the CNN for such a classification is its noise resistance as well as its ability to extract deep features independent from time. The CNN model is implemented using [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) sequential architecture inside the _cnn_model.py_ file. With the objective of achieving the best results, a version of the keras tuner is included to find the best hyperparameters after performing random search.
 
 ### Recurrent Neural Network (RNN)
 
@@ -60,7 +60,7 @@ RNN is the second deep learning approach used for this study. And more precisely
 </p>
 
 
-The advantage of using the LSTM model is its ability to learn and remember the information over long sequences of input data. It also does not require any domain expertise to manually engineer input features. In the same way as for the CNN, the architecture used for the LSTM comes from [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) inside the [lstm_model.py](https://github.com/clem2507/thesis_nomics/blob/main/training/learning_models/cnn_model.py) and is complemented with a optimization tuner.
+The advantage of using the LSTM model is its ability to learn and remember the information over long sequences of input data. It also does not require any domain expertise to manually engineer input features. In the same way as for the CNN, the architecture used for the LSTM comes from [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) inside the _lstm_model.py_ file and is complemented with a optimization tuner.
 
 ## Experiments, Results, Interpretations 
 
