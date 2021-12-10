@@ -1,8 +1,4 @@
 # custom directories
-data/
-data
-models/
-models
 .idea
 .idea/
 .DS_Store

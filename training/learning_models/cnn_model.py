@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import datetime
 import statistics
 import numpy as np
 import keras_tuner as kt
@@ -21,7 +23,7 @@ from preprocessing import Preprocessing
 from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
 
 
-def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, baseline_model, data_balancing):
+def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
     """
     Method used to create and evaluate a CNN model on data
 
@@ -31,7 +33,6 @@ def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, ba
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
     -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
-    -baseline_model: true if baseline architecture model is desired, false otherwise
     -data_balancing: true if balanced data is needed, false otherwise
 
     Returns:
@@ -39,22 +40,17 @@ def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, ba
     -accuracy: model accuracy on the testing set
     """
 
-    X_train, y_train, X_test, y_test = Preprocessing(segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing).create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset()
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, batch_size = 0.1, 1, 32
     model = Sequential()
-    if baseline_model:
-        model.add(Conv1D(filters=16, kernel_size=2, activation='relu', input_shape=(n_timesteps, n_features)))
-        model.add(MaxPooling1D(pool_size=2))
-        model.add(Flatten())
-    else:
-        model.add(Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(n_timesteps, n_features)))
-        model.add(Conv1D(filters=64, kernel_size=3, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(MaxPooling1D(pool_size=2))
-        model.add(Flatten())
-        model.add(Dense(100, activation='relu'))
+    model.add(Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(n_timesteps, n_features)))
+    model.add(Conv1D(filters=64, kernel_size=3, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(MaxPooling1D(pool_size=2))
+    model.add(Flatten())
+    model.add(Dense(100, activation='relu'))
     if num_class == 2:
         # sigmoid activation function better than softmax for binary classification
         model.add(Dense(n_outputs, activation='sigmoid'))
@@ -105,28 +101,22 @@ def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, ba
         cm_plt = plot_confusion_matrix(cm=cm, classes=['Invalid', 'Valid', 'Awake'], title='Confusion Matrix')
         model_type = 'multinomial'
 
-    if baseline_model:
-        model_param = 'baseline'
-    else:
-        model_param = 'ht_tuning'
-
     if data_balancing:
         is_balanced = 'balanced'
     else:
         is_balanced = 'unbalanced'
 
-    # directories creation
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}')
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs')
-    if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/ht'):
-        os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/ht')
-    cm_plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/cm_plt.png', bbox_inches="tight")
+    # directory creation
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/{log_time}'
+    os.mkdir(save_dir)
+    cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches="tight")
     cm_plt.close()
-    filepath = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/saved_model'
-    model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/info.txt', 'w')
+    model_info_file = open(f'{save_dir}/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {num_class} classes CNN model accuracy using a {segmentation_value} minutes signal time split and {downsampling_value} minutes median data resampling \n')
+    model_info_file.write(f'Signal resolution = {1/downsampling_value} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Is balanced = {is_balanced} \n')
+    model_info_file.write(f'Model type = {model_type} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
     model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
@@ -183,12 +173,12 @@ def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, ba
     figure.set_figwidth(6)
     figure.tight_layout()
     # plot save
-    figure.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/{model_param}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/metrics_plt.png', bbox_inches='tight')
+    figure.savefig(f'{save_dir}/metrics_plt.png', bbox_inches='tight')
 
     plt.close(fig=figure)
 
     # save of the model weights
-    save_model(model, filepath)
+    save_model(model, f'{save_dir}/saved_model')
 
     return accuracy
 
@@ -211,6 +201,7 @@ def hyperparameters_tuning(segmentation_value, downsampling_value, max_trials, e
 
     -accuracy: model accuracy on the testing set
     """
+
     def build_model(hp):
         n_timesteps, n_features, n_outputs = int(segmentation_value * (60 / downsampling_value)), 1, num_class
         model = Sequential()
@@ -238,14 +229,15 @@ def hyperparameters_tuning(segmentation_value, downsampling_value, max_trials, e
     else:
         is_balanced = 'unbalanced'
 
-    LOG_DIR = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/ht_tuning/results/split_{segmentation_value}_resampling_{downsampling_value}'
+    LOG_DIR = str(datetime.datetime.fromtimestamp(time.time()))
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/cnn/ht/{LOG_DIR}'
     X_train, y_train, X_test, y_test = Preprocessing(segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class).create_dataset()
 
     tuner = RandomSearch(
         build_model,
         objective=kt.Objective('val_accuracy', direction='max'),
         max_trials=max_trials,
-        directory=LOG_DIR,
+        directory=save_dir,
         overwrite=True,
         project_name='checkpoints'
     )
@@ -258,8 +250,11 @@ def hyperparameters_tuning(segmentation_value, downsampling_value, max_trials, e
         validation_data=(X_test, y_test)
     )
 
-    ht_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/cnn/{model_type}/ht_tuning/results/split_{segmentation_value}_resampling_{downsampling_value}/info.txt', 'w')
+    ht_info_file = open(save_dir, 'w')
     ht_info_file.write(f'This file contains information about the CNN hyperparameters tuning \n')
+    ht_info_file.write('--- \n')
+    ht_info_file.write(f'Model type = {model_type} \n')
+    ht_info_file.write(f'Is balanced = {is_balanced} \n')
     ht_info_file.write('--- \n')
     ht_info_file.write(f'Splitting time in minutes = {segmentation_value} \n')
     ht_info_file.write(f'Resampling time in seconds = {downsampling_value} \n')
@@ -275,7 +270,7 @@ def hyperparameters_tuning(segmentation_value, downsampling_value, max_trials, e
     print('successfully saved!')
 
 
-def train_cnn(segmentation_value, downsampling_value, epochs, num_class, baseline_model, data_balancing):
+def train_cnn(segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
     """
     Callable method to start the training of the CNN model
 
@@ -285,13 +280,12 @@ def train_cnn(segmentation_value, downsampling_value, epochs, num_class, baselin
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
     -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
-    -baseline_model: true if baseline architecture model is desired, false otherwise
     -data_balancing: true if balanced data is needed, false otherwise
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(segmentation_value, downsampling_value, epochs, num_class, baseline_model, data_balancing)
+    score = evaluate_model(segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time)
     score = score * 100.0
     print('score:', score, '%')
     print('-----')

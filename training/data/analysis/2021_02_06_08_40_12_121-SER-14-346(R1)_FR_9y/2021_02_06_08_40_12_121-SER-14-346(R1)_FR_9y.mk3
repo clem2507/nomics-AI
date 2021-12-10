@@ -1,0 +1,30 @@
+MK_FILE_REV_2
+ANJAW_REV=3.0.7
+IsReportUpToDate=No
+Comment=
+-
+08:40:12:000;06.02.21;08:40:12:000;06.02.21;Logiciel;ep;START
+14:55:36:900;06.02.21;14:55:36:900;06.02.21;Logiciel;ep;STOP
+08:40:12:000;06.02.21;08:41:16:900;06.02.21;Logiciel;zs;1;Out of Range
+08:57:53:500;06.02.21;09:00:32:700;06.02.21;Logiciel;zs;1;Out of Range
+09:04:49:299;06.02.21;09:17:26:400;06.02.21;Logiciel;zs;1;Out of Range
+09:29:03:400;06.02.21;10:32:51:899;06.02.21;Logiciel;zs;1;Out of Range
+10:36:21:399;06.02.21;10:58:52:500;06.02.21;Logiciel;zs;1;Out of Range
+11:08:56:200;06.02.21;13:41:11:400;06.02.21;Logiciel;zs;1;Out of Range
+13:45:29:200;06.02.21;14:53:46:400;06.02.21;Logiciel;zs;1;Out of Range
+09:21:48:000;06.02.21;09:21:53:000;06.02.21;Logiciel;zs;4;Out of Range
+11:51:44:000;06.02.21;11:53:50:000;06.02.21;Logiciel;zs;4;Out of Range
+14:28:00:000;06.02.21;14:31:37:000;06.02.21;Logiciel;zs;4;Out of Range
+08:41:12:000;06.02.21;08:43:42:000;06.02.21;RejectWake;ze;Zone d'exclusion
+09:00:32:799;06.02.21;09:04:49:299;06.02.21;RejectWake;ze;Zone d'exclusion
+09:17:26:500;06.02.21;09:29:03:400;06.02.21;RejectWake;ze;Zone d'exclusion
+10:32:52:000;06.02.21;10:36:21:399;06.02.21;RejectWake;ze;Zone d'exclusion
+10:58:52:600;06.02.21;11:08:56:200;06.02.21;RejectWake;ze;Zone d'exclusion
+13:41:11:500;06.02.21;13:45:29:200;06.02.21;RejectWake;ze;Zone d'exclusion
+08:40:12:000;06.02.21;08:41:11:899;06.02.21;Logiciel;ze;Zone d'exclusion
+08:57:53:500;06.02.21;09:00:32:700;06.02.21;Logiciel;ze;Zone d'exclusion
+09:04:49:299;06.02.21;09:17:26:400;06.02.21;Logiciel;ze;Zone d'exclusion
+09:29:03:400;06.02.21;10:32:51:899;06.02.21;Logiciel;ze;Zone d'exclusion
+10:36:21:399;06.02.21;10:58:52:500;06.02.21;Logiciel;ze;Zone d'exclusion
+11:08:56:200;06.02.21;13:41:11:400;06.02.21;Logiciel;ze;Zone d'exclusion
+13:45:29:200;06.02.21;14:53:46:400;06.02.21;Logiciel;ze;Zone d'exclusion

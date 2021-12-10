@@ -1,0 +1,340 @@
+Apios_Patient_Info_REV1
+FirstName=
+LastName=
+BirthDate=
+Gender=
+Weight=
+Height=
+PatientID=
+-CHAMPS|VALEURS-
+TF_PART_SPO2_VALID|<tr><td><small></small></td><td><small></small></td><td><small><!--TF_SPO2_EFF--></small></td><td style="<!--F_SpO2_EFCOL-->"><small><!--F_SpO2_EFF--></small></td></tr>
+TF_PART_SPO2_IDSEV|<tr><td style="width: 337px;"><small style="font-weight: bold;"><!--TF_SpO2_ODI--> <!--F_SpO2_ODI--></small><br><small><!--TF_THRESSPO2--></small></td><td style="width: 277px;"><div align="center"><!--F_Fig_S1_SPO2--></div></td></tr>
+TF_PART_SPO2_RES|<tr><td><small><!--TF_SpO2_ODI--></small></td><td colspan="2"><small><!--F_SpO2_ODI--></small></td></tr><tr><td><small><!--TF_SpO2_min--></small></td><td colspan="2"><small><!--F_SpO2_min--></small></td></tr><tr><td><small><!--TF_SpO2_mean--></small></td><td colspan="2"><small><!--F_SpO2_mean--></small></td></tr><tr><td><small><!--TF_SpO2_CT90--></small></td><td colspan="2"><small><!--F_SpO2_CT90--></small></td></tr><tr><td><small><!--TF_SpO2_CT80--></small></td><td colspan="2"><small><!--F_SpO2_CT80--></small></td></tr><tr><td><small><!--TF_SpO2_CT70--></small></td><td colspan="2"><small><!--F_SpO2_CT70--></small></td></tr><tr><td><small><!--TF_SpO2_CF--></small></td><td colspan="2"><small><!--F_SpO2_CF--></small></td></tr>
+TF_PART_SPO2_GRAPH|<tr><td><div align="center"><!--F_Fig_SpO2--></div></td></tr>
+TF_PART_BP_GRAPH|<tr><td><div align="center"><!--F_Fig_BodyPos--></div></td></tr>
+TF_Contact|Contactgegevens
+TF_Conclusions|Conclusies
+TF_ReportType|Somnolter
+TF_ReportPage1|Analyseverslag
+TF_ReportPage2|Analyse complémentaire avec estimation des µ-réveils
+TF_ReportPage3|Signaux
+TF_ReportPage4|Screenshot
+TF_ReportPage5|Rapport d'analyse sous pression positive
+TF_Page|Bladzijde
+TF_PatientInfo|Patiëntgegevens
+TF_IDPat|Patiënt ID:
+TF_RecordInfo|Registratiegegevens
+TF_Name|Naam:
+TF_FirstName|Voornaam:
+TF_Date|Datum registratie (dd/mm/jj):
+TF_Dur|Registratieduur (uu:mm:ss)
+TF_Sex|Geslacht:
+TF_Birth|Geboren op (dd/mm/jj):
+TF_Pds|Gewicht (kg):
+TF_Height|Lengte (cm):
+TF_BMI|BMI:
+TF_JAW_EFF|Validiteit Jawac signaal (%):
+TF_NAF_EFF|Validiteit nasale flow signaal (%):
+TF_SPO2_EFF|Validiteit oxymetrie signaal (%)
+TF_RIP_EFF|Validiteit Tho./Abd.signalen (%):
+TF_ECG_EFF|Validiteit ECG signalen (%):
+TF_Analysis|Analyse
+TF_Param|Parameters
+TF_DEF_A|Apneu
+TF_DEF_FLOWREDUC|flow reductie
+TF_DEF_DUR|duur
+TF_DEF_SEC|seconden
+TF_DEF_H|Hypopneu
+TF_DEF_H_D|met desaturatie
+TF_DEF_HWITHAR|of mini-ontwaken
+TF_DEF_R|inspanningsdrempel
+TF_DEF_S|Slaap
+TF_S_ALGO0|conservation of exclusion periods
+TF_S_ALGO1|ontwaken genegeerd
+TF_S_ALGO2|automatische detectie (positie)
+TF_S_ALGO3|automatische detectie (multi-signalen)
+TF_MultiAn|Analyse "Multi-signalen"
+TF_SpO2An|Analyse "Oxymetrie"
+TF_NAF_AHI|Apneu en hypopneu Index (AHI):
+TF_NAF_AHI2|Apneu en hypopneu Index (AHI):
+TF_JAW_TIT|Jawac Analyse
+TF_JAW_RDI|Respiratoire disturbance index (RDI):
+TF_JAW_RAI|Respiratoire ontwaakreflex index (a/u):
+TF_JAW_MAI|Slaapfragmentatie index (a/u):
+TF_JAW_OSC|Gemiddelde onderkaak oscillaties (mm):
+TF_JAW_CTEVE|Gecumuleerde tijd in respiratoire inspanning:
+TF_JAW_PTEVE|Tijdsproportie van respiratoire inspanning (%):
+TF_JAW_ABSMEAN|Gemiddelde onderkaakverlaging:
+TF_JAW_mmABSMEAN|Gemiddelde onderkaakverlaging (mm):
+TF_JAW_mmABSMEDIAN|Mediane onderkaakverlaging (mm):
+TF_SpO2_ODI|Zuurstof desaturatie index (ODI):
+TF_SpO2_ORI|Zuurstof resaturatie index (ORI):
+TF_SpO2_CT90|Cumulatieve tijd met SpO2 onder 90%:
+TF_SpO2_CT80|Cumulatieve tijd met SpO2 onder 80%:
+TF_SpO2_CT70|Cumulatieve tijd met SpO2 onder 70%:
+TF_SpO2_min|Minimumsaturatie (%):
+TF_SpO2_mean|Gemiddelde saturatie (%):
+TF_SpO2_CF|Gemiddelde hartslag (bpm):
+TF_TAT|Totale analysetijd (uu:mm:ss):
+TF_TST|Totale slaaptijd (uu:mm:ss):
+TF_EVENTSGRAPH|Events
+TF_EVENTS|Respiratoire Events
+TF_NUMBER|Aantal:
+TF_RATIO|Percentage (%):
+TF_INDEX|Index (a/u):
+TF_MEANDUR|Gemiddelde duur (s):
+TF_POSTURE|Houding
+TF_SU|Rug
+TF_LS|Links
+TF_RS|Rechts
+TF_PR|Buik
+TF_UP|Staand
+TF_BPDur|Duur (uu:mm:ss):
+TF_BPAHI|AHI:
+TF_BPODI|ODI:
+TF_GRAPHS|Grafieken
+TF_ANJAW_P1|Analyse uitgevoerd op
+TF_A|aan
+TF_MAKEREPORT_P1|Verslag uitgevoerd op
+TF_ReportBrizzy|Brizzy - Analyseverslag
+TF_SeverityIndex|Indicatoren van de ernst
+TF_THRES|Drempel (a/u):
+TF_THRESAHI|Drempel (a/u):
+TF_THRESArI|Drempel (a/u):
+TF_THRESCTEVE|Drempel (uu:mm:ss):
+TF_THRESPTEVE|Drempel (%):
+TF_THRESABSMEAN|Drempel (mm):
+TF_THRESSPO2|Drempel (a/u):
+TF_THRESRDI|Drempel (a/u):
+TF_AnBrizzy|Analyse
+TF_NbrTotJAWApn|Totaal aantal events:
+TF_NbrJAWOA|Aantal obstructieve events (OE):
+TF_NbrJAWCA|Aantal centrale events (CE):
+TF_NbrJAWMA|Aantal mixed events (ME):
+TF_DurBack|Slaaptijd in rugligging (uu:mm:ss):
+TF_AHIBack|AHI in rugligging (a/u):
+TF_RDIBack|RDI in rugligging (a/u):
+TF_ADULT|volwassene
+TF_CHILD|kind
+TF_HIST_OSC_Title|Verdeling van de amplitude van de onderkaak oscillaties (mm):
+TF_HIST_JAW_Title|Verdeling van de onderkaakverlaging (mm):
+TF_AddReportECG|Brizzy - ECH shot verslag
+TF_GRAPH_SHOTECG|ECG shots (24h)
+TF_GRAPH_EVTECG|Grafieken
+TF_ECGAn|ECG Analyse
+TF_HR_mean|Gemiddeld hartritme (bpm)
+TF_RR_mean|Gemiddeld RR-interval (s)
+TF_RR_pNN50|pNN50 (%):
+TF_RR_SD1|SD1 (t.o.v. de voornaamste as) (ms):
+TF_RR_SD2|SD2 (t.o.v. de rechte as) (ms):
+TF_RR_TP|Totale RR Power (s²)
+TF_RR_pVLF|Percentage VLF energie [0.01-0.04]Hz (%):
+TF_RR_pLF|Percentage LF energie [0.04-0.15]Hz (%):
+TF_RR_pHF|Percentage HF energie [0.15-0.4]Hz (%):
+TF_RR_ratioLFHF|Ratio LF/HF
+TF_OA|OA
+TF_HYP|Hyp + desat.
+TF_MA|MA
+TF_CA|CA
+TF_RERA|RERA
+TF_DESAT|Desat
+TF_HYPA|Hyp + AR
+TF_OApnea|Apneu obstructieve
+TF_Hypopnea|Hypopneu + desat.
+TF_MApnea|Apneu mixed
+TF_CApnea|Apneu (Hyp) centrale
+TF_JAW_AHI_D_A|Indice d'apnées et d'hypopnées:
+TF_COM_JAW_AHI_D_A|Nombre d'apnées, Hypopnées désaturantes, Hypopnées avec micro-réveils /h
+TF_COM_NAF_AHI|Nombre d'apnées, Hypopnées désaturantes /h
+TF_COM_JAW_RDI|Nombre d'apnées, Hypopnées désaturantes, Hypopnées avec micro-réveils  et RERAs /h
+TF_Total|Totaal
+TF_Fig_AASM2012|Sévérité du syndrome (AASM2012)
+TF_COM_Fig_AASM2012|Contribution des évènements
+TF_ISnoring|Indice de ronflement (%):
+TF_CPAP_P_MED|Pression médiane (mBar):
+TF_CPAP_P_RDI|Pression efficace pour supprimer 90% des évènements (mBar):
+TF_CPAP_P_IAH|Pression efficace pour supprimer 90% de l'effort ventilatoire (mBar):
+TF_CPAP_VAL_P|Validité du signal de pression (%):
+TF_CPAP_P_MAX|Pression max (mBar):
+F_Name|
+F_FirstName|
+F_Sex|
+F_Birth|
+F_Code|
+F_Date|07/01/19
+F_Dur|07:43:49
+F_Pds|
+F_Height|
+F_BMI|
+F_Comment|
+F_NAF_EFF|
+SF_NAF_EFCOL|
+F_JAW_EFF|100
+SF_JAW_EFCOL|
+F_SpO2_EFF|100
+SF_SpO2_EFCOL|
+F_THO_EFF|
+SF_THO_EFCOL|
+F_ABD_EFF|
+SF_ABD_EFCOL|
+F_ECG_EFF|
+SF_ECG_EFCOL|
+F_NAF_AHI|46.8
+F_JAW_AHI_D_A|46.8
+F_SpO2_ODI|27.3
+SF_SpO2_colODI|color: rgb(246,65,17);
+F_SpO2_ORI|0
+F_SpO2_CT90|00:38:34
+F_SpO2_CT80|00:00:00
+F_SpO2_CT70|00:00:00
+F_SpO2_PT90|8.6
+F_SpO2_PT80|0
+F_SpO2_PT70|0
+F_SpO2_mean|91.8
+F_SpO2_min|83
+F_SpO2_CF|98
+F_JAW_RDI|46.8
+SF_JAW_colRDI|color: rgb(246,65,17);
+F_JAW_RAI|24.1
+F_JAW_MAI|25.9
+SF_JAW_colMAI|color: rgb(246,65,17);
+F_JAW_OSC|1.08
+F_JAW_CTEVE|05:39:03
+F_JAW_PTEVE|75.8
+SF_JAW_colPTEVE|color: rgb(246,65,17);
+F_JAW_ABSMEAN|-14
+F_JAW_RELMEAN|-13.4
+F_JAW_ABSMEDIAN|-14
+F_JAW_AUCLOW|9.46
+F_JAW_AUCOSC|5.87
+F_DurRight|03:24:19
+F_DurLeft|02:09:00
+F_DurVenter|00:00:00
+F_DurBack|01:54:11
+F_DurUpright|00:00:00
+F_AHIRight|47
+F_AHILeft|49.8
+F_AHIVenter|
+F_AHIBack|43.1
+F_RDIBack|43.1
+SF_colRDIBack|
+F_AHIUpright|
+F_ODIRight|25.8
+F_ODILeft|28.8
+F_ODIVenter|
+F_ODIBack|27.8
+F_ODIUpright|
+F_IANAF|
+F_IHNAF|
+F_DMNAF|
+F_RecTime|07:43:49
+F_TST|07:27:30
+F_TAT|07:43:48
+F_NbrNAFApn|336
+F_DMNAFApn|37.7
+F_NbrNAFHyp|0
+F_DMNAFHyp|0
+F_ISnoring|
+F_NbrTotNAFApn|
+F_DMTotNAFApn|
+F_NbrSpO2Des|203
+F_DMSpO2Des|37.8
+F_NbrSpO2Res|0
+F_DMSpO2Res|0
+F_NbrJAWAVE|0
+F_RatioJAWAVE|0
+F_DMJAWAVE|0
+F_IJAWAVE|0
+F_NbrJAWOA|336
+F_RatioJAWOA|97
+SF_RatioJAWOA_EFCOL|
+F_DMJAWOA|37.7
+F_IJAWOA|45
+F_NbrJAWCA|1
+F_NbrHypC|0
+F_RatioJAWCA|0
+SF_RatioJAWCA_EFCOL|
+F_DMJAWCA|32
+F_IJAWCA|0.1
+F_IHypC|0
+F_NbrJAWMA|12
+F_RatioJAWMA|3
+SF_RatioJAWMA_EFCOL|
+F_DMJAWMA|41.8
+F_IJAWMA|1.6
+F_NbrJAWHyp|0
+F_RatioJAWHyp|0
+F_DMJAWHyp|0
+F_IJAWHyp|0
+F_NbrJAWHypA|0
+F_DMJAWHypA|0
+F_IJAWHypA|0
+F_NbrTotJAWApn|349
+F_RatioJAWApn|100
+F_DMTotJAWApn|
+F_NbrAH|349
+F_HR_mean|
+F_RR_mean|
+F_RR_pNN50|
+F_RR_SD1|
+F_RR_SD2|
+F_RR_TP|
+F_RR_pVLF|
+F_RR_pLF|
+F_RR_pHF|
+F_RR_ratioLFHF|
+F_CPAP_VAL_P|
+F_CPAP_P_MED|
+F_CPAP_P_MAX|
+F_CPAP_P_IAH|
+F_CPAP_P_RDI|
+TF_ANJAW|Analyse uitgevoerd op 08/01/19 aan 11:34:17 -- ANJAW v2.9.4
+F_ANJAWDateStr|08/01/19
+F_ANJAWTimeStr|11:34:17
+F_ANJAWVerStr|2.9.4
+TF_MAKEREPORT|Verslag uitgevoerd op 08/01/19 aan 11:34:18 -- MakeReport v3.5.0
+F_TheDate|08/01/19
+F_TheTime|11:34:18
+F_vMakeReport|3.5.0
+F_DefA|Apneu: flow reductie >= 90%, duur [10-90] seconden
+F_DefH|Hypopneu: 90% > flow reductie >= 30%, duur [10-90] seconden, met desaturatie >= 3% of mini-ontwaken
+F_DefEVE|RE: inspanningsdrempel = 0.3 mm, duur >= 60 seconden
+F_AutoSleep|Slaap: automatische detectie (multi-signalen)
+F_AnType|(volwassene)
+F_THRESArI|20
+F_THRESRDI|15
+F_THRESPTEVE|30
+F_THRESODI|15
+PB_AHI|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="red">> 30</td>
+PB_ODI|<td class="gray">5 - 15</td><td class="yellow">15 - 30</td><td class="gray">> 30</td>
+PB_AHI_D_A|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="red">> 30</td>
+PB_RDI|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="red">> 30</td>
+F_Fig_SpO2|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_SpO2.jpg
+F_Fig_HeartRate|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_HR.jpg
+F_Fig_Jawac|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Jawac.jpg
+F_Fig_NAF|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_BodyPos|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_BodyPosition.jpg
+F_Fig_ColorFig|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_ColorFig.jpg
+F_Fig_MK|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Marquage.jpg
+F_Fig_RDIBack|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_IAHBack|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_ArI|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_APP|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_HistJAW|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Histo.jpg
+F_Fig_HistOscJAW|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_HistoOsc.jpg
+F_Fig_Triangl|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Triangl.jpg
+F_Fig_MandMov|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_NAFVibr|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_HRV|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_AASM2012|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_DistriPress|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_DistriRDI|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_DistriIAH|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_DistriEfR|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_Pression|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_S1_RDI|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_S1_RDI.jpg
+F_Fig_S1_DIS|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_S1_DIS.jpg
+F_Fig_S1_TEV|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_S1_PTEV|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_S1_PTEV.jpg
+F_Fig_S1_ABM|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_Empty.jpg
+F_Fig_S1_SPO2|.\figures\2019_01_07_20_04_24_121-SER-12-150(R1)_NL_S1_SPO2.jpg

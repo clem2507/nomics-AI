@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CFG_FILE_REV_4 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <DELIMAH>1</DELIMAH>
+  <CLASSAH>1</CLASSAH>
+  <EV_SOM>4</EV_SOM>
+  <DURMIN>10</DURMIN>
+  <DURMINRE>60</DURMINRE>
+  <DURMAX>120</DURMAX>
+  <REDUCA>90</REDUCA>
+  <REDUCH>30</REDUCH>
+  <REDUCF>50</REDUCF>
+  <HYPMMS>1</HYPMMS>
+  <HYP50>0</HYP50>
+  <DESVAL>3</DESVAL>
+  <HWITHA>1</HWITHA>
+  <SNORE_LEVEL>15</SNORE_LEVEL>
+  <SNORE_NORM>0</SNORE_NORM>
+  <SNORE_SRC>2</SNORE_SRC>
+  <EFFORT>0.3</EFFORT>
+  <LK_LEVEL>5</LK_LEVEL>
+</CFG_FILE_REV_4>

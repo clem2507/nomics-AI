@@ -153,7 +153,7 @@ class Preprocessing:
     -data_balancing: true is balanced data is needed, false otherwise
     """
 
-    def __init__(self, segmentation_value, downsampling_value, num_class, data_balancing):
+    def __init__(self, segmentation_value, downsampling_value, num_class, data_balancing, log_time):
         self.invalid_jawac_df_list = []
         self.invalid_mk3_df_list = []
         self.valid_jawac_df_list = []
@@ -163,6 +163,7 @@ class Preprocessing:
         self.downsampling_value = float(downsampling_value)
         self.num_class = num_class
         self.data_balancing = data_balancing
+        self.log_time = log_time
         if self.data_balancing:
             self.is_balanced = 'balanced'
         else:
@@ -234,23 +235,14 @@ class Preprocessing:
 
         print('-----')
 
-        if self.num_class == 2:
-            # create directory
-            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}'):
-                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}')
-            # create information file that contains information about the dataframe
-            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}/info.txt', 'w')
-        else:
-            # create directory
-            if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}'):
-                os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}')
-            # create information file that contains information about the dataframe
-            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}/info.txt', 'w')
-
+        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/lstm/{self.log_time}'
+        os.mkdir(save_dir)
+        df_info_file = open(f'{save_dir}/info.txt', 'w')
         df_info_file.write('This file contains information about the content of the directory \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'Splitting time in minutes = {self.segmentation_value} \n')
         df_info_file.write(f'Resampling time in seconds = {self.downsampling_value} \n')
+        df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
         df_info_file.write(f'Sample size = {max_length} \n')
         df_info_file.write(f'Num of samples in total = {len(self.dataset_df)} \n')
         if 0 in self.dataset_df.label.value_counts().keys():
@@ -303,21 +295,22 @@ class Preprocessing:
 
         occ_counter = occurrences_counter(y)    # classes occurences counter in the y list
 
+        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.log_time}'
+        os.mkdir(save_dir)
+
         if self.num_class == 2:
             x_values = ['Invalid', 'Valid']
             y_values = [occ_counter[0], occ_counter[1]]
-            dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}/occ_bar_plt.png'
         else:
             x_values = ['Invalid', 'Valid', 'Awake']
             y_values = [occ_counter[0], occ_counter[1], occ_counter[2]]
-            dir_path = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}/occ_bar_plt.png'
 
         # bar plot with classes occurrences
         plt.bar(x_values, y_values)
         plt.title('Classes occurrences before balancing')
         plt.xlabel('classes')
         plt.ylabel('count')
-        plt.savefig(dir_path)
+        plt.savefig(f'{save_dir}/occ_bar_plt.png')
         plt.close()
 
         print('before balancing dataset:', occurrences_counter(y))
@@ -330,27 +323,31 @@ class Preprocessing:
             if self.num_class == 2:
                 y = to_categorical(y)
 
-        print('after balancing dataset:', occurrences_counter(y))
+            print('after balancing dataset:', occurrences_counter(y))
 
         # X numpy array resampling to fit model training
         X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
         # X and y variables saving
-        if self.num_class == 2:
-            np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}/X.txt', X.reshape(X.shape[0], -1))
-            np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}/y.txt', y)
-        else:
-            np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}/X.txt', X.reshape(X.shape[0], -1))
-            np.savetxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}/y.txt', y)
+        # np.savetxt(f'{save_dir}/X.txt', X.reshape(X.shape[0], -1))
+        # np.savetxt(f'{save_dir}/y.txt', y)
 
         # splitting the data into testing and training sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
-        if self.num_class == 2:
-            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/binary/split_{self.segmentation_value}_resampling_{self.downsampling_value}/info.txt', 'a')
-        else:
-            df_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.is_balanced}/multinomial/split_{self.segmentation_value}_resampling_{self.downsampling_value}/info.txt', 'a')
+
+        df_info_file = open(f'{save_dir}/info.txt', 'a')
+        df_info_file.write(f'Is balanced = {self.is_balanced} \n')
+        df_info_file.write(f'Segmentation value = {self.segmentation_value} \n')
+        df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')
+        df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
+        df_info_file.write('--- \n')
+        df_info_file.write(f'X train shape = {X_train.shape} \n')
+        df_info_file.write(f'X test shape = {X_test.shape} \n')
+        df_info_file.write(f'y train shape = {y_train.shape} \n')
+        df_info_file.write(f'y test shape = {y_test.shape} \n')
+        df_info_file.write('--- \n')
         df_info_file.write(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min \n')
         df_info_file.write('---')
         df_info_file.close()

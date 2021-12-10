@@ -1,0 +1,602 @@
+Apios_Patient_Info_REV3
+Children=0
+FirstName=
+LastName=
+BirthDate=
+Gender=
+Weight=0
+Height=0
+PatientID=
+EXAM_TYPE=DIAG
+OrthMaker=
+OrthModel=
+OrthAdvance=0
+CpapMaker=
+CpapModel=
+MaskType=
+MaskMaker=
+MaskModel=
+MaskLeaks=
+LK_LEVEL=0
+REPORT_EXCLUSIONS=<page-ital>
+-CHAMPS|VALEURS-
+TF_Contact|Contact Information
+TF_Conclusions|Conclusions
+TF_ReportType|Somnolter
+TF_ReportPage1|Analysis Report
+TF_ReportPage2|Signals
+TF_ReportPage3|Analysis complement
+TF_ReportPage4|Analysis under positive air pressure
+TF_ReportPage5|Leaks signals
+TF_ReportPage6|Leaks analysis
+TF_ReportPage7|Mandible behaviour and effort
+TF_ReportPage8|Hourly Indices (Bedtime)
+TF_ReportPage9|NIV
+TF_ReportPage10|Screenshots
+TF_ReportPageNext|(next)
+TF_Page|Page
+TF_VTitle_Id|id
+TF_VTitle_Patient|patient
+TF_VTitle_Exam|record
+TF_VTitle_Severity|severity
+TF_VTitle_Oximetry|oximetry
+TF_VTitle_Events|events
+TF_VTitle_Position|position
+TF_VTitle_Sensors|sensors
+TF_VTitle_Indices|indexes
+TF_VTitle_Others|others
+TF_VTitle_Measures|measures
+TF_VTitle_Infos|infos
+TF_VTitle_Hyp|hypotheses
+TF_VTitle_IAH|ahi
+TF_VTitle_Jawac|jawac
+TF_VTitle_Obstructions|obstructions
+TF_VTitle_Asynchronism|asynchronisms
+TF_VTitle_Pressure|pressure
+TF_VTitle_Leak|leaks
+TF_Units_HMS|hh:mm:ss
+TF_PatientInfo|Patient
+TF_IDPat|Patient ID:
+TF_RecordInfo|Record
+TF_Name|Name:
+TF_FirstName|First name:
+TF_Date_short|Date:
+TF_Dur_short|Duration:
+TF_Date|Recording date [dd/mm/yy]:
+TF_Dur|Recording duration [hh:mm:ss]:
+TF_Sex|Gender:
+TF_Birth|Birthdate [dd/mm/yy]:
+TF_Weight|Weight [kg]:
+TF_Height|Height [cm]:
+TF_BMI|BMI:
+TF_Sensor_JAW|JAWAC (mandibular movements)
+TF_Sensor_CAN|Nasal cannula
+TF_Sensor_PNM|Pneumotachograph
+TF_Sensor_RIP|Inductive chest and abdomen belts
+TF_Sensor_BP|Body position
+TF_Sensor_SPO2|Pulse oximetry
+TF_CpapMaker|CPAP brand
+TF_CpapModel|CPAP model
+TF_CpapType|CPAP type
+TF_CpapType_FIXE|Constant pressure
+TF_CpapType_AUTO|Automated
+TF_CpapType_VNI|NIV
+TF_CpapType_AUTRE|Unknown
+TF_MaskType|Mask type
+TF_MaskModel|Mask model
+TF_OrthMaker|Orthosis brand
+TF_OrthModel|Orthosis model
+TF_OrthAdvance|Orthosis advance [mm]
+TF_Sensor_FC|Cardiac pulse (derived from the oximeter)
+TF_JAW_EFF|Useful Jawac signal [%]:
+TF_NAF_EFF|Useful nasal flow signal [%]:
+TF_SPO2_EFF|Useful SpO2 signal [%]:
+TF_RIP_EFF|Useful Tho./Abd. signals [%]:
+TF_ECG_EFF|Useful ECG signal [%]:
+TF_Analysis|Type of analysis:
+TF_Param|Parameters
+TF_DEF_A|Apnea
+TF_DEF_FLOWREDUC|airflow reduction
+TF_DEF_DUR|duration
+TF_DEF_SEC|seconds
+TF_DEF_H|Hypopnea
+TF_DEF_H_D|with desaturation
+TF_DEF_HWITHAR|or autonomic arousal
+TF_DEF_R|Effort threshold [mm]
+TF_DEF_S|Sleep
+TF_S_ALGO0|conservation of exclusion periods
+TF_S_ALGO1|awakening ignored
+TF_S_ALGO2|automatic detection (position)
+TF_S_ALGO3|automatic detection (Multi-signals)
+TF_S_ALGO4|automatic detection (Jawac)
+TF_MultiAn|Multi-signal analysis
+TF_SpO2An|Oximetry analysis
+TF_NAF_AHI|Apnea and hypopnea index (AHI) [n/h]:
+TF_NAF_AHI2|Mesured apnea and hypopnea index:
+TF_JAW_TIT|Jawac analysis
+TF_JAW_RDI|Estimated respiratory disturbance index (RDI) [n/h]:
+TF_JAW_RAI|Estimated respiratory arousal index [n/h]:
+TF_COM_JAW_RAI|Ventilatory origin
+TF_JAW_MAI|Estimated respiratory arousal index [n/h]:
+TF_JAW_OSC|Average of mandible oscillations [mm]:
+TF_JAW_CTEVE_HMS|Respiratory effort
+TF_JAW_PTEVE|Respiratory effort [%]
+TF_COM_PTEVE|Obstructive markings (OA, MA, Hyp_d, Hyp_j, Hyp_50, RERA, RE)
+TF_JAW_ABSMEAN|Mean mandibular lowering [mm]
+TF_JAW_ABSMEDIAN|Median mandibular lowering [mm]
+TF_JAW_ABSMAX|Maximum mandibular lowering [mm]
+TF_SpO2_ODI|Oxygen desaturation index (ODI) [n/h]:
+TF_SpO2_ORI|Oxygen resaturation index (ORI):
+TF_SpO2_CT90|Cumulative time with SpO2&lt;90%:
+TF_SpO2_CT80|Cumulative time with SpO2&lt;80%:
+TF_SpO2_CT70|Cumulative time with SpO2&lt;70%:
+TF_SpO2_min|Minimum saturation [%]:
+TF_SpO2_mean|Mean saturation [%]:
+TF_SpO2_CF|Mean pulse rate [bpm]:
+TF_TAT|Total analysis time [hh:mm:ss]:
+TF_TST|Total sleep time [hh:mm:ss]:
+TF_COM_TST|sleep time
+TF_TALH|Time spent in bed [hh:mm:ss]:
+TF_COM_TAL|time in bed
+TF_TAL|Time in bed [minutes]:
+TF_EVENTSGRAPH|Events
+TF_EVENTS|Respiratory Events
+TF_NUMBER|Number:
+TF_RATIO|Ratio [%]:
+TF_INDEX|Index [n/h]:
+TF_MEANDUR|Mean duration [s]:
+TF_MAXDUR|Longest apnea [s]
+TF_TOTDUR|Total Apnea duration [min]
+TF_DUR_MIN|Duration [min]
+TF_POSTURE|Posture
+TF_SU|Supine
+TF_NSU|Not Sup.
+TF_LS|Left
+TF_RS|Right
+TF_PR|Prone
+TF_UP|Standing
+TF_BPDur|Duration [hh:mm:ss]
+TF_BPAHI|AHI [n/h]
+TF_BPODI|ODI [n/h]
+TF_GRAPHS|Graphs
+TF_ANJAW_P1|Analysis conducted on
+TF_A| at 
+TF_H|h
+TF_Minute|-?-
+TF_MAKEREPORT_P1|Report generated on
+TF_ReportBrizzy|Brizzy - Analysis Report
+TF_SeverityIndex|Indicators of Severity
+TF_Info1|On average 5% difference when comparing the sleep time analysis by Jawac and conventional analysis under PSG, in Respirology 2016.
+TF_Info2|The variations in amplitude of the Jawac signal are proportional to the variations in sleep respiratory effort in healthy and apneic subjects, in Frontiers in Neurology 2017.
+TF_Info3|The probability of obtaining a positive diagnosis in PSG (RDI&gt;= 15/h) is 94.2% when the respiratory fragmentation index is &gt;= 13.5, in Respirology 2016.
+TF_MEDIAN|Median
+TF_MEAN|Average
+TF_95eC|at 95th percentile
+TF_MAX|Maximal
+TF_THRES|Threshold [n/h]: 
+TF_THRESAHI|Threshold [n/h]: 
+TF_THRESArI|Threshold [n/h]: 
+TF_THRESCTEVE|Threshold [hh:mm:ss]: 
+TF_THRESPTEVE|Threshold [%]: 
+TF_THRESABSMEAN|Threshold [mm]: 
+TF_THRESSPO2|Threshold [n/h]: 
+TF_THRESRDI|Threshold [n/h]: 
+TF_AnBrizzy|Analysis
+TF_NbrTotJAWApn|Total number of events:
+TF_NbrJAWOA|Number of obstructive events (OE):
+TF_NbrJAWCA|Number of central events (CE):
+TF_NbrJAWMA|Number of mixed events (ME):
+TF_DurBack|Sleep time in supine position [hh:mm:ss]:
+TF_AHIBack|AHI in supine position [n/h]:
+TF_RDIBack|RDI in supine position [n/h]:
+TF_ADULT|adult
+TF_CHILD|children
+TF_DIAG|Diagnostic
+TF_ORTH|Orthosis
+TF_CPAP|CPAP
+TF_HIST_OSC_Title| Distribution of mandible oscillations amplitude [mm]
+TF_HIST_OSC_Title_Short| Distribution of oscillations amplitude [mm]
+TF_HIST_JAW_Title| Distribution of mandibular lowering [mm]
+TF_AddReportECG|Brizzy - Report ECG - addendum
+TF_GRAPH_SHOTECG|ECG shots (24h)
+TF_GRAPH_EVTECG|ECG around marked events
+TF_ECGAn|ECG analysis
+TF_HR_mean|Mean heart rate [bpm]:
+TF_RR_mean|Mean RR [s]:
+TF_RR_pNN50|pNN50 [%]:
+TF_RR_SD1|SD1 (around main axis) [ms]:
+TF_RR_SD2|SD1 (around perpendicular axis) [ms]:
+TF_RR_TP|Total power of RR [s²]
+TF_RR_pVLF|Percentage of VLF power [0.01-0.04]Hz [%]:
+TF_RR_pLF|Percentage of LF power [0.04-0.15]Hz [%]:
+TF_RR_pHF|Percentage of HF power [0.15-0.4]Hz [%]:
+TF_RR_ratioLFHF|Ratio LF/HF:
+TF_OA|OA
+TF_HYP|Desaturating Hyp
+TF_HYP_alt1|Desaturating events
+TF_HYPO|Obstructives Hypopnea
+TF_HYPC|Central Hypopnea
+TF_HYP50|Hyp with flow &lt;50%
+TF_MA|MA
+TF_CA|CA
+TF_RERA|RERA estimated Jawac
+TF_DESAT|Desat
+TF_HYPA|Hyp estimated Jawac
+TF_HYPA_alt1|Obstructive events
+TF_OApnea|Obstructives Apnea
+TF_Hypopnea|Hypopnea
+TF_MApnea|Mixed Apnea
+TF_MApnea_alt1|Mixed events
+TF_CApneaOnly|Central Apnea
+TF_CApnea|Central Apnea (Hyp)
+TF_CApnea_alt1|Central Events
+TF_Glotique|Glottic
+TF_Oroph|Oropharyngeal
+TF_EI|Ineffective effort
+TF_AutoTriggering|Auto triggering
+TF_DoubleTriggering|Double triggering
+TF_CYC_P|Early cycling
+TF_CYC_T|Late cycling
+TF_JAW_AHI_D_A|Estimated Apnea Hypopnea Index:
+TF_COM_JAW_AHI_D_A|AHI + hypopneas with arousals /h
+TF_COM_NAF_AHI|Number of apneas & hypopneas /
+TF_COM_JAW_RDI|Number of apneas, hypopneas and RERA /sleep time
+TF_Total|Total
+TF_Fig_AASM2012|Contribution of events
+TF_Snoring|Snoring [%]
+TF_CPAP_P_MED|Median pressure [cmH2O]:
+TF_CPAP_P_RDI|Effective Pressure 90th centile (RDI) [cmH2O]:
+TF_CPAP_P_IAH|Effective Pressure 90th centile (AHI) [cmH2O]:
+TF_CPAP_VAL_P|Validity of the pressure signal [%]:
+TF_CPAP_P_MAX|Max pressure [cmH2O]:
+TF_CPAP_P_95C|Pressure 95th percentile [cmH2O]:
+TF_JAW_IHO|Obstructive Hypopneas Index (OHI):
+TF_JAW_IAO|Obstructive Apneas Index (OAI)
+TF_JAW_IAHO|Index of Obstructive Apneas/hypopneas (OAHI)
+TF_COM_IHO|Number of hypopneas with desaturation /h:
+TF_COM_IAHO|OAHI = [( A + B + D ) / F ] x 60
+TF_COM_IAO|OAI = [( A + B ) / F ] x 60
+TF_ET|Standard deviation:
+TF_LK_LEVEL|Leak detection threshold [l/min]
+TF_LK_MEDGLB|Median overall leakage [l/min]
+TF_LK_MEDNI|Median unintentional leaks (Unint.) [l/min]
+TF_LK_PROP|Proportion of time in Unint. leakage [%]
+TF_LK_MEANFLOW|Medium tidal volume [l]
+TF_LK_ODDS_DET1|Mouth opening*
+TF_LK_ODDS_DET2|Respiratory effort
+TF_LK_ODDS_DET3|CPAP pressure*
+TF_LK_ODDS_DET4|Non-supine position
+TF_LK_ODDS_DET5|Supine Position
+TF_LK_ODDS_CONTRIBUABLE|Contributes to leakage
+TF_LK_ODDS_NONCONTRIBUABLE|Does not contribute to leakage
+TF_LK_ODDS_NONCALCULABLE|Not calculable
+TF_LK_ODDS_NONSIGNIFICATIF|Not relevant
+TF_LK_DET|Factors explaining the occurrence of leakage at the threshold of
+TF_LK_DET_INFO|*above the median value of the night
+TF_LK_DET_AVERTISSEMENT|This analysis is provided for guidance only and should be interpreted in the light of other information provided on the APIOS report.
+TF_NA|n.a.
+TF_TBD|TBD
+F_TBD|TBD
+TF_Normal|-?-
+TF_Low|-?-
+TF_Moderate|-?-
+TF_High|-?-
+TF_SleepDurations|-?-
+TF_Standard|-?-
+TF_AsleepTime|-?-
+TF_SleepEfficiency|-?-
+TF_SleepDisturbance|-?-
+TF_WakeDuration|-?-
+TF_RDI_MM|-?-
+TF_CTVE_MM|-?-
+TF_ARI_MM|-?-
+TF_AHI_MM|-?-
+TF_|-?-
+TF_PART_SPO2_VALID|<tr><td><small></small></td><td><small></small></td><td><small><!--TF_SPO2_EFF--></small></td><td style="<!--F_SpO2_EFCOL-->"><small><!--F_SpO2_EFF--></small></td></tr>
+TF_PART_SPO2_IDSEV|<tr><td style="width: 337px;"><small style="font-weight: bold;"><!--TF_SpO2_ODI--> <!--F_SpO2_ODI--></small><br><small><!--TF_THRESSPO2--></small></td><td style="width: 277px;"><div align="center"><!--F_Fig_S1_SPO2--></div></td></tr>
+TF_PART_SPO2_RES|<tr><td><small><!--TF_SpO2_ODI--></small></td><td colspan="2"><small><!--F_SpO2_ODI--></small></td></tr><tr><td><small><!--TF_SpO2_min--></small></td><td colspan="2"><small><!--F_SpO2_min--></small></td></tr><tr><td><small><!--TF_SpO2_mean--></small></td><td colspan="2"><small><!--F_SpO2_mean--></small></td></tr><tr><td><small><!--TF_SpO2_CT90--></small></td><td colspan="2"><small><!--F_SpO2_CT90--></small></td></tr><tr><td><small><!--TF_SpO2_CT80--></small></td><td colspan="2"><small><!--F_SpO2_CT80--></small></td></tr><tr><td><small><!--TF_SpO2_CT70--></small></td><td colspan="2"><small><!--F_SpO2_CT70--></small></td></tr><tr><td><small><!--TF_SpO2_CF--></small></td><td colspan="2"><small><!--F_SpO2_CF--></small></td></tr>
+TF_PART_SPO2_GRAPH|<tr><td><div align="center"><!--F_Fig_SpO2--></div></td></tr>
+TF_PART_BP_GRAPH|<tr><td><div align="center"><!--F_Fig_BodyPos--></div></td></tr>
+TF_Sensor_NAF|Nasal cannula
+F_Name| 
+F_FirstName| 
+F_Sex| 
+F_Birth| 
+F_Code| 
+F_Date|17/05/19
+F_Dur|09:20:21
+F_Weight|0
+F_Pds|0
+F_Height|0
+F_BMI| 
+F_Comment| 
+F_TST|00:18:00
+F_TAT|02:35:28
+SF_TATCOL|color: rgb(246,65,17);
+F_TALH|02:34:29
+F_TAL|154.5
+F_WakeDuration|136
+F_RatioWakeDuration|88
+F_NAF_EFF| 
+SF_NAF_EFCOL| 
+F_JAW_EFF|100
+SF_JAW_EFCOL| 
+F_SpO2_EFF|29
+SF_SpO2_EFCOL|color: rgb(246,65,17);
+F_THO_EFF| 
+SF_THO_EFCOL| 
+F_ABD_EFF| 
+SF_ABD_EFCOL| 
+SF_RIP_EFCOL| 
+F_ECG_EFF| 
+SF_ECG_EFCOL| 
+F_NAF_AHI|0
+F_JAW_AHI_D_A|0
+F_SpO2_ODI| 
+SF_SpO2_colODI| 
+F_SpO2_ORI| 
+F_SpO2_CT90|00:00:00
+F_SpO2_CT80|00:00:00
+F_SpO2_CT70|00:00:00
+F_SpO2_PT90| 
+F_SpO2_PT80| 
+F_SpO2_PT70| 
+F_SpO2_mean| 
+F_SpO2_min| 
+F_SpO2_CF|NaN
+F_JAW_RDI|0
+SF_JAW_colRDI| 
+F_JAW_RAI|0
+F_JAW_MAI|6.7
+SF_JAW_colMAI| 
+F_JAW_OSC|0.1
+F_JAW_CTEVE_HMS|00:00:00
+F_JAW_PTEVE|0
+SF_JAW_colPTEVE| 
+F_JAW_ABSMEAN|-1
+F_JAW_ABSMEDIAN|1
+F_JAW_AUCLOW|9.7
+F_JAW_OUV_MIN|-1.6
+F_JAW_OUV_MAX|5.3
+F_JAW_OUV_MED|-1.3
+F_JAW_ET|2.65
+F_ITALOA|0
+F_ITALMA|0
+F_ITALCA|0
+F_ITALOH|0
+F_ITALCH|0
+F_TALIAHO|0
+F_TALIAO|0
+F_TALIDO|0
+F_DurRight|00:00:00
+F_DurLeft|00:00:00
+F_DurVenter|00:00:00
+F_DurBack|00:17:58
+F_DurUpright|00:00:00
+F_DurnBack|00:00:00
+F_PropBack|100
+F_PropnBack|0
+F_AHIRight| 
+F_AHILeft| 
+F_AHIVenter| 
+F_AHIBack| 
+SF_colAHIBack| 
+SF_colRDIBack| 
+F_AHInBack| 
+F_AHIUpright| 
+F_RDIBack| 
+F_RDInBack| 
+F_ODIRight| 
+F_ODILeft| 
+F_ODIVenter| 
+F_ODIBack| 
+F_ODInBack| 
+F_ODIUpright| 
+F_TOTDUR|0
+F_TOTDUR_PROP|0
+F_TOTDUR_DOS|0
+F_TOTDUR_DOS_PROP|0
+F_TOTDUR_NDOS|0
+F_TOTDUR_NDOS_PROP|NaN
+F_MAXDUR|0
+F_MAXDUR_DOS|0
+F_MAXDUR_NDOS|0
+F_JAW_PTEVE_DOS| 
+F_JAW_PTEVE_NDOS| 
+F_JAW_RAI_DOS| 
+F_JAW_RAI_NDOS| 
+F_JAW_MAI_DOS| 
+F_JAW_MAI_NDOS| 
+F_JAW_IAO_DOS| 
+F_JAW_IAO_NDOS| 
+F_IJAWHyp_DOS| 
+F_IJAWHyp_NDOS| 
+F_JAW_IAHO_DOS| 
+F_JAW_IAHO_NDOS| 
+F_IANAF| 
+F_IHNAF| 
+F_DMNAF| 
+F_NbrNAFApn|0
+F_DMNAFApn|0
+F_NbrNAFHyp|0
+F_DMNAFHyp|0
+F_ISnoring|n.a.
+F_SnoreBack|n.a.
+F_SnorenBack|n.a.
+F_NbrTotNAFApn| 
+F_DMTotNAFApn| 
+F_NbrSpO2Des|0
+F_DMSpO2Des|0
+F_NbrSpO2Res|0
+F_DMSpO2Res|0
+F_NbrSpO2DesU|0
+F_NbrJAWAVE|0
+F_DMJAWAVE|0
+F_IJAWAVE|0
+F_NbrJAWOA|0
+F_RatioJAWOA|0
+SF_RatioJAWOA_EFCOL| 
+F_DMJAWOA|0
+F_IJAWOA|0
+F_NbrJAWCA|0
+F_NbrHypC|0
+F_RatioJAWCA|0
+SF_RatioJAWCA_EFCOL| 
+F_DMJAWCA|0
+F_IJAWCA|0
+F_IHypC|0
+F_NbrJAWMA|0
+F_RatioJAWMA|0
+SF_RatioJAWMA_EFCOL| 
+F_DMJAWMA|0
+F_IJAWMA|0
+F_NbrJAWHyp|0
+F_RatioJAWHyp|0
+F_DMJAWHyp|0
+F_IJAWHyp|0
+F_JAW_IAO|0
+F_JAW_IAHO|0
+F_NbrHypD50|0
+F_IHypD50|0
+F_DMHypD50|0
+F_NbrHyp50|0
+F_IHyp50|0
+F_DMHyp50|0
+F_NbrJAWHypA|0
+F_DMJAWHypA|0
+F_IJAWHypA|0
+F_NbrTotJAWApn|0
+F_RatioJAWApn|100
+F_DMTotJAWApn| 
+F_NbrAH|0
+F_NbrJAWOE|0
+F_IJAWOE|0
+F_NbrJAWME|0
+F_IJAWME|0
+F_DMJAWME|0
+F_NbrJAWCE|0
+F_IJAWCE|0
+F_DMJAWCE|0
+F_NbrJAWOEd|0
+F_IJAWOEd|0
+F_DMJAWOEd| 
+F_NbrJAWOEnd|0
+F_IJAWOEnd|0
+F_DMJAWOEnd| 
+F_HR_mean| 
+F_RR_mean| 
+F_RR_pNN50| 
+F_RR_SD1| 
+F_RR_SD2| 
+F_RR_TP| 
+F_RR_pVLF| 
+F_RR_pLF| 
+F_RR_pHF| 
+F_RR_ratioLFHF| 
+F_CPAP_VAL_P| 
+F_CPAP_P_MED| 
+F_CPAP_P_MAX| 
+F_CPAP_P_MOY| 
+F_CPAP_P_95C| 
+F_CPAP_P_IAH| 
+F_CPAP_P_RDI| 
+F_VNI_NbrOO| 
+F_VNI_DMOO| 
+F_VNI_DTOO| 
+F_VNI_IOO| 
+F_VNI_NbrOG| 
+F_VNI_DMOG| 
+F_VNI_DTOG| 
+F_VNI_IOG| 
+F_VNI_NbrEI| 
+F_VNI_DMEI| 
+F_VNI_DTEI| 
+F_VNI_IEI| 
+F_VNI_NbrA_TRIG| 
+F_VNI_DMA_TRIG| 
+F_VNI_DTA_TRIG| 
+F_VNI_IA_TRIG| 
+F_VNI_NbrD_TRIG| 
+F_VNI_DMD_TRIG| 
+F_VNI_DTD_TRIG| 
+F_VNI_ID_TRIG| 
+F_VNI_NbrCYC_P| 
+F_VNI_DMCYC_P| 
+F_VNI_DTCYC_P| 
+F_VNI_ICYC_P| 
+F_VNI_NbrCYC_T| 
+F_VNI_DMCYC_T| 
+F_VNI_DTCYC_T| 
+F_VNI_ICYC_T| 
+F_VNI_NbrObstruTot| 
+F_VNI_DMObstruTot| 
+F_VNI_DTObstruTot| 
+F_VNI_IObstruTot| 
+F_VNI_NbrAsynchroTot| 
+F_VNI_DMAsynchroTot| 
+F_VNI_DTAsynchroTot| 
+F_VNI_IAsynchroTot| 
+F_LK_LEVEL|0
+F_LK_PROP| 
+SF_LK_PROPcol| 
+F_LK_MEDGLB| 
+F_LK_MEDNI| 
+F_LK_MEANFLOW| 
+F_LK_95CNI| 
+F_LK_MAXNI| 
+F_LK_MEANNI| 
+TF_ANJAW|Analysis conducted on 17/05/19  at  14:57:27 -- ANJAW v2.11.1.a
+F_ANJAWDateStr|17/05/19
+F_ANJAWTimeStr|14:57:27
+F_ANJAWVerStr|2.11.1.a
+TF_MAKEREPORT|Report generated on 17/05/19  at  14:57:30 -- MakeReport v3.7.1.a
+F_TheDate|17/05/19
+F_TheTime|14:57:30
+F_vMakeReport|3.7.1.a
+F_DefA|Apnea: airflow reduction >= 90%, duration [10-120] seconds
+F_DefH|Hypopnea: 90% > airflow reduction >= 30%, duration [10-120] seconds, with desaturation >= 3% or autonomic arousal
+F_DefEVE|0.3
+F_AutoSleep|Sleep: automatic detection (Multi-signals)
+F_AnType|Diagnostic adult
+F_THRESArI|20
+F_THRESRDI|13.5
+F_THRESPTEVE|20
+F_THRESODI|15
+PB_AHI|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="gray">> 30</td>
+PB_TALIAHO|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="gray">> 30</td>
+PB_ODI|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="gray">> 30</td>
+PB_AHI_D_A|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="gray">> 30</td>
+PB_RDI|<td class="gray">5 - 15</td><td class="gray">15 - 30</td><td class="gray">> 30</td>
+PB_PTEVE|<td class="gray">0 - 20</td><td class="gray">20 - 30</td><td class="gray">> 30</td>
+F_Fig_SpO2|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_SpO2.jpg
+F_Fig_HeartRate|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_HR.jpg
+F_Fig_SpO2_HR|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_SpO2_HR.jpg
+F_Fig_Jawac|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Jawac.jpg
+F_Fig_BodyPos|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_BodyPosition.jpg
+F_Fig_MK|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Marquage.jpg
+F_Fig_HistJAW|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Histo.jpg
+F_Fig_HistOscJAW|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_HistoOsc.jpg
+F_Fig_Triangl|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Triangl.jpg
+F_Fig_HRV|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_AASM2012|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_DistriPress|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_DistriRDI|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_DistriIAH|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_DistriEfR|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_Pression|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_DistriJAW|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_JawacSeg|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_JawacSeg.jpg
+F_Fig_Leaks|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_LK_Ouv|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_LK_Effort|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_LK_Pression|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_LK_Position|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_LK_Events|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_OddsRatios|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_RIPphase|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_Empty.jpg
+F_Fig_JAWEffort|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_JAWEffort.jpg
+F_Fig_MandMov|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_MandMov.jpg
+F_Fig_S1_RDI|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_S1_RDI.jpg
+F_Fig_S1_DIS|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_S1_DIS.jpg
+F_Fig_S1_PTEV|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_S1_PTEV.jpg
+F_Fig_S1_SPO2|figures/2019_05_17_01_35_37_121-SER-17-606(R1)_EN_2y_S1_SPO2.jpg

@@ -1,0 +1,78 @@
+MK_FILE_REV_0
+ANJAW_REV=2.11.3
+IsReportUpToDate=Yes
+Comment=
+-
+22:23:54:000;29.12.19;22:23:54:000;29.12.19;Logiciel;ep;START
+08:10:37:900;30.12.19;08:10:37:900;30.12.19;Logiciel;ep;STOP
+06:34:44:000;30.12.19;06:38:56:900;30.12.19;Logiciel;zs;2,1;RE
+00:09:14:300;30.12.19;00:09:35:199;30.12.19;Logiciel;zs;1;OE
+07:09:15:400;30.12.19;07:09:36:400;30.12.19;Logiciel;zs;1;CE
+00:11:01:399;30.12.19;00:11:55:199;30.12.19;Logiciel;zs;1;OE
+03:44:34:333;30.12.19;03:45:20:000;30.12.19;Logiciel;zs;4;Desaturation
+05:27:10:333;30.12.19;05:27:44:000;30.12.19;Logiciel;zs;4;Desaturation
+05:29:18:333;30.12.19;05:30:09:000;30.12.19;Logiciel;zs;4;Desaturation
+05:30:33:666;30.12.19;05:31:18:666;30.12.19;Logiciel;zs;4;Desaturation
+05:33:16:666;30.12.19;05:33:57:333;30.12.19;Logiciel;zs;4;Desaturation
+05:35:10:333;30.12.19;05:35:55:333;30.12.19;Logiciel;zs;4;Desaturation
+05:37:15:333;30.12.19;05:37:57:333;30.12.19;Logiciel;zs;4;Desaturation
+05:40:05:666;30.12.19;05:40:35:000;30.12.19;Logiciel;zs;4;Desaturation
+06:47:42:333;30.12.19;06:48:49:000;30.12.19;Logiciel;zs;4;Desaturation
+07:28:37:333;30.12.19;07:29:20:333;30.12.19;Logiciel;zs;4;Desaturation
+07:34:32:666;30.12.19;07:35:13:333;30.12.19;Logiciel;zs;4;Desaturation
+22:23:54:000;29.12.19;22:25:15:900;29.12.19;Logiciel;zs;1;Out of Range
+00:56:49:100;30.12.19;01:06:10:600;30.12.19;Logiciel;zs;1;Out of Range
+01:42:09:799;30.12.19;01:52:23:399;30.12.19;Logiciel;zs;1;Out of Range
+02:19:42:399;30.12.19;02:48:56:500;30.12.19;Logiciel;zs;1;Out of Range
+02:57:58:099;30.12.19;03:53:44:799;30.12.19;Logiciel;zs;1;Out of Range
+04:04:45:700;30.12.19;05:00:46:400;30.12.19;Logiciel;zs;1;Out of Range
+05:15:24:099;30.12.19;05:24:43:200;30.12.19;Logiciel;zs;1;Out of Range
+05:45:30:400;30.12.19;05:47:27:200;30.12.19;Logiciel;zs;1;Out of Range
+07:45:52:699;30.12.19;07:56:06:500;30.12.19;Logiciel;zs;1;Out of Range
+08:01:16:000;30.12.19;08:04:27:800;30.12.19;Logiciel;zs;1;Out of Range
+22:23:54:000;29.12.19;03:43:36:666;30.12.19;Logiciel;zs;4;Out of Range
+03:53:45:000;30.12.19;03:54:19:666;30.12.19;Logiciel;zs;4;Out of Range
+03:54:23:000;30.12.19;03:54:24:666;30.12.19;Logiciel;zs;4;Out of Range
+03:54:31:000;30.12.19;03:58:04:666;30.12.19;Logiciel;zs;4;Out of Range
+04:02:12:000;30.12.19;05:02:12:666;30.12.19;Logiciel;zs;4;Out of Range
+05:06:04:000;30.12.19;05:15:35:000;30.12.19;Logiciel;zs;4;Out of Range
+05:24:43:000;30.12.19;05:24:45:666;30.12.19;Logiciel;zs;4;Out of Range
+07:12:16:666;30.12.19;07:12:20:333;30.12.19;Logiciel;zs;4;Out of Range
+07:17:12:000;30.12.19;07:17:24:333;30.12.19;Logiciel;zs;4;Out of Range
+07:26:16:666;30.12.19;07:26:18:666;30.12.19;Logiciel;zs;4;Out of Range
+08:02:27:000;30.12.19;08:02:32:666;30.12.19;Logiciel;zs;4;Out of Range
+08:03:09:000;30.12.19;08:03:13:666;30.12.19;Logiciel;zs;4;Out of Range
+08:03:53:000;30.12.19;08:06:22:666;30.12.19;Logiciel;zs;4;Out of Range
+22:23:54:000;29.12.19;03:43:36:666;30.12.19;Logiciel;zs;5;Out of Range
+03:53:45:000;30.12.19;03:54:19:666;30.12.19;Logiciel;zs;5;Out of Range
+03:54:23:000;30.12.19;03:54:24:666;30.12.19;Logiciel;zs;5;Out of Range
+03:54:31:000;30.12.19;03:58:04:666;30.12.19;Logiciel;zs;5;Out of Range
+04:02:12:000;30.12.19;05:02:12:666;30.12.19;Logiciel;zs;5;Out of Range
+05:06:04:000;30.12.19;05:15:35:000;30.12.19;Logiciel;zs;5;Out of Range
+05:24:43:000;30.12.19;05:24:45:666;30.12.19;Logiciel;zs;5;Out of Range
+07:12:16:666;30.12.19;07:12:20:333;30.12.19;Logiciel;zs;5;Out of Range
+07:17:12:000;30.12.19;07:17:24:333;30.12.19;Logiciel;zs;5;Out of Range
+07:26:16:666;30.12.19;07:26:18:666;30.12.19;Logiciel;zs;5;Out of Range
+08:02:27:000;30.12.19;08:02:32:666;30.12.19;Logiciel;zs;5;Out of Range
+08:03:09:000;30.12.19;08:03:13:666;30.12.19;Logiciel;zs;5;Out of Range
+08:03:53:000;30.12.19;08:06:22:666;30.12.19;Logiciel;zs;5;Out of Range
+08:02:20:000;30.12.19;08:04:33:000;30.12.19;Logiciel;zs;6;Out of Range
+08:06:48:000;30.12.19;08:10:37:000;30.12.19;Logiciel;zs;6;Out of Range
+22:24:54:000;29.12.19;22:39:24:000;29.12.19;RejectWake;ze;Zone d'exclusion
+22:56:24:000;29.12.19;22:59:24:000;29.12.19;RejectWake;ze;Zone d'exclusion
+01:06:10:700;30.12.19;01:42:09:799;30.12.19;RejectWake;ze;Zone d'exclusion
+02:48:56:600;30.12.19;02:57:58:099;30.12.19;RejectWake;ze;Zone d'exclusion
+03:53:44:900;30.12.19;04:04:45:700;30.12.19;RejectWake;ze;Zone d'exclusion
+05:00:46:500;30.12.19;05:15:24:099;30.12.19;RejectWake;ze;Zone d'exclusion
+05:43:54:099;30.12.19;05:45:30:400;30.12.19;RejectWake;ze;Zone d'exclusion
+05:47:27:299;30.12.19;06:13:24:000;30.12.19;RejectWake;ze;Zone d'exclusion
+07:10:24:099;30.12.19;07:26:24:000;30.12.19;RejectWake;ze;Zone d'exclusion
+07:39:54:099;30.12.19;07:45:52:699;30.12.19;RejectWake;ze;Zone d'exclusion
+07:56:06:599;30.12.19;07:59:29:900;30.12.19;RejectWake;ze;Zone d'exclusion
+22:23:54:000;29.12.19;22:24:53:899;29.12.19;Logiciel;ze;Zone d'exclusion
+00:56:49:100;30.12.19;01:06:10:600;30.12.19;Logiciel;ze;Zone d'exclusion
+01:42:09:799;30.12.19;01:52:23:399;30.12.19;Logiciel;ze;Zone d'exclusion
+02:19:42:399;30.12.19;02:48:56:500;30.12.19;Logiciel;ze;Zone d'exclusion
+02:57:58:099;30.12.19;03:43:36:900;30.12.19;Logiciel;ze;Zone d'exclusion
+04:04:45:700;30.12.19;05:00:46:400;30.12.19;Logiciel;ze;Zone d'exclusion
+07:59:29:900;30.12.19;08:10:37:900;30.12.19;Logiciel;ze;Zone d'exclusion

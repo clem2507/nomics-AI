@@ -1,0 +1,10 @@
+This file contains information about the content of the directory 
+--- 
+Splitting time in minutes = 0.5 
+Resampling time in seconds = 1.0 
+Signal resolution = 1.0 
+Sample size = 30 
+Num of samples in total = 255519 
+Num of invalid samples = 143372 
+Num of valid samples = 112147 
+--- 

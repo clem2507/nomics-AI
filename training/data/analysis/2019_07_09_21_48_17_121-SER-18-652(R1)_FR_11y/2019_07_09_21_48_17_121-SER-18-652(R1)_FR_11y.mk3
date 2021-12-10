@@ -1,0 +1,39 @@
+MK_FILE_REV_0
+ANJAW_REV=2.11.2
+IsReportUpToDate=Yes
+Comment=
+-
+21:48:17:000;09.07.19;21:48:17:000;09.07.19;Logiciel;ep;START
+09:48:03:900;10.07.19;09:48:03:900;10.07.19;Logiciel;ep;STOP
+03:18:07:000;10.07.19;03:25:35:900;10.07.19;Logiciel;zs;2,1;RE
+06:17:48:000;10.07.19;06:19:17:900;10.07.19;Logiciel;zs;2,1;RE
+23:38:48:000;09.07.19;23:39:12:600;09.07.19;Logiciel;zs;1;RERA
+06:48:49:400;10.07.19;06:49:08:900;10.07.19;Logiciel;zs;1;RERA
+07:44:31:599;10.07.19;07:44:55:099;10.07.19;Logiciel;zs;1;RERA
+07:45:56:900;10.07.19;07:46:10:400;10.07.19;Logiciel;zs;1;RERA
+07:54:51:500;10.07.19;07:55:39:000;10.07.19;Logiciel;zs;1;RERA
+00:27:44:200;10.07.19;00:28:09:500;10.07.19;Logiciel;zs;1;OE
+07:45:01:000;10.07.19;07:45:51:199;10.07.19;Logiciel;zs;1;OE
+09:47:00:800;10.07.19;09:48:03:900;10.07.19;Logiciel;zs;1;Out of Range
+22:44:23:000;09.07.19;22:45:39:000;09.07.19;Logiciel;zs;4;Out of Range
+22:55:10:000;09.07.19;22:58:45:000;09.07.19;Logiciel;zs;4;Out of Range
+22:58:55:000;09.07.19;22:59:00:000;09.07.19;Logiciel;zs;4;Out of Range
+23:38:40:000;09.07.19;23:38:45:000;09.07.19;Logiciel;zs;4;Out of Range
+07:46:41:000;10.07.19;07:46:46:000;10.07.19;Logiciel;zs;4;Out of Range
+08:01:04:000;10.07.19;08:01:09:000;10.07.19;Logiciel;zs;4;Out of Range
+08:16:52:000;10.07.19;08:16:57:000;10.07.19;Logiciel;zs;4;Out of Range
+09:47:30:000;10.07.19;09:48:03:000;10.07.19;Logiciel;zs;4;Out of Range
+21:49:17:000;09.07.19;22:08:47:000;09.07.19;RejectWake;ze;Zone d'exclusion
+22:48:34:000;09.07.19;22:52:10:900;09.07.19;RejectWake;ze;Zone d'exclusion
+23:01:39:000;09.07.19;23:05:17:000;09.07.19;RejectWake;ze;Zone d'exclusion
+00:46:17:100;10.07.19;00:56:47:000;10.07.19;RejectWake;ze;Zone d'exclusion
+01:14:47:000;10.07.19;01:21:17:000;10.07.19;RejectWake;ze;Zone d'exclusion
+01:57:17:000;10.07.19;01:59:17:000;10.07.19;RejectWake;ze;Zone d'exclusion
+05:53:17:099;10.07.19;05:57:17:000;10.07.19;RejectWake;ze;Zone d'exclusion
+07:09:47:000;10.07.19;07:18:17:000;10.07.19;RejectWake;ze;Zone d'exclusion
+07:56:17:099;10.07.19;08:27:17:000;10.07.19;RejectWake;ze;Zone d'exclusion
+09:41:47:000;10.07.19;09:44:34:900;10.07.19;RejectWake;ze;Zone d'exclusion
+21:48:17:000;09.07.19;21:49:16:899;09.07.19;Logiciel;ze;Zone d'exclusion
+22:41:23:900;09.07.19;22:48:33:900;09.07.19;Logiciel;ze;Zone d'exclusion
+22:52:10:900;09.07.19;23:01:38:899;09.07.19;Logiciel;ze;Zone d'exclusion
+09:44:34:900;10.07.19;09:48:03:900;10.07.19;Logiciel;ze;Zone d'exclusion

@@ -1,0 +1,11 @@
+PCTFR;9.15.3;;
+PCTFR;9.15.3;0;
+ANJAW;2.11.2;;
+ANJAW;2.11.2;W00001;Délimitation sur signal Jawac: pas de différenciation des apnées et hypopnées
+ANJAW;2.11.2;000013;Validité Nasal Flow faible (0 min)
+ANJAW;2.11.2;000015;Validité RIP Thorax faible (0 min)
+ANJAW;2.11.2;000017;Validité RIP Sum faible (0 min)
+ANJAW;2.11.2;0;
+MAKEREPORT;3.7.2;;
+MAKEREPORT;3.7.2;000030;Temps de sommeil total ou de validité des signaux insuffisant (2 min)
+MAKEREPORT;3.7.2;0;
