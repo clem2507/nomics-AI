@@ -316,7 +316,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
         valid_rate = 0
 
     if threshold != 0:
-        if not is_valid(valid_hours, valid_rate):
+        if not is_valid(analysis_end - analysis_start, valid_hours):
             print('new start analysis time:', new_start_time)
             print('new end analysis time:', new_end_time)
             print('analysis duration:', (new_end_time - new_start_time))
@@ -407,7 +407,7 @@ def num_of_correct_pred(y_true, y_pred):
     return count
 
 
-def is_valid(valid_hours, valid_rate):
+def is_valid(total_hours, valid_hours):
     """
     Function that takes the decision about the validity of an analysis based on its total number of valid hours and rate
     
@@ -425,9 +425,7 @@ def is_valid(valid_hours, valid_rate):
     True if the entire analysis is valid, false otherwise
     """
 
-    if valid_hours > 6:
-        return True
-    elif valid_hours > 4 and valid_rate > 0.75:
+    if (total_hours.total_seconds() / 3600.0) > 6 and valid_hours > 4:
         return True
     return False
 

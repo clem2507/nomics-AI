@@ -1,0 +1,28 @@
+This file contains information about the 2 classes LSTM model accuracy using a 0.5 minutes signal time split and 1.0 minutes median data resampling 
+Signal resolution = 1.0 
+--- 
+Is balanced = balanced 
+Model type = binary 
+--- 
+Num of epochs = 5 
+Epochs training computation time (in sec) = [50.47723960876465, 36.96023488044739, 43.13107705116272, 44.71038818359375, 45.41050624847412] 
+Epochs training computation time mean (in sec) = 44.13788919448852 
+--- 
+Training accuracy history = [0.9962522983551025, 0.9973396062850952, 0.9974668025970459, 0.9974552392959595, 0.9974610209465027] 
+Training f1_score history = [0.9961450695991516, 0.997348427772522, 0.9974641799926758, 0.9974640607833862, 0.9974526762962341] 
+Training loss history = [0.01808972656726837, 0.01343478448688984, 0.012253649532794952, 0.01202023308724165, 0.011799555271863937] 
+--- 
+Validation accuracy history = [0.9979179501533508, 0.9979700446128845, 0.9981261491775513, 0.997813880443573, 0.9978659152984619] 
+Validation f1_score history = [0.9979236125946045, 0.9979754686355591, 0.9981569647789001, 0.9978197813034058, 0.9978716969490051] 
+Validation loss history = [0.009995704516768456, 0.009621119126677513, 0.00900701992213726, 0.009941816329956055, 0.009346069768071175] 
+--- 
+Radius of the CI = 0.00031914263551329044 
+True classification of the model is likely between 0.9971657201688996 and 0.9978040054399261 
+Lower bound model classification accuracy = 0.9971656965062278 
+Upper bound model classification accuracy = 0.9978039735633092 
+--- 
+Test accuracy = 0.9974848628044128 
+Confusion matrix (invalid | valid) = 
+ [[47144    46]
+ [  192 47244]] 
+--- 

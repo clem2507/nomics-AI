@@ -1,6 +1,0 @@
-Is balanced = balanced 
-Segmentation value = 1.0 
-Downsampling value = 1.0 
-Signal resolution = 1.0 
-Total data preprocessing computation time = 389.73 sec | 6.5 min 
----

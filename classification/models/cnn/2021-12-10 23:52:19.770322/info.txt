@@ -1,0 +1,28 @@
+This file contains information about the 2 classes CNN model accuracy using a 0.5 minutes signal time split and 1.0 minutes median data resampling 
+Signal resolution = 1.0 
+--- 
+Is balanced = unbalanced 
+Model type = binary 
+--- 
+Num of epochs = 5 
+Epochs training computation time (in sec) = [16.69323205947876, 11.929532051086426, 11.841419696807861, 12.245743989944458, 12.64950704574585] 
+Epochs training computation time mean (in sec) = 13.07188696861267 
+--- 
+Training accuracy history = [0.9891482591629028, 0.9959241151809692, 0.9967743158340454, 0.9967743158340454, 0.9969885349273682] 
+Training f1 score history = [0.9891019463539124, 0.995895266532898, 0.9967666864395142, 0.9967553615570068, 0.9969855546951294] 
+Training loss history = [0.037909671664237976, 0.0206298865377903, 0.017376823350787163, 0.016053244471549988, 0.014967575669288635] 
+--- 
+Validation accuracy history = [0.9959112405776978, 0.9968457818031311, 0.9944509267807007, 0.9977803826332092, 0.9974883198738098] 
+Validation f1 score history = [0.9959121346473694, 0.9968457818031311, 0.9943934082984924, 0.9977803826332092, 0.997518002986908] 
+Validation loss history = [0.02208130434155464, 0.020974956452846527, 0.025337474420666695, 0.013710208237171173, 0.014347333461046219] 
+--- 
+Radius of the CI = 0.00032421089112157715 
+True classification of the model is likely between 0.9973632481008828 and 0.998011669883126 
+Lower bound model classification accuracy = 0.9973632297325729 
+Upper bound model classification accuracy = 0.9980116427799387 
+--- 
+Test accuracy = 0.9976874589920044 
+Confusion matrix (invalid | valid) = 
+ [[47222    19]
+ [  176 36905]] 
+--- 

@@ -109,7 +109,6 @@ def evaluate_model(segmentation_value, downsampling_value, epochs, num_class, da
     cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches="tight")
     cm_plt.close()
     model_info_file = open(f'{save_dir}/info.txt', 'w')
-    model_info_file = open(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{is_balanced}/lstm/{model_type}/split_{segmentation_value}_resampling_{downsampling_value}/{epochs}_epochs/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {num_class} classes LSTM model accuracy using a {segmentation_value} minutes signal time split and {downsampling_value} minutes median data resampling \n')
     model_info_file.write(f'Signal resolution = {1/downsampling_value} \n')
     model_info_file.write('--- \n')
@@ -266,7 +265,7 @@ def hyperparameters_tuning(segmentation_value, downsampling_value, max_trials, e
     print('successfully saved!')
 
 
-def train_lstm(segmentation_value, downsampling_value, epochs, num_class, data_balancing):
+def train_lstm(segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
     """
     Callable method to start the training of the LSTM model
 

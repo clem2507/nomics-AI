@@ -233,36 +233,9 @@ class Preprocessing:
                 out = [arr, temp_dataset_df.iloc[idx].label]
                 self.dataset_df = self.dataset_df.append(pd.Series(out, index=self.dataset_df.columns), ignore_index=True)
 
-        print('-----')
-
-        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/lstm/{self.log_time}'
-        os.mkdir(save_dir)
-        df_info_file = open(f'{save_dir}/info.txt', 'w')
-        df_info_file.write('This file contains information about the content of the directory \n')
-        df_info_file.write('--- \n')
-        df_info_file.write(f'Splitting time in minutes = {self.segmentation_value} \n')
-        df_info_file.write(f'Resampling time in seconds = {self.downsampling_value} \n')
-        df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
-        df_info_file.write(f'Sample size = {max_length} \n')
-        df_info_file.write(f'Num of samples in total = {len(self.dataset_df)} \n')
-        if 0 in self.dataset_df.label.value_counts().keys():
-            df_info_file.write(f'Num of invalid samples = {self.dataset_df.label.value_counts()[0]} \n')
-        else:
-            df_info_file.write('Num of invalid samples = 0 \n')
-        if 1 in self.dataset_df.label.value_counts().keys():
-            df_info_file.write(f'Num of valid samples = {self.dataset_df.label.value_counts()[1]} \n')
-        else:
-            df_info_file.write('Num of valid samples = 0 \n')
-        if self.num_class != 2:
-            if 2 in self.dataset_df.label.value_counts().keys():
-                df_info_file.write(f'Num of awake samples = {self.dataset_df.label.value_counts()[2]} \n')
-            else:
-                df_info_file.write('Num of awake samples = 0 \n')
-        df_info_file.write('--- \n')
-        df_info_file.close()
-
         self.dataset_df = self.dataset_df[check_nan(self.dataset_df['data'].values)]
 
+        print('-----')
         print(self.dataset_df.label.value_counts())
         print('-----')
 
@@ -337,7 +310,7 @@ class Preprocessing:
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
-        df_info_file = open(f'{save_dir}/info.txt', 'a')
+        df_info_file = open(f'{save_dir}/info2.txt', 'a')
         df_info_file.write(f'Is balanced = {self.is_balanced} \n')
         df_info_file.write(f'Segmentation value = {self.segmentation_value} \n')
         df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')

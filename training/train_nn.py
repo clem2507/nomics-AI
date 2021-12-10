@@ -69,15 +69,15 @@ if __name__ == '__main__':
 
     # CNN
     # binray
-    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --data_balancing False
+    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2
     # multinomia
-    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 50 --num_class 3 --data_balancing False
+    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3
 
     # LSTM
     # binary
-    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --data_balancing False
+    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2
     # multinomial
-    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 50 --num_class 3 --data_balancing False
+    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3
 
     opt = parse_opt()
     main(p=opt)

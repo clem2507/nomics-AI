@@ -9,6 +9,7 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+from pathlib import Path
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from tensorflow.keras.models import load_model
@@ -48,13 +49,13 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     # if condition to distinct binary and binary classification
     if num_class == 2:
-        segmentation_value = 1.0    # window segmentation value in minute
-        downsampling_value = 3.0    # signal downsampling value in second
-        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/test_models/{model.lower()}/binary/saved_model'
+        segmentation_value = 0.5    # window segmentation value in minute
+        downsampling_value = 1.0    # signal downsampling value in second
+        model_path = str(sorted(Path(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}').iterdir(), key=os.path.getmtime)[::-1][0]) + '/saved_model'
     else:
         segmentation_value = 1.0    # window segmentation value in minute
         downsampling_value = 1.0    # signal downsampling value in second
-        model_path = os.path.dirname(os.path.abspath('util.py')) + f'/classification/test_models/{model.lower()}/multinomial/saved_model'
+        model_path = str(sorted(Path(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}').iterdir(), key=os.path.getmtime)[::-1][0]) + '/saved_model'
 
     block_print()
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
@@ -132,12 +133,12 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     print('--------')
 
-    print('is analysis valid:', is_valid(valid_hours, valid_rate))
+    print('is analysis valid:', is_valid(times[-1] - times[0], valid_hours))
 
     print('--------')
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'percentage_signal_valid': round((valid_rate * 100), 2), 'percentage_signal_invalid': round((invalid_rate * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * segmentation_value) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * segmentation_value) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(valid_hours, valid_rate)}
+    dictionary = {'percentage_signal_valid': round((valid_rate * 100), 2), 'percentage_signal_invalid': round((invalid_rate * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * segmentation_value) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * segmentation_value) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
 
     # if the graph is asked to be shown, this condition is entered
     if out_graph:
@@ -158,17 +159,20 @@ def analysis_classification(edf, model, num_class, out_graph):
             else:
                 break
         title = title[::-1]
-        ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid hours in bounds = {hours_conversion(valid_hours)} - Valid: {is_valid(valid_hours, valid_rate)}')
+        ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title} - Valid hours in bounds = {hours_conversion(valid_hours)} - Valid: {is_valid(times[-1] - times[0], valid_hours)}')
         ax.grid()
 
         curr_time = raw_data.__dict__['info']['meas_date']    # starting time of the analysis
         # graph background color based on signal classified label
         for label in classes:
             if label[0] == 0:
+                # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='r', alpha=0.3*label[1])
                 plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='r', alpha=0.25)
             elif label[0] == 1:
+                # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='g', alpha=0.3*label[1])
                 plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='g', alpha=0.25)
             elif label[0] == 2:
+                # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='b', alpha=0.3*label[1])
                 plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='b', alpha=0.25)
             curr_time += datetime.timedelta(minutes=segmentation_value)
 
@@ -220,6 +224,6 @@ if __name__ == '__main__':
     main(p=opt)
 
     # Cmd test lines
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data1.edf' --out_graph True --model 'LSTM' --num_class 3
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data2.edf' --out_graph True --model 'LSTM' --num_class 3
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data3.edf' --out_graph True --model 'LSTM' --num_class 3
+    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data1.edf' --out_graph True --model 'CNN'
+    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data2.edf' --out_graph True --model 'CNN'
+    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data3.edf' --out_graph True --model 'CNN'
