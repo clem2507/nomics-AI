@@ -321,7 +321,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
             print('new end analysis time:', new_end_time)
             print('analysis duration:', (new_end_time - new_start_time))
             print('valid time in new bounds:', hours_conversion(valid_hours))
-            print('valid rate in new bounds:', valid_rate * 100)
+            print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
             print("not enough valid signal (< 4h) in first selected bounds, let's try with a wider tolerance")
             return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)
     return valid_hours, valid_rate, new_start_time, new_end_time

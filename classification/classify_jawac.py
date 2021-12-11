@@ -45,21 +45,29 @@ def analysis_classification(edf, model, num_class, out_graph):
                             -'is_valid'
     """
 
+    block_print()
+
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
     # if condition to distinct binary and binary classification
-    if num_class == 2:
-        segmentation_value = 0.5    # window segmentation value in minute
-        downsampling_value = 1.0    # signal downsampling value in second
-        model_path = str(sorted(Path(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}').iterdir(), key=os.path.getmtime)[::-1][0]) + '/saved_model'
-    else:
-        segmentation_value = 1.0    # window segmentation value in minute
-        downsampling_value = 1.0    # signal downsampling value in second
-        model_path = str(sorted(Path(os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}').iterdir(), key=os.path.getmtime)[::-1][0]) + '/saved_model'
+    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}'
+    most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
+    i = 0
+    while True:
+        model_path = str(most_recent_folder_path[i]) + '/saved_model'
+        info_path = str(most_recent_folder_path[i]) + '/info.txt'
+        info_file = open(info_path)
+        lines = info_file.readlines()
+        lines = lines[2:5]
+        segmentation_value = float(lines[1][-5:-2])    # window segmentation value in minute
+        downsampling_value = float(lines[2][-5:-2])    # signal downsampling value in second
+        if int(lines[0][-3:-2]) == num_class:
+            break
+        i+=1
+        if i == len(most_recent_folder_path):
+            raise Exception(f'model path not found, please train a {num_class}-class {model} model')
 
-    block_print()
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
-    enable_print()
 
     data, times = raw_data[:]    # edf file data extraction
     times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
@@ -102,13 +110,13 @@ def analysis_classification(edf, model, num_class, out_graph):
             invalid_total += 1
         else:
             valid_total += 1
-    valid_rate = valid_total / len(classes)
-    invalid_rate = invalid_total / len(classes)
+    total_valid_rate = valid_total / len(classes)
+    total_invalid_rate = invalid_total / len(classes)
 
     print('--------')
 
-    print('valid percentage:', round((valid_rate * 100), 2), '%')
-    print('invalid percentage:', round((invalid_rate * 100), 2), '%')
+    print('valid percentage:', round((total_valid_rate * 100), 2), '%')
+    print('invalid percentage:', round((total_invalid_rate * 100), 2), '%')
 
     print('--------')
 
@@ -118,7 +126,7 @@ def analysis_classification(edf, model, num_class, out_graph):
     print('--------')
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
-    valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.75)
+    valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.7)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -129,7 +137,7 @@ def analysis_classification(edf, model, num_class, out_graph):
         duration = 0
         print('analysis duration: Unknown')
     print('valid time in new bounds:', hours_conversion(valid_hours))
-    print('valid rate in new bounds:', round(valid_rate * 100, 2), '%')
+    print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
 
     print('--------')
 
@@ -138,7 +146,7 @@ def analysis_classification(edf, model, num_class, out_graph):
     print('--------')
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'percentage_signal_valid': round((valid_rate * 100), 2), 'percentage_signal_invalid': round((invalid_rate * 100), 2), 'hours_signal_valid': hours_conversion((valid_total * segmentation_value) / 60), 'hours_signal_invalid': hours_conversion((invalid_total * segmentation_value) / 60), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': duration, 'hours_valid_in_bounds': hours_conversion(valid_hours), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
+    dictionary = {'total_signal_duration': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_signal_valid': round((total_valid_rate * 100), 2), 'percentage_signal_invalid': round((total_invalid_rate * 100), 2), 'hours_signal_valid': round(((valid_total * segmentation_value) / 60), 2), 'hours_signal_invalid': round(((invalid_total * segmentation_value) / 60), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'duration_in_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_valid_in_bounds': round(valid_hours, 2), 'percentage_valid_in_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
 
     # if the graph is asked to be shown, this condition is entered
     if out_graph:
@@ -214,7 +222,9 @@ def parse_opt():
 
 
 def main(p):
-    analysis_classification(**vars(p))
+    out_dic = analysis_classification(**vars(p))
+    enable_print()
+    print(out_dic)
 
 
 if __name__ == '__main__':
@@ -224,6 +234,6 @@ if __name__ == '__main__':
     main(p=opt)
 
     # Cmd test lines
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data1.edf' --out_graph True --model 'CNN'
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data2.edf' --out_graph True --model 'CNN'
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data3.edf' --out_graph True --model 'CNN'
+    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data1.edf' --out_graph True --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data2.edf' --out_graph True --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data3.edf' --out_graph True --model 'LSTM'

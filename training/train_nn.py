@@ -3,8 +3,7 @@ import time
 import datetime
 import argparse
 
-from learning_models.cnn_model import train_cnn
-from learning_models.lstm_model import train_lstm
+from learning_models.model import train_model
 from data_loader.preprocessing import create_dataframes
 
 
@@ -40,12 +39,8 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
             epochs = 5
         else:
             epochs = 50
-    if model.lower() == 'lstm':
-        train_lstm(segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
-    elif model.lower() == 'cnn':
-        train_cnn(segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
-    else:
-        raise Exception('model architecture type does not exist, please choose between LSTM and CNN')
+    
+    train_model(model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
 
 
 def parse_opt():
@@ -69,15 +64,15 @@ if __name__ == '__main__':
 
     # CNN
     # binray
-    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2
-    # multinomia
-    # python3 training/train_nn.py --model 'cnn' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2 --model 'cnn'
+    # multinomial
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3 --model 'cnn'
 
     # LSTM
     # binary
-    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2 --model 'lstm'
     # multinomial
-    # python3 training/train_nn.py --model 'lstm' --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3 --model 'lstm'
 
     opt = parse_opt()
     main(p=opt)
