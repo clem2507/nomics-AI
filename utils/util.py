@@ -424,7 +424,6 @@ def is_valid(total_hours, valid_hours):
 
     True if the entire analysis is valid, false otherwise
     """
-
     if (total_hours.total_seconds() / 3600.0) > 6 and valid_hours > 4:
         return True
     return False

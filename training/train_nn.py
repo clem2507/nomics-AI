@@ -51,7 +51,8 @@ def parse_opt():
     parser.add_argument('--downsampling_value', type=float, default=1, help='signal resampling in Hz')
     parser.add_argument('--epochs', type=int, default=None, help='total number of epochs for training')
     parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
-    parser.add_argument('--data_balancing', type=bool, default=False, help='dataset instances balancing, if false, no data balancing is performed among the different classes, otherwise balancing is applied')
+    parser.add_argument('--balance', dest='data_balancing', action='store_true', help='invoke to balance the dataset instances')
+    parser.set_defaults(data_balancing=False)
     return parser.parse_args()
 
 
@@ -64,13 +65,13 @@ if __name__ == '__main__':
 
     # CNN
     # binray
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2 --model 'cnn'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --model 'cnn'
     # multinomial
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3 --model 'cnn'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 0.1 --epochs 50 --num_class 3 --model 'cnn'
 
     # LSTM
     # binary
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 5 --num_class 2 --model 'lstm'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --model 'lstm'
     # multinomial
     # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3 --model 'lstm'
 
