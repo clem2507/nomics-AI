@@ -101,10 +101,7 @@ def analysis_classification(edf, model, num_class, out_graph):
     # loop that runs through the list of model predictions to keep the highest predicted probability values
     for item in predictions[:-1]:
         idx = np.argmax(item)
-        if idx == 0 and item[idx] > 0.95:
-            classes.append((idx, item[idx]))
-        else:
-            classes.append((1, item[idx]))
+        classes.append((idx, item[idx]))
     classes.append((0, 0))
 
     valid_total = 0    # counter for the total number of valid regions found
@@ -231,7 +228,9 @@ def parse_opt():
 def main(p):
     out_dic = analysis_classification(**vars(p))
     enable_print()
+    print('------- OUTPUT DICTIONARY -------')
     print(out_dic)
+    print('---------------------------------')
 
 
 if __name__ == '__main__':
