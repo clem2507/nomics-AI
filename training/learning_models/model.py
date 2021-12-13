@@ -48,42 +48,52 @@ def evaluate_model(model_name, segmentation_value, downsampling_value, epochs, n
     validation_split, verbose, batch_size = 0.1, 1, 32
     model = Sequential()
     if model_name == 'cnn':
-
-        # using 10Hz resolution and 1 minute window -- 600 sample size
-        model.add(Conv1D(filters=64, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 64 x 300
-        model.add(Conv1D(filters=128, kernel_size=5, strides=1, activation='relu'))   # conv layer -- 2 -- Output size 128 x 296
-        model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 128 x 148
-
-        model.add(Dropout(0.2))   # dropout -- 4 -- Output size 128 x 148
-
-        model.add(Conv1D(filters=128, kernel_size=13, strides=1, activation='relu'))   # conv layer -- 5 -- Output size 128 x 136
-        model.add(Conv1D(filters=256, kernel_size=7, strides=1, activation='relu'))   # conv layer -- 6 -- Output size 256 x 130
-        model.add(MaxPooling1D(pool_size=2))   # max pooling -- 7 -- Output size 256 x 65
-
-        model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))   # conv layer -- 8 -- Output size 32 x 63
-        model.add(Conv1D(filters=64, kernel_size=6, strides=1, activation='relu'))    # conv layer -- 9 -- Output size 64 x 58
-        model.add(MaxPooling1D(pool_size=2))   # max pooling -- 10 -- Output size 64 x 29
-
-        model.add(Conv1D(filters=8, kernel_size=5, strides=1, activation='relu'))   # conv layer -- 11 -- Output size 8 x 25
-        model.add(Conv1D(filters=8, kernel_size=2, strides=1, activation='relu'))   # conv layer -- 12 -- Output size 8 x 24
-        model.add(MaxPooling1D(pool_size=2))   # max pooling -- 13 -- Output size 8 x 12
-
-        model.add(Flatten())   # flatten layer -- 14 -- Output size 1 x 96
-        model.add(Dense(64, activation='relu'))   # fully connected layer -- 15 -- Output size 1 x 64
-
-        model.add(Dropout(0.2))   # dropout -- 16 -- Output size 1 x 64
-
         if num_class == 2:
-            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 17 -- Output size 1 x 2
+            # using 1Hz resolution and 1 minute window -- 60 sample size
+            model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu'))   # conv layer -- 1 -- Output size 16 x 29
+            model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))    # conv layer -- 2 -- Output size 32 x 27
+            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 32 x 27
+
+            model.add(Dropout(0.2))   # dropout -- 4 -- Output size 32 x 14
+
+            model.add(Flatten())   # flatten layer -- 5 -- Output size 1 x 448
+            model.add(Dense(64, activation='relu'))   # fully connected layer -- 6 -- Output size 1 x 64
+
+            model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
+
+            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
         else:
+            # using 10Hz resolution and 1 minute window -- 600 sample size
+            model.add(Conv1D(filters=64, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 64 x 298
+            model.add(Conv1D(filters=128, kernel_size=5, strides=1, activation='relu'))   # conv layer -- 2 -- Output size 128 x 294
+            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 128 x 147
+
+            model.add(Dropout(0.2))   # dropout -- 4 -- Output size 128 x 147
+
+            model.add(Conv1D(filters=128, kernel_size=13, strides=1, activation='relu'))   # conv layer -- 5 -- Output size 128 x 135
+            model.add(Conv1D(filters=256, kernel_size=7, strides=1, activation='relu'))   # conv layer -- 6 -- Output size 256 x 129
+            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 7 -- Output size 256 x 64
+
+            model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))   # conv layer -- 8 -- Output size 32 x 62
+            model.add(Conv1D(filters=64, kernel_size=6, strides=1, activation='relu'))    # conv layer -- 9 -- Output size 64 x 57
+            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 10 -- Output size 64 x 28
+
+            model.add(Conv1D(filters=8, kernel_size=5, strides=1, activation='relu'))   # conv layer -- 11 -- Output size 8 x 24
+            model.add(Conv1D(filters=8, kernel_size=2, strides=1, activation='relu'))   # conv layer -- 12 -- Output size 8 x 23
+            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 13 -- Output size 8 x 11
+
+            model.add(Flatten())   # flatten layer -- 14 -- Output size 1 x 88
+            model.add(Dense(64, activation='relu'))   # fully connected layer -- 15 -- Output size 1 x 64
+
+            model.add(Dropout(0.2))   # dropout -- 16 -- Output size 1 x 64
+
             model.add(Dense(n_outputs, activation='softmax'))   # fully connected layer -- 17 -- Output size 1 x 3
             model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     elif model_name == 'lstm':
-        model.add(LSTM(64, activation='tanh', input_shape=(n_timesteps, n_features)))
-        model.add(LSTM(128, activation='tanh'))
+        model.add(LSTM(128, activation='tanh', input_shape=(n_timesteps, n_features)))
         model.add(Dropout(0.2))
-        model.add(Dense(128, activation='relu'))
+        model.add(Dense(64, activation='relu'))
         model.add(Dropout(0.2))
         if num_class == 2:
             # sigmoid activation function better than softmax for binary classification

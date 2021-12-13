@@ -67,7 +67,7 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN
-    # binray
+    # binary
     # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --model 'cnn'
     # multinomial
     # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 0.1 --epochs 50 --num_class 3 --model 'cnn'
