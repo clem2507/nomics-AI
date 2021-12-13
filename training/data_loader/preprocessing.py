@@ -19,56 +19,6 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 from util import extract_data_from_line, string_datetime_conversion, occurrences_counter, check_nan, block_print, enable_print
 
 
-def load_data(segmentation_value, downsampling_value, num_class, data_balancing):
-    """
-    Method used to load the data already processed and saved for model's training
-
-    Parameters:
-
-    -segmentation_value: window segmentation value in minute
-    -downsampling_value: signal downsampling value in second
-    -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
-    -data_balancing: true if balanced data is needed, false otherwise
-
-    Returns:
-
-    -X_train: x data instances for training the model
-    -y_train: y label instances for training the model
-    -X_test: x data instances for testing the model
-    -y_test: y label instances for testing the model
-    """
-
-    print('load data...')
-
-    if data_balancing:
-        is_balanced = 'balanced'
-    else:
-        is_balanced = 'unbalanced'
-
-    # data loader
-    if num_class == 2:
-        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/binary/split_{segmentation_value}_resampling_{downsampling_value}/X.txt')
-        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/binary/split_{segmentation_value}_resampling_{downsampling_value}/y.txt')
-    else:
-        X = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/multinomial/split_{segmentation_value}_resampling_{downsampling_value}/X.txt')
-        y = np.loadtxt(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{is_balanced}/multinomial/split_{segmentation_value}_resampling_{downsampling_value}/y.txt')
-
-    # reshaping the data to suit the training process
-    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
-
-    # splitting the data into testing and training sets
-    X_train, y_train, X_test, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-
-    print('----')
-    print(X_train.shape)
-    print(X_test.shape)
-    print(y_train.shape)
-    print(y_test.shape)
-    print('----')
-
-    return X_train, X_test, y_train, y_test
-
-
 def create_dataframes(directory):
     """
     Function that update, creates and saves the dataframes based on the analyses files
@@ -321,7 +271,7 @@ class Preprocessing:
         # np.savetxt(f'{save_dir}/y.txt', y)
 
         # splitting the data into testing and training sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
