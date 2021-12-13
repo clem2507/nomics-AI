@@ -131,7 +131,7 @@ def evaluate_model(model_name, segmentation_value, downsampling_value, epochs, n
     # directory creation
     save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
     os.mkdir(save_dir)
-    cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches="tight")
+    cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
     cm_plt.close()
     model_info_file = open(f'{save_dir}/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {model_name} model \n')

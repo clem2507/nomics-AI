@@ -51,8 +51,8 @@ def parse_opt():
     parser.add_argument('--downsampling_value', type=float, default=1, help='signal resampling in Hz')
     parser.add_argument('--epochs', type=int, default=None, help='total number of epochs for training')
     parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
-    parser.add_argument('--balance', dest='data_balancing', action='store_true', help='invoke to balance the dataset instances')
-    parser.set_defaults(data_balancing=False)
+    parser.add_argument('--no_balance', dest='data_balancing', action='store_false', help='invoke to not balance the dataset instances')
+    parser.set_defaults(data_balancing=True)
     return parser.parse_args()
 
 
@@ -62,6 +62,9 @@ def main(p):
 
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+    opt = parse_opt()
+    main(p=opt)
 
     # CNN
     # binray
@@ -74,6 +77,3 @@ if __name__ == '__main__':
     # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --model 'lstm'
     # multinomial
     # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3 --model 'lstm'
-
-    opt = parse_opt()
-    main(p=opt)

@@ -17,7 +17,7 @@ from tensorflow.keras.models import load_model
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 
-from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion
+from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, extract_data_from_line, string_datetime_conversion
 
 
 def analysis_classification(edf, model, num_class, out_graph):
@@ -101,7 +101,10 @@ def analysis_classification(edf, model, num_class, out_graph):
     # loop that runs through the list of model predictions to keep the highest predicted probability values
     for item in predictions[:-1]:
         idx = np.argmax(item)
-        classes.append((idx, item[idx]))
+        if idx == 0 and item[idx] > 0.95:
+            classes.append((idx, item[idx]))
+        else:
+            classes.append((1, item[idx]))
     classes.append((0, 0))
 
     valid_total = 0    # counter for the total number of valid regions found
@@ -238,6 +241,8 @@ if __name__ == '__main__':
     main(p=opt)
 
     # Cmd test lines
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data1.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data2.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify_jawac.py --edf 'training/test_data/patient_data3.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data2.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data3.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data4.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data5.edf' --view_graph --model 'LSTM'

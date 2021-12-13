@@ -196,7 +196,22 @@ class Preprocessing:
             for idx, row in self.invalid_mk3_df_list[i].iterrows():
                 if row.label == 'Out of Range':
                     temp = [self.invalid_jawac_df_list[i].loc[row['start']:row['end']].data.tolist(), 0]
+                    self.invalid_jawac_df_list[i].drop(self.invalid_jawac_df_list[i].loc[row['start']:row['end']].index.tolist(), inplace=True)
                     temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
+
+            prev_time = None
+            temp = []
+            for idx, row in self.invalid_jawac_df_list[i].iterrows():
+                if prev_time is not None:
+                    if prev_time + datetime.timedelta(0, seconds=self.downsampling_value) == idx:
+                        temp.append(row.data)
+                    else:
+                        if len(temp) > 0:
+                            temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
+                        temp = []
+                prev_time = idx
+            if len(temp) > 0:
+                temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
 
         # split of the valid dataframes
         for i in tqdm(range(len(self.valid_mk3_df_list))):
@@ -253,8 +268,8 @@ class Preprocessing:
 
         start_time = time.time()    # start timer variable used for the calculation of the total execution time 
         print('-----')
-        print(f'{self.segmentation_value} minutes signal time split')
-        print(f'{self.downsampling_value} minutes data resampling')
+        print(f'{self.segmentation_value} min signal time split')
+        print(f'{self.downsampling_value} sec data resampling')
         print(f'{self.num_class} classes classification')
         print(f'data balancing: {self.data_balancing}')
         print('-----')
@@ -310,7 +325,7 @@ class Preprocessing:
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
-        df_info_file = open(f'{save_dir}/info2.txt', 'a')
+        df_info_file = open(f'{save_dir}/info.txt', 'a')
         df_info_file.write(f'Is balanced = {self.is_balanced} \n')
         df_info_file.write(f'Segmentation value = {self.segmentation_value} \n')
         df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')
