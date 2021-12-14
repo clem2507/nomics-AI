@@ -252,10 +252,10 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
     analysis_start_copy = copy(analysis_start)
     analysis_end_copy = copy(analysis_end)
     time_step_copy = copy(time_step)
-    classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label'])
+    classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label', 'probability'])
     curr_time = analysis_start
     for label in classes:
-        temp = [curr_time, curr_time + datetime.timedelta(minutes=time_step), label[0]]
+        temp = [curr_time, curr_time + datetime.timedelta(minutes=time_step), label[0], label[1]]
         classes_df = classes_df.append(pd.Series(temp, index=classes_df.columns), ignore_index=True)
         curr_time += datetime.timedelta(minutes=time_step)
 
@@ -324,7 +324,10 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
             print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
             print("not enough valid signal (< 4h) in first selected bounds, let's try with a wider tolerance")
             return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)
-    return valid_hours, valid_rate, new_start_time, new_end_time
+    new_bounds_classes = []
+    for idx, row in classes_df.iterrows():
+        new_bounds_classes.append((row.label, row.probability)) 
+    return new_bounds_classes, valid_hours, valid_rate, new_start_time, new_end_time
 
 
 def recall_m(y_true, y_pred):
@@ -428,6 +431,17 @@ def is_valid(total_hours, valid_hours):
         return True
     return False
 
+
+def signal_quality(classes):
+    if len(classes) == 0:
+        return 0
+    score = 0
+    for c in classes:
+        if c[0] == 0:
+            score -= c[1]
+        elif c[0] == 1:
+            score += c[1]
+    return score/len(classes)
 
 class TimingCallback(Callback):
     """

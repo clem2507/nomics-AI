@@ -1,4 +1,4 @@
-from comet_ml import Experiment
+# from comet_ml import Experiment
 
 import os
 import sys
@@ -25,12 +25,14 @@ from preprocessing import Preprocessing
 from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
 
 
-def evaluate_model(model_name, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
     Parameters:
 
+    -analysis_directory: directory path containing the analyses to create the dataframes
+    -model_name: name of the model to train, either CNN or LSTM
     -segmentation_value: window segmentation value in minute
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
@@ -42,7 +44,7 @@ def evaluate_model(model_name, segmentation_value, downsampling_value, epochs, n
     -accuracy: model accuracy on the testing set
     """
 
-    X_train, y_train, X_test, y_test = Preprocessing(segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset()
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     X_train, y_train = shuffle(X_train, y_train)
     validation_split, verbose, batch_size = 0.1, 1, 32
@@ -50,7 +52,7 @@ def evaluate_model(model_name, segmentation_value, downsampling_value, epochs, n
     if model_name == 'cnn':
         if num_class == 2:
             # using 1Hz resolution and 1 minute window -- 60 sample size
-            model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu'))   # conv layer -- 1 -- Output size 16 x 29
+            model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
             model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))    # conv layer -- 2 -- Output size 32 x 27
             model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 32 x 27
 
@@ -234,25 +236,25 @@ def evaluate_model(model_name, segmentation_value, downsampling_value, epochs, n
     save_model(model, f'{save_dir}/saved_model')
 
     # Create an experiment with your api key
-    experiment = Experiment(
-        api_key='sPYygjS1kurlK8CM4iKoJZU8T',
-        project_name='nomics',
-        workspace='clem2507',
-    )
-    experiment.set_name(log_time)
-    experiment.log_model(model_name, f'{save_dir}/saved_model')
-    experiment.add_tags([model_name, model_type, is_balanced])
-    experiment.log_confusion_matrix(labels=labels, matrix=cm)
-    for i in range(epochs):
-        experiment.log_metric('train accuracy', training_accuracy_history[i], step=i+1)
-        experiment.log_metric('train f1', training_f1_history[i], step=i+1)
-        experiment.log_metric('train loss', training_loss_history[i], step=i+1)
-        experiment.log_metric('val accuracy', validation_accuracy_history[i], step=i+1)
-        experiment.log_metric('val f1', validation_f1_history[i], step=i+1)
-        experiment.log_metric('val loss', validation_loss_history[i], step=i+1)
-    experiment.log_metric('epochs', epochs)
-    experiment.log_metric('test accuracy', accuracy)
-    experiment.end()
+    # experiment = Experiment(
+    #     api_key='sPYygjS1kurlK8CM4iKoJZU8T',
+    #     project_name='nomics',
+    #     workspace='clem2507',
+    # )
+    # experiment.set_name(log_time)
+    # experiment.log_model(model_name, f'{save_dir}/saved_model')
+    # experiment.add_tags([model_name, model_type, is_balanced])
+    # experiment.log_confusion_matrix(labels=labels, matrix=cm)
+    # for i in range(epochs):
+    #     experiment.log_metric('train accuracy', training_accuracy_history[i], step=i+1)
+    #     experiment.log_metric('train f1', training_f1_history[i], step=i+1)
+    #     experiment.log_metric('train loss', training_loss_history[i], step=i+1)
+    #     experiment.log_metric('val accuracy', validation_accuracy_history[i], step=i+1)
+    #     experiment.log_metric('val f1', validation_f1_history[i], step=i+1)
+    #     experiment.log_metric('val loss', validation_loss_history[i], step=i+1)
+    # experiment.log_metric('epochs', epochs)
+    # experiment.log_metric('test accuracy', accuracy)
+    # experiment.end()
 
     return accuracy
 
@@ -359,12 +361,14 @@ def hyperparameters_tuning(model_name, segmentation_value, downsampling_value, m
     print('successfully saved!')
 
 
-def train_model(model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
     """
     Callable method to start the training of the model
 
     Parameters:
 
+    -analysis_directory: directory path containing the analyses to create the dataframes
+    -model: name of the model to train, either CNN or LSTM
     -segmentation_value: window segmentation value in minute
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
@@ -374,7 +378,7 @@ def train_model(model, segmentation_value, downsampling_value, epochs, num_class
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time)
+    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time)
     score = score * 100.0
     print('score:', score, '%')
     print('-----')

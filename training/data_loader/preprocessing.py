@@ -19,73 +19,6 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 from util import extract_data_from_line, string_datetime_conversion, occurrences_counter, check_nan, block_print, enable_print
 
 
-def create_dataframes(directory):
-    """
-    Function that update, creates and saves the dataframes based on the analyses files
-
-    Parameters:
-
-    -directory: directory path containing the analyses to create the dataframes
-    """
-
-    dir_names = sorted(os.listdir(directory))    # analyses directory names
-    for i in tqdm(range(len(dir_names))):
-        # make sure file name is not invalid (had issue with the .DS_Store file)
-        if not dir_names[i].startswith('.'):
-            mk3_file = f'{directory}/{dir_names[i]}/{dir_names[i]}.mk3'    # mk3 file path containing inforamtion about the analysis label
-            edf_file = f'{directory}/{dir_names[i]}/{dir_names[i]}.edf'    # edf file path containing time series data
-            if os.path.exists(mk3_file) and os.path.exists(edf_file):
-                if not os.path.exists(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/edf_dfs/{dir_names[i]}'):
-                    # create the analysis directory to save the dataframes if it does not already exist
-                    os.mkdir(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/edf_dfs/{dir_names[i]}')
-                else:
-                    continue
-                data_mk3 = open(mk3_file)    # mk3 file reading
-                lines = data_mk3.readlines()    # list with the mk3 lines
-                start_record_time = lines[5].split(';')[0]
-                start_record_date = lines[5].split(';')[1]
-                lines = lines[7:]    # log file information removed (not needed anymore)
-                col_names = ['start', 'end', 'label']
-                df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
-                for line in lines:
-                    # Out of Range is the label for invalid signal area
-                    if line.split(sep=';')[-1][:-1] == 'Out of Range':
-                        if line.split(sep=';')[-2] == '1':
-                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
-                            df_mk3 = df_mk3.append(temp, ignore_index=True)
-                    else:
-                        temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
-                        df_mk3 = df_mk3.append(temp, ignore_index=True)
-                if len(df_mk3) < 1:
-                    continue
-                else:
-                    # dataframe saving
-                    df_mk3.to_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
-
-                block_print()
-                raw_data = mne.io.read_raw_edf(edf_file)    # edf file reading
-                enable_print()
-
-                data, times = raw_data[:]    # edf file data extraction
-                times = string_datetime_conversion(times, start_record_time, start_record_date)    # conversion to usable date dtype 
-                df_jawac = pd.DataFrame()    # dataframe creation to store time series data
-                df_jawac.insert(0, 'times', times)
-                df_jawac.insert(1, 'data', data[0])
-                # downsamping signal to 10Hz to have normalized data (some devices record with higher frequency)
-                df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
-                # dataframe saving
-                df_jawac.to_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
-    
-    dfs_directory = os.path.dirname(os.path.abspath('util.py')) + '/training/data/edf_dfs'
-    dfs_names = sorted(os.listdir(dfs_directory))
-    # removal of unwanted directories in the path of the input directory
-    for i in tqdm(range(len(dfs_names))):
-        # make sure file name is not invalid (had issue with the .DS_Store file)
-        if not dfs_names[i].startswith('.'):
-            if dfs_names[i] not in dir_names:
-                shutil.rmtree(dfs_directory + f'/{dfs_names[i]}')
-
-
 class Preprocessing:
     """
     Class used to preprocess the created dataframes
@@ -96,6 +29,7 @@ class Preprocessing:
     -invalid_mk3_df_list: list of dataframes containing data about the invalid labeling
     -valid_jawac_df_list: list of dataframes containing data about the valid time series
     -valid_mk3_df_list: list of dataframes containing data about the valid labeling
+    -analysis_directory: directory path containing the analyses to create the dataframes
     -dataset_df: final dataframe containing the merged processed data
     -segmentation_value: window segmentation value in minute
     -downsampling_value: signal downsampling value in second
@@ -103,12 +37,14 @@ class Preprocessing:
     -data_balancing: true is balanced data is needed, false otherwise
     """
 
-    def __init__(self, segmentation_value, downsampling_value, num_class, data_balancing, log_time):
+    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, num_class=2, data_balancing=True, log_time=''):
         self.invalid_jawac_df_list = []
         self.invalid_mk3_df_list = []
         self.valid_jawac_df_list = []
         self.valid_mk3_df_list = []
         self.dataset_df = pd.DataFrame(columns=['data', 'label'])
+        self.directory = analysis_directory
+        self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
         self.downsampling_value = float(downsampling_value)
         self.num_class = num_class
@@ -119,17 +55,83 @@ class Preprocessing:
         else:
             self.is_balanced = 'unbalanced'
 
+    
+    def create_dataframes(self):
+        """
+        Function that update, creates and saves the dataframes based on the analyses files
+        """
+
+        dir_names = sorted(os.listdir(self.directory))    # analyses directory names
+        if not os.path.exists(self.dfs_directory):
+            os.mkdir(self.dfs_directory)
+        for i in tqdm(range(len(dir_names))):
+            # make sure file name is not invalid (had issue with the .DS_Store file)
+            if not dir_names[i].startswith('.'):
+                mk3_file = f'{self.directory}/{dir_names[i]}/{dir_names[i]}.mk3'    # mk3 file path containing inforamtion about the analysis label
+                edf_file = f'{self.directory}/{dir_names[i]}/{dir_names[i]}.edf'    # edf file path containing time series data
+                if os.path.exists(mk3_file) and os.path.exists(edf_file):
+                    if not os.path.exists(f'{self.dfs_directory}/{dir_names[i]}'):
+                        # create the analysis directory to save the dataframes if it does not already exist
+                        os.mkdir(f'{self.dfs_directory}/{dir_names[i]}')
+                    else:
+                        continue
+                    data_mk3 = open(mk3_file)    # mk3 file reading
+                    lines = data_mk3.readlines()    # list with the mk3 lines
+                    start_record_time = lines[5].split(';')[0]
+                    start_record_date = lines[5].split(';')[1]
+                    lines = lines[7:]    # log file information removed (not needed anymore)
+                    col_names = ['start', 'end', 'label']
+                    df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
+                    for line in lines:
+                        # Out of Range is the label for invalid signal area
+                        if line.split(sep=';')[-1][:-1] == 'Out of Range':
+                            if line.split(sep=';')[-2] == '1':
+                                temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
+                                df_mk3 = df_mk3.append(temp, ignore_index=True)
+                        else:
+                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
+                            df_mk3 = df_mk3.append(temp, ignore_index=True)
+                    if len(df_mk3) < 1:
+                        continue
+                    else:
+                        # dataframe saving
+                        df_mk3.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
+
+                    block_print()
+                    raw_data = mne.io.read_raw_edf(edf_file)    # edf file reading
+                    enable_print()
+
+                    data, times = raw_data[:]    # edf file data extraction
+                    times = string_datetime_conversion(times, start_record_time, start_record_date)    # conversion to usable date dtype 
+                    df_jawac = pd.DataFrame()    # dataframe creation to store time series data
+                    df_jawac.insert(0, 'times', times)
+                    df_jawac.insert(1, 'data', data[0])
+                    # downsamping signal to 10Hz to have normalized data (some devices record with higher frequency)
+                    df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
+                    # dataframe saving
+                    df_jawac.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+                else:
+                    print(f'edf --> {edf_file} or mk3 file --> {mk3_file} not found')
+        
+        dfs_names = sorted(os.listdir(self.dfs_directory))
+        # removal of unwanted directories in the path of the input directory
+        for i in tqdm(range(len(dfs_names))):
+            # make sure file name is not invalid (had issue with the .DS_Store file)
+            if not dfs_names[i].startswith('.'):
+                if dfs_names[i] not in dir_names:
+                    shutil.rmtree(self.dfs_directory + f'/{dfs_names[i]}')
+
     def split_dataframe(self):
         """
         Method used to segment the dataframes into one common dataframe
         """
 
-        dir_names = sorted(os.listdir(os.path.dirname(os.path.abspath('util.py')) + '/training/data/edf_dfs'))
+        dir_names = sorted(os.listdir(self.dfs_directory))
         # loop through the dataframe directory to differentiate analyses with invalid regions from those with only valid regions
         for i in tqdm(range(len(dir_names))):
             if not dir_names[i].startswith('.'):
-                df_mk3 = pd.read_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
-                df_jawac = pd.read_pickle(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/edf_dfs/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+                df_mk3 = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
+                df_jawac = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
                 if 'Out of Range' in df_mk3.label.tolist():
                     self.invalid_mk3_df_list.append(df_mk3)
                     self.invalid_jawac_df_list.append(df_jawac)

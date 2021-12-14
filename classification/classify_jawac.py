@@ -17,7 +17,7 @@ from tensorflow.keras.models import load_model
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 
-from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, extract_data_from_line, string_datetime_conversion
+from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, extract_data_from_line, string_datetime_conversion
 
 
 def analysis_classification(edf, model, num_class, out_graph):
@@ -60,8 +60,8 @@ def analysis_classification(edf, model, num_class, out_graph):
         info_file = open(info_path)
         lines = info_file.readlines()
         lines = lines[2:5]
-        segmentation_value = float(lines[1][-5:-2])    # window segmentation value in minute
-        downsampling_value = float(lines[2][-5:-2])    # signal downsampling value in second
+        segmentation_value = float(lines[1][-6:-2])    # window segmentation value in minute
+        downsampling_value = float(lines[2][-6:-2])    # signal downsampling value in second
         if int(lines[0][-3:-2]) == num_class:
             break
         i+=1
@@ -101,7 +101,13 @@ def analysis_classification(edf, model, num_class, out_graph):
     # loop that runs through the list of model predictions to keep the highest predicted probability values
     for item in predictions[:-1]:
         idx = np.argmax(item)
-        classes.append((idx, item[idx]))
+        if idx == 0:
+            if item[idx] > 0.995:
+                classes.append((idx, item[idx]))
+            else:
+                classes.append((1, 0.5))
+        else:
+            classes.append((idx, item[idx]))
     classes.append((0, 0))
 
     valid_total = 0    # counter for the total number of valid regions found
@@ -125,9 +131,13 @@ def analysis_classification(edf, model, num_class, out_graph):
     print('invalid hours:', hours_conversion((invalid_total * segmentation_value) / 60))
 
     print('--------')
+    
+    print('total signal quality', round((signal_quality(classes) * 100), 2))
+
+    print('--------')
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
-    valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.7)
+    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.7)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -141,13 +151,17 @@ def analysis_classification(edf, model, num_class, out_graph):
     print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
 
     print('--------')
+    
+    print('signal quality in new bounds', round((signal_quality(new_bounds_classes) * 100), 2))
+
+    print('--------')
 
     print('is analysis valid:', is_valid(times[-1] - times[0], valid_hours))
 
     print('--------')
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_valid': round((total_valid_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_valid': round(((valid_total * segmentation_value) / 60), 2), 'hours_invalid': round(((invalid_total * segmentation_value) / 60), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_valid_new_bounds': round(valid_hours, 2), 'percentage_valid_new_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
+    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_valid': round((total_valid_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_valid': round(((valid_total * segmentation_value) / 60), 2), 'hours_invalid': round(((invalid_total * segmentation_value) / 60), 2), 'total_signal_quality': round((signal_quality(classes) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_valid_new_bounds': round(valid_hours, 2), 'percentage_valid_new_bounds': round(valid_rate * 100, 2), 'signal_quality_new_bounds': round((signal_quality(new_bounds_classes) * 100), 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
 
     # graph
     fig, ax = plt.subplots()
@@ -173,14 +187,14 @@ def analysis_classification(edf, model, num_class, out_graph):
     # graph background color based on signal classified label
     for label in classes:
         if label[0] == 0:
-            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='r', alpha=0.3*label[1])
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='r', alpha=0.25)
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='r', alpha=0.3*label[1])
+            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='r', alpha=0.25)
         elif label[0] == 1:
-            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='g', alpha=0.3*label[1])
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='g', alpha=0.25)
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='g', alpha=0.3*label[1])
+            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='g', alpha=0.25)
         elif label[0] == 2:
-            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='b', alpha=0.3*label[1])
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='b', alpha=0.25)
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='b', alpha=0.3*label[1])
+            # plt.axvspan(curr_time, curr_time + datetime.timedelta(minutes=segmentation_value), facecolor='b', alpha=0.25)
         curr_time += datetime.timedelta(minutes=segmentation_value)
 
     # legend
@@ -198,6 +212,8 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
 
+    plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
+
     dictionary['plot'] = plt
     if out_graph:
         plt.show()
@@ -208,9 +224,6 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     print('classification execution time =', round((end - start_class), 2), 'sec')
     print('total execution time =', round((end - start), 2), 'sec')
-    print('--------')
-    print(dictionary)
-    print('--------')
 
     return dictionary
 
@@ -236,8 +249,14 @@ def main(p):
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-    opt = parse_opt()
-    main(p=opt)
+    directory = '/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/analysis'
+    filenames = os.listdir(directory)
+    for f in filenames:
+        if not f.startswith('.'):
+            analysis_classification(f'{directory}/{f}/{f}.edf', 'lstm', 2, False)
+
+    # opt = parse_opt()
+    # main(p=opt)
 
     # Cmd test lines
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'

@@ -1,10 +1,13 @@
 import os
+import sys
 import time
 import datetime
 import argparse
 
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
+
+from preprocessing import Preprocessing
 from learning_models.model import train_model
-from data_loader.preprocessing import create_dataframes
 
 
 def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, num_class, data_balancing):
@@ -30,7 +33,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
 
     print(analysis_directory)
     if os.path.exists(analysis_directory):
-        create_dataframes(directory=analysis_directory)
+        Preprocessing(analysis_directory=analysis_directory).create_dataframes()
     else:
         raise Exception('input directory does not exist')
 
@@ -40,7 +43,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
         else:
             epochs = 50
     
-    train_model(model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
+    train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
 
 
 def parse_opt():
