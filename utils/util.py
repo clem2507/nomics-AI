@@ -441,7 +441,10 @@ def signal_quality(classes):
             score -= c[1]
         elif c[0] == 1:
             score += c[1]
-    return score/len(classes)
+    q = score/len(classes)
+    if q < 0:
+        q = 0
+    return q
 
 class TimingCallback(Callback):
     """

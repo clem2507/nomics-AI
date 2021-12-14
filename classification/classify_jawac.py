@@ -46,7 +46,7 @@ def analysis_classification(edf, model, num_class, out_graph):
                             -'is_valid'
     """
 
-    block_print()
+    # block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
@@ -102,7 +102,8 @@ def analysis_classification(edf, model, num_class, out_graph):
     for item in predictions[:-1]:
         idx = np.argmax(item)
         if idx == 0:
-            if item[idx] > 0.995:
+            if item[idx] > 0.9:
+                print(item[idx])
                 classes.append((idx, item[idx]))
             else:
                 classes.append((1, 0.5))
@@ -212,7 +213,7 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
 
-    plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
+    # plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
     if out_graph:
@@ -249,14 +250,8 @@ def main(p):
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-    directory = '/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/analysis'
-    filenames = os.listdir(directory)
-    for f in filenames:
-        if not f.startswith('.'):
-            analysis_classification(f'{directory}/{f}/{f}.edf', 'lstm', 2, False)
-
-    # opt = parse_opt()
-    # main(p=opt)
+    opt = parse_opt()
+    main(p=opt)
 
     # Cmd test lines
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
