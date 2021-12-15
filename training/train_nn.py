@@ -8,9 +8,10 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_lo
 
 from preprocessing import Preprocessing
 from learning_models.model import train_model
+from learning_models.knn import train_model as knn_train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, num_class, data_balancing):
+def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, num_class, data_balancing, neighbors):
     """
     Primary function for training the CNN or LSTM model
 
@@ -43,8 +44,12 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
         else:
             epochs = 50
     
-    train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
-
+    if model.lower() == 'cnn' or model.lower() == 'lstm':
+        train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
+    elif model.lower() == 'knn':
+        knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
+    else:
+        raise Exception('model type does not exist, please choose between LSTM and CNN')
 
 def parse_opt():
     parser = argparse.ArgumentParser()
@@ -55,6 +60,7 @@ def parse_opt():
     parser.add_argument('--epochs', type=int, default=None, help='total number of epochs for training')
     parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, input 2 for (valid | invalid), 3 for (valid | invalid | awake)')
     parser.add_argument('--no_balance', dest='data_balancing', action='store_false', help='invoke to not balance the dataset instances')
+    parser.add_argument('--neighbors', type=int, default=3, help='neighbors: number of k-nearest neighbors to train the model')
     parser.set_defaults(data_balancing=True)
     return parser.parse_args()
 
@@ -71,12 +77,18 @@ if __name__ == '__main__':
 
     # CNN
     # binary
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --model 'cnn'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --num_class 2 --model 'cnn'
     # multinomial
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 0.1 --epochs 50 --num_class 3 --model 'cnn'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 15 --downsampling_value 0.1 --epochs 50 --num_class 3 --model 'cnn'
 
     # LSTM
     # binary
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --num_class 2 --model 'lstm'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --num_class 2 --model 'lstm'
     # multinomial
-    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 0.5 --downsampling_value 1 --epochs 50 --num_class 3 --model 'lstm'
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 15 --downsampling_value 1 --epochs 50 --num_class 3 --model 'lstm'
+
+    # KNN
+    # binary
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 1 --downsampling_value 1 --num_class 2 --neighbors 5 --model 'knn'
+    # multinomial
+    # python3 training/train_nn.py --analysis_directory 'training/data/analysis' --segmentation_value 15 --downsampling_value 1 --num_class 3 --neighbors 5 --model 'knn'

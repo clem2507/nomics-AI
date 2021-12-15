@@ -197,6 +197,7 @@ class Preprocessing:
         for idx in tqdm(range(len(temp_dataset_df))):
             temp = [temp_dataset_df.iloc[idx][0][i:i + max_length] for i in range(0, len(temp_dataset_df.iloc[idx][0]), max_length)][:-1]
             for arr in temp:
+                arr.append(np.var(arr)*1000)
                 out = [arr, temp_dataset_df.iloc[idx].label]
                 self.dataset_df = self.dataset_df.append(pd.Series(out, index=self.dataset_df.columns), ignore_index=True)
 

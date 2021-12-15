@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import mne
+import pickle
 import argparse
 import datetime
 import numpy as np
@@ -46,12 +47,13 @@ def analysis_classification(edf, model, num_class, out_graph):
                             -'is_valid'
     """
 
-    # block_print()
+    block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
     # if condition to distinct binary and binary classification
-    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model.lower()}'
+    model_name = model.lower()
+    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}'
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     i = 0
     while True:
@@ -66,7 +68,7 @@ def analysis_classification(edf, model, num_class, out_graph):
             break
         i+=1
         if i == len(most_recent_folder_path):
-            raise Exception(f'model path not found, please train a {num_class}-class {model} model')
+            raise Exception(f'model path not found, please train a {num_class}-class {model_name} model')
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -80,35 +82,46 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     start_class = time.time()    # start variable used for the calculation of the final classification time 
 
-    # model loader
-    if model.lower() in ['cnn', 'lstm']:
-        if os.path.exists(model_path):
-            model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
-        else:
-            raise Exception('model path does not exist')
-    else:
-        raise Exception('model should either be CNN or LSTM, found something else')
-
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
     size = int((60 / downsampling_value) * segmentation_value)
-    X_test_seq = np.array([df_jawac.loc[i:i + size - 1, :].data for i in range(0, len(df_jawac), size)], dtype=object)
-    X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq, padding='post', dtype='float64')
+    X_test_seq = np.array([(df_jawac.loc[i:i + size - 1, :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
+    X_test_seq_temp = []
+    for arr in X_test_seq:
+        # arr = arr.append(pd.Series([np.var(arr)*1000]), ignore_index=True)
+        arr = np.append(arr, pd.Series([np.var(arr)*1000]))
+        X_test_seq_temp.append(arr)
+        # X_test_seq_temp.append(pd.Series([np.var(arr), np.median(arr)]))
+    # X_test_seq_temp = np.array(X_test_seq_temp, dtype=list)
+    X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
     X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
     df_jawac.set_index('times', inplace=True)
+
+    # model loader
+    if os.path.exists(model_path):
+        if model_name in ['cnn', 'lstm']:
+            model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
+        else:
+            X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1]))
+            model = pickle.load(open(model_path, 'rb'))
+    else:
+        raise Exception('model path does not exist')
 
     predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
     classes = []    # classes list holds the predicted labels
     # loop that runs through the list of model predictions to keep the highest predicted probability values
     for item in predictions[:-1]:
         idx = np.argmax(item)
-        if idx == 0:
-            if item[idx] > 0.9:
-                print(item[idx])
-                classes.append((idx, item[idx]))
+        if model_name in ['cnn', 'lstm']:
+            if idx == 0:
+                if item[idx] > 0.9:
+                    print(item[idx])
+                    classes.append((idx, item[idx]))
+                else:
+                    classes.append((1, 0.5))
             else:
-                classes.append((1, 0.5))
+                classes.append((idx, item[idx]))
         else:
-            classes.append((idx, item[idx]))
+            classes.append((idx, 1))
     classes.append((0, 0))
 
     valid_total = 0    # counter for the total number of valid regions found
@@ -138,7 +151,7 @@ def analysis_classification(edf, model, num_class, out_graph):
     print('--------')
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
-    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.7)
+    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.95)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -213,7 +226,7 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
 
-    # plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
+    plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
     if out_graph:
@@ -253,9 +266,19 @@ if __name__ == '__main__':
     opt = parse_opt()
     main(p=opt)
 
+    # directory = '/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/analysis'
+    # filenames = sorted(os.listdir(directory))
+    # for f in filenames:
+    #     if not f.startswith('.'):
+    #         edf_path = f'{directory}/{f}/{f}.edf'
+    #         if os.path.exists(edf_path):
+    #             analysis_classification(edf_path, 'lstm', 2, False)
+
     # Cmd test lines
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data2.edf' --view_graph --model 'LSTM'
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data3.edf' --view_graph --model 'LSTM'
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data4.edf' --view_graph --model 'LSTM'
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data5.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data6.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data7.edf' --view_graph --model 'LSTM'
