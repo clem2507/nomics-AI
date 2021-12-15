@@ -226,7 +226,7 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
 
-    plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
+    plt.savefig(f'/Users/clemdetry/Documents/Nomics/thesis_nomics.nosync/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
     if out_graph:
@@ -266,13 +266,15 @@ if __name__ == '__main__':
     opt = parse_opt()
     main(p=opt)
 
-    # directory = '/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/analysis'
+    # directory = '/Users/clemdetry/Documents/Nomics/thesis_nomics.nosync/training/data/analysis'
     # filenames = sorted(os.listdir(directory))
     # for f in filenames:
     #     if not f.startswith('.'):
     #         edf_path = f'{directory}/{f}/{f}.edf'
     #         if os.path.exists(edf_path):
     #             analysis_classification(edf_path, 'lstm', 2, False)
+    #         else:
+    #             print(f'{edf_path} does not exist')
 
     # Cmd test lines
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
@@ -282,3 +284,5 @@ if __name__ == '__main__':
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data5.edf' --view_graph --model 'LSTM'
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data6.edf' --view_graph --model 'LSTM'
     # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data7.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data8.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify_jawac.py --edf 'classification/test_data/patient_data9.edf' --view_graph --model 'LSTM'
