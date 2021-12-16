@@ -1,0 +1,17 @@
+MK_FILE_REV_2
+ANJAW_REV=3.0.7
+IsReportUpToDate=No
+Comment=
+-
+21:28:10:000;22.04.21;21:28:10:000;22.04.21;Logiciel;ep;START
+06:39:26:900;23.04.21;06:39:26:900;23.04.21;Logiciel;ep;STOP
+21:28:10:000;22.04.21;06:39:26:900;23.04.21;Logiciel;zs;1;Out of Range
+21:28:10:000;22.04.21;21:29:03:000;22.04.21;Logiciel;zs;4;Out of Range
+21:29:08:000;22.04.21;21:29:13:000;22.04.21;Logiciel;zs;4;Out of Range
+21:29:57:000;22.04.21;21:30:37:000;22.04.21;Logiciel;zs;4;Out of Range
+02:18:41:000;23.04.21;02:21:57:000;23.04.21;Logiciel;zs;4;Out of Range
+02:26:09:000;23.04.21;02:26:24:000;23.04.21;Logiciel;zs;4;Out of Range
+04:28:12:000;23.04.21;04:28:17:000;23.04.21;Logiciel;zs;4;Out of Range
+06:37:42:000;23.04.21;06:37:49:000;23.04.21;Logiciel;zs;4;Out of Range
+06:39:00:000;23.04.21;06:39:11:000;23.04.21;Logiciel;zs;4;Out of Range
+21:28:10:000;22.04.21;06:39:26:900;23.04.21;Logiciel;ze;Zone d'exclusion

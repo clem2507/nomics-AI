@@ -1,0 +1,118 @@
+MK_FILE_REV_2
+ANJAW_REV=3.0.7
+IsReportUpToDate=No
+Comment=
+-
+16:08:51:000;01.01.00;16:08:51:000;01.01.00;Logiciel;ep;START
+00:04:26:900;05.01.00;00:04:26:900;05.01.00;Logiciel;ep;STOP
+16:08:51:000;01.01.00;17:04:16:500;01.01.00;Logiciel;zs;1;Out of Range
+17:10:48:500;01.01.00;18:10:39:399;01.01.00;Logiciel;zs;1;Out of Range
+18:16:12:199;01.01.00;18:26:14:500;01.01.00;Logiciel;zs;1;Out of Range
+18:27:15:299;01.01.00;18:33:05:299;01.01.00;Logiciel;zs;1;Out of Range
+18:34:20:000;01.01.00;18:46:33:200;01.01.00;Logiciel;zs;1;Out of Range
+18:50:00:799;01.01.00;19:01:48:899;01.01.00;Logiciel;zs;1;Out of Range
+19:02:52:500;01.01.00;19:16:34:799;01.01.00;Logiciel;zs;1;Out of Range
+19:18:18:000;01.01.00;19:29:48:899;01.01.00;Logiciel;zs;1;Out of Range
+19:31:12:700;01.01.00;19:42:58:899;01.01.00;Logiciel;zs;1;Out of Range
+19:44:48:899;01.01.00;20:01:10:899;01.01.00;Logiciel;zs;1;Out of Range
+20:05:02:700;01.01.00;22:39:27:900;01.01.00;Logiciel;zs;1;Out of Range
+22:49:40:900;01.01.00;22:58:58:900;01.01.00;Logiciel;zs;1;Out of Range
+23:01:53:599;01.01.00;00:01:31:299;02.01.00;Logiciel;zs;1;Out of Range
+00:05:29:900;02.01.00;01:46:59:099;02.01.00;Logiciel;zs;1;Out of Range
+01:55:34:900;02.01.00;05:06:29:199;02.01.00;Logiciel;zs;1;Out of Range
+05:26:58:000;02.01.00;09:02:35:900;02.01.00;Logiciel;zs;1;Out of Range
+09:06:24:900;02.01.00;09:23:11:699;02.01.00;Logiciel;zs;1;Out of Range
+09:25:45:599;02.01.00;09:56:19:199;02.01.00;Logiciel;zs;1;Out of Range
+10:01:55:699;02.01.00;11:55:13:899;02.01.00;Logiciel;zs;1;Out of Range
+12:25:11:899;02.01.00;12:56:28:199;02.01.00;Logiciel;zs;1;Out of Range
+13:02:20:800;02.01.00;14:24:40:800;02.01.00;Logiciel;zs;1;Out of Range
+14:41:55:100;02.01.00;16:39:06:000;02.01.00;Logiciel;zs;1;Out of Range
+16:44:28:899;02.01.00;17:06:05:899;02.01.00;Logiciel;zs;1;Out of Range
+17:13:47:800;02.01.00;18:40:14:899;02.01.00;Logiciel;zs;1;Out of Range
+18:45:38:800;02.01.00;19:44:18:000;02.01.00;Logiciel;zs;1;Out of Range
+19:46:28:699;02.01.00;20:43:33:100;02.01.00;Logiciel;zs;1;Out of Range
+20:49:21:100;02.01.00;22:27:41:100;02.01.00;Logiciel;zs;1;Out of Range
+22:30:56:899;02.01.00;22:42:37:600;02.01.00;Logiciel;zs;1;Out of Range
+22:46:29:100;02.01.00;22:50:54:100;02.01.00;Logiciel;zs;1;Out of Range
+22:57:42:399;02.01.00;23:01:55:899;02.01.00;Logiciel;zs;1;Out of Range
+23:09:03:199;02.01.00;23:52:44:600;02.01.00;Logiciel;zs;1;Out of Range
+00:02:01:399;03.01.00;00:38:50:600;03.01.00;Logiciel;zs;1;Out of Range
+01:26:08:800;03.01.00;02:05:30:899;03.01.00;Logiciel;zs;1;Out of Range
+02:16:32:399;03.01.00;06:38:40:299;03.01.00;Logiciel;zs;1;Out of Range
+07:08:13:100;03.01.00;09:01:00:200;03.01.00;Logiciel;zs;1;Out of Range
+09:21:59:100;03.01.00;13:16:49:700;03.01.00;Logiciel;zs;1;Out of Range
+13:33:18:100;03.01.00;14:41:22:100;03.01.00;Logiciel;zs;1;Out of Range
+14:55:45:799;03.01.00;16:55:12:700;03.01.00;Logiciel;zs;1;Out of Range
+16:57:56:399;03.01.00;17:15:51:200;03.01.00;Logiciel;zs;1;Out of Range
+17:24:59:100;03.01.00;20:04:34:700;03.01.00;Logiciel;zs;1;Out of Range
+20:08:34:500;03.01.00;22:22:29:299;03.01.00;Logiciel;zs;1;Out of Range
+22:33:27:100;03.01.00;00:57:14:799;04.01.00;Logiciel;zs;1;Out of Range
+01:01:56:100;04.01.00;01:46:33:000;04.01.00;Logiciel;zs;1;Out of Range
+01:51:48:100;04.01.00;02:23:02:299;04.01.00;Logiciel;zs;1;Out of Range
+02:29:12:100;04.01.00;03:24:49:100;04.01.00;Logiciel;zs;1;Out of Range
+03:35:25:100;04.01.00;05:02:49:700;04.01.00;Logiciel;zs;1;Out of Range
+05:32:12:500;04.01.00;13:01:43:100;04.01.00;Logiciel;zs;1;Out of Range
+13:53:40:100;04.01.00;14:07:44:700;04.01.00;Logiciel;zs;1;Out of Range
+14:10:21:100;04.01.00;14:11:45:700;04.01.00;Logiciel;zs;1;Out of Range
+14:13:11:100;04.01.00;14:28:11:700;04.01.00;Logiciel;zs;1;Out of Range
+14:37:53:100;04.01.00;15:12:57:899;04.01.00;Logiciel;zs;1;Out of Range
+15:37:36:700;04.01.00;15:39:11:799;04.01.00;Logiciel;zs;1;Out of Range
+15:54:49:100;04.01.00;16:20:15:700;04.01.00;Logiciel;zs;1;Out of Range
+16:33:18:000;04.01.00;16:44:30:000;04.01.00;Logiciel;zs;1;Out of Range
+16:45:46:799;04.01.00;16:47:33:899;04.01.00;Logiciel;zs;1;Out of Range
+16:55:08:100;04.01.00;18:15:23:799;04.01.00;Logiciel;zs;1;Out of Range
+18:21:47:099;04.01.00;21:11:30:799;04.01.00;Logiciel;zs;1;Out of Range
+21:27:42:500;04.01.00;23:26:48:700;04.01.00;Logiciel;zs;1;Out of Range
+20:41:58:000;02.01.00;20:42:11:000;02.01.00;Logiciel;zs;4;Out of Range
+16:08:51:000;01.01.00;17:04:16:500;01.01.00;Logiciel;ze;Zone d'exclusion
+17:10:48:500;01.01.00;18:10:39:399;01.01.00;Logiciel;ze;Zone d'exclusion
+18:16:12:199;01.01.00;18:46:33:200;01.01.00;Logiciel;ze;Zone d'exclusion
+18:50:00:799;01.01.00;19:16:34:799;01.01.00;Logiciel;ze;Zone d'exclusion
+19:18:18:000;01.01.00;19:42:58:899;01.01.00;Logiciel;ze;Zone d'exclusion
+19:44:48:899;01.01.00;20:01:10:899;01.01.00;Logiciel;ze;Zone d'exclusion
+20:05:02:700;01.01.00;22:39:27:900;01.01.00;Logiciel;ze;Zone d'exclusion
+22:49:40:900;01.01.00;22:58:58:900;01.01.00;Logiciel;ze;Zone d'exclusion
+23:01:53:599;01.01.00;00:01:31:299;02.01.00;Logiciel;ze;Zone d'exclusion
+00:05:29:900;02.01.00;01:46:59:099;02.01.00;Logiciel;ze;Zone d'exclusion
+01:55:34:900;02.01.00;05:06:29:199;02.01.00;Logiciel;ze;Zone d'exclusion
+05:26:58:000;02.01.00;09:02:35:900;02.01.00;Logiciel;ze;Zone d'exclusion
+09:06:24:900;02.01.00;09:23:11:699;02.01.00;Logiciel;ze;Zone d'exclusion
+09:25:45:599;02.01.00;09:56:19:199;02.01.00;Logiciel;ze;Zone d'exclusion
+10:01:55:699;02.01.00;11:55:13:899;02.01.00;Logiciel;ze;Zone d'exclusion
+12:25:11:899;02.01.00;12:56:28:199;02.01.00;Logiciel;ze;Zone d'exclusion
+13:02:20:800;02.01.00;14:24:40:800;02.01.00;Logiciel;ze;Zone d'exclusion
+14:41:55:100;02.01.00;16:39:06:000;02.01.00;Logiciel;ze;Zone d'exclusion
+16:44:28:899;02.01.00;17:06:05:899;02.01.00;Logiciel;ze;Zone d'exclusion
+17:13:47:800;02.01.00;18:40:14:899;02.01.00;Logiciel;ze;Zone d'exclusion
+18:45:38:800;02.01.00;19:44:18:000;02.01.00;Logiciel;ze;Zone d'exclusion
+19:46:28:699;02.01.00;20:45:11:899;02.01.00;Logiciel;ze;Zone d'exclusion
+20:49:21:100;02.01.00;22:27:41:100;02.01.00;Logiciel;ze;Zone d'exclusion
+22:30:56:899;02.01.00;22:42:37:600;02.01.00;Logiciel;ze;Zone d'exclusion
+22:46:29:100;02.01.00;22:50:54:100;02.01.00;Logiciel;ze;Zone d'exclusion
+22:57:42:399;02.01.00;23:01:55:899;02.01.00;Logiciel;ze;Zone d'exclusion
+23:09:03:199;02.01.00;23:52:44:600;02.01.00;Logiciel;ze;Zone d'exclusion
+00:02:01:399;03.01.00;00:38:50:600;03.01.00;Logiciel;ze;Zone d'exclusion
+01:26:08:800;03.01.00;02:05:30:899;03.01.00;Logiciel;ze;Zone d'exclusion
+02:16:32:399;03.01.00;06:38:40:299;03.01.00;Logiciel;ze;Zone d'exclusion
+07:08:13:100;03.01.00;09:01:00:200;03.01.00;Logiciel;ze;Zone d'exclusion
+09:21:59:100;03.01.00;13:16:49:700;03.01.00;Logiciel;ze;Zone d'exclusion
+13:33:18:100;03.01.00;14:41:22:100;03.01.00;Logiciel;ze;Zone d'exclusion
+14:55:45:799;03.01.00;16:55:12:700;03.01.00;Logiciel;ze;Zone d'exclusion
+16:57:56:399;03.01.00;17:15:51:200;03.01.00;Logiciel;ze;Zone d'exclusion
+17:24:59:100;03.01.00;20:04:34:700;03.01.00;Logiciel;ze;Zone d'exclusion
+20:08:34:500;03.01.00;22:22:29:299;03.01.00;Logiciel;ze;Zone d'exclusion
+22:33:27:100;03.01.00;00:57:14:799;04.01.00;Logiciel;ze;Zone d'exclusion
+01:01:56:100;04.01.00;01:46:33:000;04.01.00;Logiciel;ze;Zone d'exclusion
+01:51:48:100;04.01.00;02:23:02:299;04.01.00;Logiciel;ze;Zone d'exclusion
+02:29:12:100;04.01.00;03:24:49:100;04.01.00;Logiciel;ze;Zone d'exclusion
+03:35:25:100;04.01.00;05:02:49:700;04.01.00;Logiciel;ze;Zone d'exclusion
+05:32:12:500;04.01.00;13:01:43:100;04.01.00;Logiciel;ze;Zone d'exclusion
+13:53:40:100;04.01.00;14:07:44:700;04.01.00;Logiciel;ze;Zone d'exclusion
+14:13:11:100;04.01.00;14:28:11:700;04.01.00;Logiciel;ze;Zone d'exclusion
+14:37:53:100;04.01.00;15:12:57:899;04.01.00;Logiciel;ze;Zone d'exclusion
+15:37:36:700;04.01.00;15:39:11:799;04.01.00;Logiciel;ze;Zone d'exclusion
+15:54:49:100;04.01.00;16:20:15:700;04.01.00;Logiciel;ze;Zone d'exclusion
+16:33:18:000;04.01.00;16:47:33:899;04.01.00;Logiciel;ze;Zone d'exclusion
+16:55:08:100;04.01.00;18:15:23:799;04.01.00;Logiciel;ze;Zone d'exclusion
+18:21:47:099;04.01.00;21:11:30:799;04.01.00;Logiciel;ze;Zone d'exclusion
+21:27:42:500;04.01.00;23:26:48:700;04.01.00;Logiciel;ze;Zone d'exclusion

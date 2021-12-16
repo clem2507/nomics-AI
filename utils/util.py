@@ -433,12 +433,12 @@ def is_valid(total_hours, valid_hours):
 
 
 def signal_quality(classes):
-    if len(classes) == 0:
-        return 0
     score = 0
+    if len(classes) == 0:
+        return score
     for c in classes:
         if c[0] == 0:
-            score -= c[1]
+            score += 1-c[1]
         elif c[0] == 1:
             score += c[1]
     q = score/len(classes)

@@ -1,0 +1,12 @@
+PCTFR;10.1.2;;
+PCTFR;10.1.2;0;
+ANJAW;3.0.7;;
+ANJAW;3.0.7;W00001;Délimitation sur signal Jawac: pas de différenciation des apnées et hypopnées
+ANJAW;3.0.7;W00008;Validité Jawac insuffisante: délimitation des évènements impossible
+ANJAW;3.0.7;W00009;Validité Jawac insuffisante: classification des évènements impossible
+ANJAW;3.0.7;W00010;Validité Jawac insuffisante: discrimination Eveil/Sommeil affectée
+ANJAW;3.0.7;000011;Validité Jawac faible (5 min)
+ANJAW;3.0.7;000013;Validité Nasal Flow faible (0 min)
+ANJAW;3.0.7;000015;Validité RIP Thorax faible (0 min)
+ANJAW;3.0.7;000017;Validité RIP Sum faible (0 min)
+ANJAW;3.0.7;0;

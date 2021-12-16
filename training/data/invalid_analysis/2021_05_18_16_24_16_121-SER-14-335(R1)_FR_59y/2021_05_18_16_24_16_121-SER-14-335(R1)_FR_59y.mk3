@@ -1,0 +1,12 @@
+MK_FILE_REV_2
+ANJAW_REV=3.0.7
+IsReportUpToDate=No
+Comment=
+-
+21:52:27:000;18.05.21;21:52:27:000;18.05.21;Logiciel;ep;START
+23:46:06:899;18.05.21;23:46:06:899;18.05.21;Logiciel;ep;STOP
+21:52:27:000;18.05.21;23:46:06:899;18.05.21;Logiciel;zs;1;Out of Range
+21:52:27:000;18.05.21;21:57:08:000;18.05.21;Logiciel;zs;4;Out of Range
+22:07:32:000;18.05.21;22:07:44:000;18.05.21;Logiciel;zs;4;Out of Range
+22:07:52:000;18.05.21;22:07:59:000;18.05.21;Logiciel;zs;4;Out of Range
+21:52:27:000;18.05.21;23:46:06:899;18.05.21;Logiciel;ze;Zone d'exclusion

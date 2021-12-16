@@ -1,0 +1,25 @@
+MK_FILE_REV_2
+ANJAW_REV=3.0.7
+IsReportUpToDate=No
+Comment=
+-
+01:56:28:000;27.05.21;01:56:28:000;27.05.21;Logiciel;ep;START
+12:02:38:900;27.05.21;12:02:38:900;27.05.21;Logiciel;ep;STOP
+01:56:28:000;27.05.21;06:01:50:500;27.05.21;Logiciel;zs;1;Out of Range
+06:08:07:399;27.05.21;06:39:55:799;27.05.21;Logiciel;zs;1;Out of Range
+06:50:28:200;27.05.21;06:51:37:400;27.05.21;Logiciel;zs;1;Out of Range
+07:00:29:500;27.05.21;08:35:31:599;27.05.21;Logiciel;zs;1;Out of Range
+08:37:06:700;27.05.21;08:40:28:900;27.05.21;Logiciel;zs;1;Out of Range
+09:08:48:200;27.05.21;09:12:16:799;27.05.21;Logiciel;zs;1;Out of Range
+09:13:23:900;27.05.21;09:40:58:900;27.05.21;Logiciel;zs;1;Out of Range
+09:42:25:299;27.05.21;12:02:38:900;27.05.21;Logiciel;zs;1;Out of Range
+01:56:28:000;27.05.21;01:56:45:000;27.05.21;Logiciel;zs;4;Out of Range
+01:56:59:000;27.05.21;01:57:04:000;27.05.21;Logiciel;zs;4;Out of Range
+01:57:13:000;27.05.21;01:57:18:000;27.05.21;Logiciel;zs;4;Out of Range
+09:42:25:000;27.05.21;09:46:27:000;27.05.21;Logiciel;zs;4;Out of Range
+12:02:32:000;27.05.21;12:02:38:000;27.05.21;Logiciel;zs;4;Out of Range
+01:56:28:000;27.05.21;06:01:50:500;27.05.21;Logiciel;ze;Zone d'exclusion
+06:08:07:399;27.05.21;06:39:55:799;27.05.21;Logiciel;ze;Zone d'exclusion
+07:00:29:500;27.05.21;08:35:31:599;27.05.21;Logiciel;ze;Zone d'exclusion
+08:37:06:700;27.05.21;08:40:28:900;27.05.21;Logiciel;ze;Zone d'exclusion
+09:08:48:200;27.05.21;12:02:38:900;27.05.21;Logiciel;ze;Zone d'exclusion

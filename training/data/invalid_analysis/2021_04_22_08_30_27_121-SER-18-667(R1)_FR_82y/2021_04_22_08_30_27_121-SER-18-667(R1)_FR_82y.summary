@@ -1,0 +1,7 @@
+PCTFR;10.1.2;;
+PCTFR;10.1.2;000092;Problème rencontré lors de la génération des shots ECG
+PCTFR;10.1.2;0;
+ANJAW;3.0.7;;
+ANJAW;3.0.7;W00001;Délimitation sur signal Jawac: pas de différenciation des apnées et hypopnées
+ANJAW;3.0.7;E00002;Durée d'analyse <5minutes
+ANJAW;3.0.7;0;

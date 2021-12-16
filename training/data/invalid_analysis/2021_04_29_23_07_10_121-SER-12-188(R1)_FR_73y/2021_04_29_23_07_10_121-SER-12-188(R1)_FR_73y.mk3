@@ -1,0 +1,186 @@
+MK_FILE_REV_2
+ANJAW_REV=3.0.7
+IsReportUpToDate=No
+Comment=
+-
+23:07:10:000;29.04.21;23:07:10:000;29.04.21;Logiciel;ep;START
+09:19:10:900;30.04.21;09:19:10:900;30.04.21;Logiciel;ep;STOP
+23:23:22:333;29.04.21;23:24:20:000;29.04.21;Logiciel;zs;4;Desaturation
+23:38:23:333;29.04.21;23:39:08:666;29.04.21;Logiciel;zs;4;Desaturation
+23:47:30:666;29.04.21;23:48:28:333;29.04.21;Logiciel;zs;4;Desaturation
+00:20:16:666;30.04.21;00:21:14:333;30.04.21;Logiciel;zs;4;Desaturation
+00:33:04:666;30.04.21;00:33:47:666;30.04.21;Logiciel;zs;4;Desaturation
+00:35:57:666;30.04.21;00:36:54:333;30.04.21;Logiciel;zs;4;Desaturation
+00:41:05:333;30.04.21;00:41:56:333;30.04.21;Logiciel;zs;4;Desaturation
+00:47:19:333;30.04.21;00:48:13:666;30.04.21;Logiciel;zs;4;Desaturation
+00:50:22:666;30.04.21;00:50:57:333;30.04.21;Logiciel;zs;4;Desaturation
+00:51:11:666;30.04.21;00:52:19:666;30.04.21;Logiciel;zs;4;Desaturation
+00:52:48:333;30.04.21;00:53:25:666;30.04.21;Logiciel;zs;4;Desaturation
+00:54:43:333;30.04.21;00:55:13:000;30.04.21;Logiciel;zs;4;Desaturation
+00:55:35:333;30.04.21;00:56:40:000;30.04.21;Logiciel;zs;4;Desaturation
+00:56:51:333;30.04.21;00:57:43:000;30.04.21;Logiciel;zs;4;Desaturation
+00:58:01:666;30.04.21;00:58:56:666;30.04.21;Logiciel;zs;4;Desaturation
+00:59:07:333;30.04.21;00:59:53:333;30.04.21;Logiciel;zs;4;Desaturation
+01:00:23:333;30.04.21;01:01:45:000;30.04.21;Logiciel;zs;4;Desaturation
+01:05:14:666;30.04.21;01:05:59:333;30.04.21;Logiciel;zs;4;Desaturation
+01:07:03:333;30.04.21;01:07:34:666;30.04.21;Logiciel;zs;4;Desaturation
+01:08:07:333;30.04.21;01:09:10:333;30.04.21;Logiciel;zs;4;Desaturation
+01:09:23:666;30.04.21;01:10:32:333;30.04.21;Logiciel;zs;4;Desaturation
+01:10:48:666;30.04.21;01:11:28:666;30.04.21;Logiciel;zs;4;Desaturation
+01:12:32:333;30.04.21;01:13:04:666;30.04.21;Logiciel;zs;4;Desaturation
+01:13:16:333;30.04.21;01:14:01:000;30.04.21;Logiciel;zs;4;Desaturation
+01:14:16:333;30.04.21;01:15:04:666;30.04.21;Logiciel;zs;4;Desaturation
+01:15:29:666;30.04.21;01:16:15:666;30.04.21;Logiciel;zs;4;Desaturation
+01:16:36:333;30.04.21;01:17:02:000;30.04.21;Logiciel;zs;4;Desaturation
+01:17:24:333;30.04.21;01:18:13:666;30.04.21;Logiciel;zs;4;Desaturation
+01:18:18:333;30.04.21;01:18:58:000;30.04.21;Logiciel;zs;4;Desaturation
+01:19:09:666;30.04.21;01:19:23:000;30.04.21;Logiciel;zs;4;Desaturation
+01:20:11:333;30.04.21;01:20:47:000;30.04.21;Logiciel;zs;4;Desaturation
+01:21:39:333;30.04.21;01:22:35:666;30.04.21;Logiciel;zs;4;Desaturation
+01:22:46:333;30.04.21;01:22:58:666;30.04.21;Logiciel;zs;4;Desaturation
+01:23:34:333;30.04.21;01:24:44:666;30.04.21;Logiciel;zs;4;Desaturation
+01:25:01:666;30.04.21;01:25:58:666;30.04.21;Logiciel;zs;4;Desaturation
+01:26:22:666;30.04.21;01:27:14:666;30.04.21;Logiciel;zs;4;Desaturation
+01:29:42:333;30.04.21;01:30:28:333;30.04.21;Logiciel;zs;4;Desaturation
+01:30:53:666;30.04.21;01:31:29:333;30.04.21;Logiciel;zs;4;Desaturation
+01:31:46:333;30.04.21;01:32:24:666;30.04.21;Logiciel;zs;4;Desaturation
+01:33:14:333;30.04.21;01:34:03:666;30.04.21;Logiciel;zs;4;Desaturation
+01:35:40:333;30.04.21;01:36:09:000;30.04.21;Logiciel;zs;4;Desaturation
+01:37:33:666;30.04.21;01:38:09:333;30.04.21;Logiciel;zs;4;Desaturation
+01:38:33:666;30.04.21;01:39:29:666;30.04.21;Logiciel;zs;4;Desaturation
+01:40:14:333;30.04.21;01:41:00:000;30.04.21;Logiciel;zs;4;Desaturation
+01:45:22:333;30.04.21;01:46:50:333;30.04.21;Logiciel;zs;4;Desaturation
+02:13:41:333;30.04.21;02:14:26:000;30.04.21;Logiciel;zs;4;Desaturation
+02:15:53:333;30.04.21;02:16:23:000;30.04.21;Logiciel;zs;4;Desaturation
+02:17:45:333;30.04.21;02:18:24:333;30.04.21;Logiciel;zs;4;Desaturation
+02:18:29:333;30.04.21;02:19:16:000;30.04.21;Logiciel;zs;4;Desaturation
+02:21:25:666;30.04.21;02:22:17:666;30.04.21;Logiciel;zs;4;Desaturation
+02:33:19:666;30.04.21;02:33:59:666;30.04.21;Logiciel;zs;4;Desaturation
+02:52:01:666;30.04.21;02:53:00:333;30.04.21;Logiciel;zs;4;Desaturation
+02:53:11:333;30.04.21;02:53:52:333;30.04.21;Logiciel;zs;4;Desaturation
+02:54:03:333;30.04.21;02:54:28:000;30.04.21;Logiciel;zs;4;Desaturation
+03:10:50:666;30.04.21;03:11:30:666;30.04.21;Logiciel;zs;4;Desaturation
+03:32:27:333;30.04.21;03:33:29:000;30.04.21;Logiciel;zs;4;Desaturation
+03:33:47:333;30.04.21;03:34:37:000;30.04.21;Logiciel;zs;4;Desaturation
+03:35:45:666;30.04.21;03:36:25:000;30.04.21;Logiciel;zs;4;Desaturation
+03:36:35:666;30.04.21;03:37:07:000;30.04.21;Logiciel;zs;4;Desaturation
+03:37:39:333;30.04.21;03:38:36:000;30.04.21;Logiciel;zs;4;Desaturation
+03:38:59:333;30.04.21;03:39:41:666;30.04.21;Logiciel;zs;4;Desaturation
+03:39:52:333;30.04.21;03:40:16:000;30.04.21;Logiciel;zs;4;Desaturation
+03:41:11:333;30.04.21;03:41:59:000;30.04.21;Logiciel;zs;4;Desaturation
+03:42:50:333;30.04.21;03:43:16:000;30.04.21;Logiciel;zs;4;Desaturation
+03:45:15:666;30.04.21;03:46:03:333;30.04.21;Logiciel;zs;4;Desaturation
+03:46:16:666;30.04.21;03:47:07:000;30.04.21;Logiciel;zs;4;Desaturation
+03:47:10:333;30.04.21;03:47:58:333;30.04.21;Logiciel;zs;4;Desaturation
+03:48:38:333;30.04.21;03:49:32:000;30.04.21;Logiciel;zs;4;Desaturation
+03:49:53:333;30.04.21;03:51:07:666;30.04.21;Logiciel;zs;4;Desaturation
+03:53:25:666;30.04.21;03:55:02:333;30.04.21;Logiciel;zs;4;Desaturation
+03:55:33:666;30.04.21;03:56:24:666;30.04.21;Logiciel;zs;4;Desaturation
+04:00:15:666;30.04.21;04:00:48:666;30.04.21;Logiciel;zs;4;Desaturation
+04:01:13:333;30.04.21;04:02:35:666;30.04.21;Logiciel;zs;4;Desaturation
+04:04:44:333;30.04.21;04:05:39:000;30.04.21;Logiciel;zs;4;Desaturation
+04:24:27:333;30.04.21;04:25:25:666;30.04.21;Logiciel;zs;4;Desaturation
+04:25:36:333;30.04.21;04:26:22:666;30.04.21;Logiciel;zs;4;Desaturation
+04:37:51:333;30.04.21;04:38:28:333;30.04.21;Logiciel;zs;4;Desaturation
+04:40:32:666;30.04.21;04:41:00:333;30.04.21;Logiciel;zs;4;Desaturation
+04:41:11:333;30.04.21;04:41:52:666;30.04.21;Logiciel;zs;4;Desaturation
+04:41:55:333;30.04.21;04:42:38:000;30.04.21;Logiciel;zs;4;Desaturation
+04:45:41:333;30.04.21;04:46:07:333;30.04.21;Logiciel;zs;4;Desaturation
+04:46:19:666;30.04.21;04:46:56:333;30.04.21;Logiciel;zs;4;Desaturation
+04:51:53:666;30.04.21;04:52:22:000;30.04.21;Logiciel;zs;4;Desaturation
+04:54:57:333;30.04.21;04:56:01:000;30.04.21;Logiciel;zs;4;Desaturation
+04:58:23:666;30.04.21;04:59:26:666;30.04.21;Logiciel;zs;4;Desaturation
+05:00:18:666;30.04.21;05:00:35:000;30.04.21;Logiciel;zs;4;Desaturation
+05:00:47:333;30.04.21;05:01:24:000;30.04.21;Logiciel;zs;4;Desaturation
+05:03:23:333;30.04.21;05:04:04:000;30.04.21;Logiciel;zs;4;Desaturation
+05:04:57:333;30.04.21;05:05:26:333;30.04.21;Logiciel;zs;4;Desaturation
+05:07:08:333;30.04.21;05:08:02:666;30.04.21;Logiciel;zs;4;Desaturation
+05:16:46:666;30.04.21;05:17:21:666;30.04.21;Logiciel;zs;4;Desaturation
+05:17:34:666;30.04.21;05:17:56:333;30.04.21;Logiciel;zs;4;Desaturation
+05:18:17:333;30.04.21;05:18:55:000;30.04.21;Logiciel;zs;4;Desaturation
+05:21:20:333;30.04.21;05:21:51:333;30.04.21;Logiciel;zs;4;Desaturation
+05:24:23:333;30.04.21;05:25:04:666;30.04.21;Logiciel;zs;4;Desaturation
+05:31:45:333;30.04.21;05:32:08:666;30.04.21;Logiciel;zs;4;Desaturation
+05:32:12:333;30.04.21;05:33:08:333;30.04.21;Logiciel;zs;4;Desaturation
+05:37:47:333;30.04.21;05:38:29:000;30.04.21;Logiciel;zs;4;Desaturation
+05:38:54:333;30.04.21;05:39:16:000;30.04.21;Logiciel;zs;4;Desaturation
+05:40:51:333;30.04.21;05:41:46:333;30.04.21;Logiciel;zs;4;Desaturation
+05:42:46:333;30.04.21;05:43:50:000;30.04.21;Logiciel;zs;4;Desaturation
+05:46:21:333;30.04.21;05:47:25:000;30.04.21;Logiciel;zs;4;Desaturation
+05:48:46:333;30.04.21;05:49:33:000;30.04.21;Logiciel;zs;4;Desaturation
+05:51:48:666;30.04.21;05:52:29:666;30.04.21;Logiciel;zs;4;Desaturation
+05:52:40:333;30.04.21;05:53:34:333;30.04.21;Logiciel;zs;4;Desaturation
+05:55:01:333;30.04.21;05:55:31:333;30.04.21;Logiciel;zs;4;Desaturation
+06:01:34:333;30.04.21;06:02:27:666;30.04.21;Logiciel;zs;4;Desaturation
+06:13:00:666;30.04.21;06:13:57:666;30.04.21;Logiciel;zs;4;Desaturation
+23:07:10:000;29.04.21;08:52:29:099;30.04.21;Logiciel;zs;1;Out of Range
+23:07:10:000;29.04.21;23:16:14:666;29.04.21;Logiciel;zs;4;Out of Range
+23:16:36:333;29.04.21;23:16:58:333;29.04.21;Logiciel;zs;4;Out of Range
+01:47:22:666;30.04.21;01:47:28:333;30.04.21;Logiciel;zs;4;Out of Range
+02:06:09:333;30.04.21;02:06:15:333;30.04.21;Logiciel;zs;4;Out of Range
+02:07:32:000;30.04.21;02:07:45:666;30.04.21;Logiciel;zs;4;Out of Range
+02:09:10:000;30.04.21;02:09:19:666;30.04.21;Logiciel;zs;4;Out of Range
+02:09:47:000;30.04.21;02:10:07:666;30.04.21;Logiciel;zs;4;Out of Range
+03:53:08:000;30.04.21;03:53:25:666;30.04.21;Logiciel;zs;4;Out of Range
+04:57:41:000;30.04.21;04:57:58:333;30.04.21;Logiciel;zs;4;Out of Range
+05:19:30:000;30.04.21;05:20:07:666;30.04.21;Logiciel;zs;4;Out of Range
+05:20:37:000;30.04.21;05:20:48:000;30.04.21;Logiciel;zs;4;Out of Range
+05:30:56:000;30.04.21;05:31:10:666;30.04.21;Logiciel;zs;4;Out of Range
+05:45:14:000;30.04.21;05:45:31:333;30.04.21;Logiciel;zs;4;Out of Range
+05:45:47:000;30.04.21;05:46:10:666;30.04.21;Logiciel;zs;4;Out of Range
+06:15:24:666;30.04.21;06:15:36:333;30.04.21;Logiciel;zs;4;Out of Range
+06:17:17:000;30.04.21;06:19:38:333;30.04.21;Logiciel;zs;4;Out of Range
+06:19:59:000;30.04.21;08:41:50:666;30.04.21;Logiciel;zs;4;Out of Range
+08:42:36:000;30.04.21;08:51:35:333;30.04.21;Logiciel;zs;4;Out of Range
+08:52:07:666;30.04.21;09:19:10:666;30.04.21;Logiciel;zs;4;Out of Range
+23:07:10:000;29.04.21;23:16:14:666;29.04.21;Logiciel;zs;5;Out of Range
+23:16:36:333;29.04.21;23:16:58:333;29.04.21;Logiciel;zs;5;Out of Range
+01:47:22:666;30.04.21;01:47:28:333;30.04.21;Logiciel;zs;5;Out of Range
+02:06:09:333;30.04.21;02:06:15:333;30.04.21;Logiciel;zs;5;Out of Range
+02:07:32:000;30.04.21;02:07:45:666;30.04.21;Logiciel;zs;5;Out of Range
+02:09:10:000;30.04.21;02:09:19:666;30.04.21;Logiciel;zs;5;Out of Range
+02:09:47:000;30.04.21;02:10:07:666;30.04.21;Logiciel;zs;5;Out of Range
+03:53:08:000;30.04.21;03:53:25:666;30.04.21;Logiciel;zs;5;Out of Range
+04:57:41:000;30.04.21;04:57:58:333;30.04.21;Logiciel;zs;5;Out of Range
+05:19:30:000;30.04.21;05:20:07:666;30.04.21;Logiciel;zs;5;Out of Range
+05:20:37:000;30.04.21;05:20:48:000;30.04.21;Logiciel;zs;5;Out of Range
+05:30:56:000;30.04.21;05:31:10:666;30.04.21;Logiciel;zs;5;Out of Range
+05:45:14:000;30.04.21;05:45:31:333;30.04.21;Logiciel;zs;5;Out of Range
+05:45:47:000;30.04.21;05:46:10:666;30.04.21;Logiciel;zs;5;Out of Range
+06:15:24:666;30.04.21;06:15:36:333;30.04.21;Logiciel;zs;5;Out of Range
+06:17:17:000;30.04.21;06:19:38:333;30.04.21;Logiciel;zs;5;Out of Range
+06:19:59:000;30.04.21;08:41:50:666;30.04.21;Logiciel;zs;5;Out of Range
+08:42:36:000;30.04.21;08:51:35:333;30.04.21;Logiciel;zs;5;Out of Range
+08:52:07:666;30.04.21;09:19:10:666;30.04.21;Logiciel;zs;5;Out of Range
+23:07:16:000;29.04.21;23:07:21:000;29.04.21;Logiciel;zs;6;Out of Range
+23:07:58:000;29.04.21;23:08:06:000;29.04.21;Logiciel;zs;6;Out of Range
+23:09:44:000;29.04.21;23:09:55:000;29.04.21;Logiciel;zs;6;Out of Range
+23:09:58:000;29.04.21;23:10:03:000;29.04.21;Logiciel;zs;6;Out of Range
+23:10:20:000;29.04.21;23:10:25:000;29.04.21;Logiciel;zs;6;Out of Range
+23:11:04:000;29.04.21;23:11:09:000;29.04.21;Logiciel;zs;6;Out of Range
+23:11:36:000;29.04.21;23:12:00:000;29.04.21;Logiciel;zs;6;Out of Range
+23:12:39:000;29.04.21;23:13:00:000;29.04.21;Logiciel;zs;6;Out of Range
+23:15:47:000;29.04.21;23:16:49:000;29.04.21;Logiciel;zs;6;Out of Range
+23:16:58:000;29.04.21;23:17:04:000;29.04.21;Logiciel;zs;6;Out of Range
+23:17:06:000;29.04.21;23:18:14:000;29.04.21;Logiciel;zs;6;Out of Range
+23:18:19:000;29.04.21;23:18:24:000;29.04.21;Logiciel;zs;6;Out of Range
+02:03:26:000;30.04.21;02:09:51:000;30.04.21;Logiciel;zs;6;Out of Range
+02:09:53:000;30.04.21;02:09:59:000;30.04.21;Logiciel;zs;6;Out of Range
+05:45:51:000;30.04.21;05:45:56:000;30.04.21;Logiciel;zs;6;Out of Range
+06:17:17:000;30.04.21;06:19:47:000;30.04.21;Logiciel;zs;6;Out of Range
+06:23:44:000;30.04.21;06:23:49:000;30.04.21;Logiciel;zs;6;Out of Range
+06:24:37:000;30.04.21;06:24:42:000;30.04.21;Logiciel;zs;6;Out of Range
+08:41:05:000;30.04.21;08:41:15:000;30.04.21;Logiciel;zs;6;Out of Range
+08:41:42:000;30.04.21;08:41:50:000;30.04.21;Logiciel;zs;6;Out of Range
+08:42:01:000;30.04.21;08:42:22:000;30.04.21;Logiciel;zs;6;Out of Range
+08:47:31:000;30.04.21;08:47:36:000;30.04.21;Logiciel;zs;6;Out of Range
+08:48:05:000;30.04.21;08:51:30:000;30.04.21;Logiciel;zs;6;Out of Range
+08:51:35:000;30.04.21;08:51:40:000;30.04.21;Logiciel;zs;6;Out of Range
+08:52:17:000;30.04.21;08:52:22:000;30.04.21;Logiciel;zs;6;Out of Range
+08:59:08:000;30.04.21;08:59:13:000;30.04.21;Logiciel;zs;6;Out of Range
+08:59:19:000;30.04.21;08:59:24:000;30.04.21;Logiciel;zs;6;Out of Range
+09:19:08:000;30.04.21;09:19:10:000;30.04.21;Logiciel;zs;6;Out of Range
+08:54:30:000;30.04.21;09:01:10:000;30.04.21;RejectWake;ze;Zone d'exclusion
+23:07:10:000;29.04.21;23:21:12:899;29.04.21;Logiciel;ze;Zone d'exclusion
+02:00:26:899;30.04.21;02:12:59:899;30.04.21;Logiciel;ze;Zone d'exclusion
+06:14:17:900;30.04.21;08:54:29:900;30.04.21;Logiciel;ze;Zone d'exclusion
