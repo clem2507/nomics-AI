@@ -114,7 +114,6 @@ def analysis_classification(edf, model, num_class, out_graph):
         if model_name in ['cnn', 'lstm']:
             if idx == 0:
                 if item[idx] > 0.9:
-                    print(item[idx])
                     classes.append((idx, item[idx]))
                 else:
                     classes.append((1, 0.5))
