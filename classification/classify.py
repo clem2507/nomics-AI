@@ -121,24 +121,24 @@ def analysis_classification(edf, model, num_class, out_graph):
                 classes.append((idx, item[idx]))
         else:
             classes.append((idx, 1))
-    classes.append((0, 0))
+    classes.append((0, 1))
     valid_threshold = 3   # in minutes
     valid_idx = []
     for i in range(len(classes)):
         if classes[i][0] == 0:
-            if len(valid_idx) > 0 and len(valid_idx) < valid_threshold:
+            if len(valid_idx) > 0 and len(valid_idx) <= valid_threshold:
                 for pos in valid_idx:
                     classes[pos] = (0, 0.5)
             valid_idx = []
         else:
             valid_idx.append(i)
-    invalid_threshold = 3   # in minutes
+    invalid_threshold = 1   # in minutes
     invalid_idx = []
-    for i in range(len(classes)):
+    for i in range(1, len(classes)-1):
         if classes[i][0] == 0:
             invalid_idx.append(i)
         else:
-            if len(invalid_idx) > 0 and len(invalid_idx) < invalid_threshold:
+            if len(invalid_idx) > 0 and len(invalid_idx) <= invalid_threshold:
                 for pos in invalid_idx:
                     classes[pos] = (1, 0.5)
             invalid_idx = []
@@ -245,7 +245,7 @@ def analysis_classification(edf, model, num_class, out_graph):
 
     plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
 
-    # plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
+    # plt.savefig(f'/Users/clemdetry/Documents/Nomics/thesis_nomics.nosync/training/data/output_graphs1/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
     if out_graph:
@@ -287,6 +287,7 @@ if __name__ == '__main__':
     opt = parse_opt()
     main(p=opt)
 
+
     # Cmd test lines
     # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
     # python3 classification/classify.py --edf 'classification/test_data/patient_data2.edf' --view_graph --model 'LSTM'
@@ -299,3 +300,5 @@ if __name__ == '__main__':
     # python3 classification/classify.py --edf 'classification/test_data/patient_data9.edf' --view_graph --model 'LSTM'
     # python3 classification/classify.py --edf 'classification/test_data/patient_data10.edf' --view_graph --model 'LSTM'
     # python3 classification/classify.py --edf 'classification/test_data/patient_data11.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify.py --edf 'classification/test_data/patient_data12.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify.py --edf 'classification/test_data/patient_data13.edf' --view_graph --model 'LSTM'
