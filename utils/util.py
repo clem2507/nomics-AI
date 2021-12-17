@@ -433,6 +433,17 @@ def is_valid(total_hours, valid_hours):
 
 
 def signal_quality(classes):
+    """
+    Method used to give an estimate of the valid quality of the signal based on the output probabilities of the model
+
+    Parameters:
+
+    -classes: list with the output predicted classes with their probabilities
+
+    Returns:
+
+    -out: signal quality estimation (in %)
+    """
     score = 0
     if len(classes) == 0:
         return score
@@ -441,10 +452,10 @@ def signal_quality(classes):
             score += 1-c[1]
         elif c[0] == 1:
             score += c[1]
-    q = score/len(classes)
-    if q < 0:
-        q = 0
-    return q
+    out = score/len(classes)
+    if out < 0:
+        out = 0
+    return out
 
 class TimingCallback(Callback):
     """

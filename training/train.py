@@ -14,11 +14,11 @@ from knn import train_model as knn_train_model
 
 def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, num_class, data_balancing, neighbors):
     """
-    Primary function for training the CNN or LSTM model
+    Primary function for training the CNN, LSTM or KNN model
 
     Parameters:
 
-    -model (--model): deep learning model architecture, either CNN or LSTM
+    -model (--model): learning model architecture, either CNN, LSTM or KNN
     -analysis_directory (--analysis_directory): directory path containing the analyses to train the model on
     -segmentation_value (--segmentation_value): window segmentation value in minute
     -downsampling_value (--downsampling_value): signal downsampling value in second
@@ -50,11 +50,11 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     elif model.lower() == 'knn':
         knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time)
     else:
-        raise Exception('model type does not exist, please choose between LSTM and CNN')
+        raise Exception('model type does not exist, please choose between LSTM, CNN and KNN')
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='LSTM', help='deep training model architecture - either CNN or LSTM')
+    parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture - either CNN, LSTM or KNN')
     parser.add_argument('--analysis_directory', type=str, default='', help='directory path with analysis to use for neural network training')
     parser.add_argument('--segmentation_value', type=float, default=1, help='time series time split window in minutes')
     parser.add_argument('--downsampling_value', type=float, default=1, help='signal resampling in Hz')

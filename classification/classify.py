@@ -28,7 +28,7 @@ def analysis_classification(edf, model, num_class, out_graph):
     Parameters:
 
     -edf (--edf): edf file path containing time series data
-    -model (--model): deep learning model architecture, either CNN or LSTM
+    -model (--model): learning model architecture, either CNN, LSTM or KNN
     -num_class (--num_class): number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
     -out_graph (--out_graph): true to show the output graph, false to skip it and only use the output dictionary
 
@@ -122,7 +122,7 @@ def analysis_classification(edf, model, num_class, out_graph):
         else:
             classes.append((idx, 1))
     classes.append((0, 0))
-    valid_threshold = 10   # in minutes
+    valid_threshold = 3   # in minutes
     valid_idx = []
     for i in range(len(classes)):
         if classes[i][0] == 0:
@@ -266,7 +266,7 @@ def analysis_classification(edf, model, num_class, out_graph):
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--edf', type=str, default='', help='edf file path containing time series data')
-    parser.add_argument('--model', type=str, default='LSTM', help='deep learning model architecture, either CNN or LSTM')
+    parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
     parser.add_argument('--num_class', type=int, default=2, help='number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)')
     parser.add_argument('--view_graph', dest='out_graph', action='store_true', help='invoke to view the output graph')
     parser.set_defaults(out_graph=False)
@@ -277,7 +277,7 @@ def main(p):
     out_dic = analysis_classification(**vars(p))
     print('-------- OUTPUT DICTIONARY --------')
     print(out_dic)
-    print('---------------------------------')
+    print('-----------------------------------')
 
 
 if __name__ == '__main__':
@@ -286,91 +286,6 @@ if __name__ == '__main__':
 
     opt = parse_opt()
     main(p=opt)
-
-
-    # from tqdm import tqdm
-    # main_dir = '/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/invalid_analysis'
-    # out = sorted(os.listdir(main_dir))
-    # for i in tqdm(range(len(out))):
-    #     # mk3_file
-    #     mk3_file = os.path.join(main_dir, out[i] + '/' + out[i] + '.mk3')
-    #     edf_file = os.path.join(main_dir, out[i] + '/' + out[i] + '.edf')
-    #     if os.path.exists(mk3_file) and os.path.exists(edf_file):
-    #         data_mk3 = open(mk3_file)
-    #         lines = data_mk3.readlines()
-    #         start_record_time = lines[5].split(';')[0]
-    #         start_record_date = lines[5].split(';')[1]
-    #         lines = lines[7:]
-    #         col_names = ['start', 'end', 'label']
-    #         df_mk3 = pd.DataFrame(columns = col_names)
-    #         flag = False
-    #         for line in lines:
-    #             if line.split(sep=";")[-1][:-1] == 'Out of Range':
-    #                 if line.split(sep=";")[-2] == '1':
-    #                     temp = pd.Series(extract_data_from_line(line), index = df_mk3.columns)
-    #                     df_mk3 = df_mk3.append(temp, ignore_index=True)
-    #                     flag = True
-    #                 else:
-    #                     continue
-    #             else:
-    #                 temp = pd.Series(extract_data_from_line(line), index = df_mk3.columns)
-    #                 df_mk3 = df_mk3.append(temp, ignore_index=True)
-    #         if not flag:
-    #             continue
-    #
-    #         # edf file
-    #         block_print()
-    #         raw_data = mne.io.read_raw_edf(edf_file)
-    #         enable_print()
-    #         data, times = raw_data[:]
-    #         sec_interval = 1
-    #         times = string_datetime_conversion(times, start_record_time, start_record_date)
-    #         df_jawac = pd.DataFrame()
-    #         df_jawac.insert(0, 'times', times)
-    #         df_jawac.insert(1, 'data', data[0])
-    #         df_jawac = df_jawac.set_index('times')
-    #         df_jawac = df_jawac.resample(str(sec_interval)+'S').median()['data'].to_frame(name='data')
-
-    #         # graph
-    #         fig, ax = plt.subplots()
-    #         fig.set_size_inches(18.5, 10.5)
-
-    #         ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-    #         ax.axhline(y=0, color='r', linewidth=1)
-    #         ax.set(xlabel='time (s)', ylabel='opening (mm)', title=f'Jawac Signal - {out[i]}')
-    #         ax.grid()
-
-    #         plt.axvspan(df_jawac.index.tolist()[0], df_jawac.index.tolist()[-1], facecolor='g', alpha=0.20)
-    #         for index, row in df_mk3.iterrows():
-    #             if row['label'] == 'Out of Range':
-    #                 plt.axvspan(row['start'], row['end'], facecolor='r', alpha=0.20)
-
-    #         legend_elements = [Patch(facecolor='g', edgecolor='w', label='valid signal', alpha=0.20),
-    #                             Patch(facecolor='r', edgecolor='w', label='invalid signal', alpha=0.20)]
-    #         ax.legend(handles=legend_elements, loc='upper left')
-
-    #         # plt.show()
-    #         plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/invalid_graphs/out_{out[i]}.png', bbox_inches='tight')
-    #         plt.close(fig=fig)
-    #     else:
-    #         print('This file does not exist')
-    #         print(out[i])
-    #         print(edf_file)
-    #         print(mk3_file)
-    #         print('---')
-
-
-    # from tqdm import tqdm
-    # directory = '/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/analysis'
-    # filenames = sorted(os.listdir(directory))
-    # for i in tqdm(range(len(filenames))):
-    #     if not filenames[i].startswith('.'):
-    #         edf_path = f'{directory}/{filenames[i]}/{filenames[i]}.edf'
-    #         if os.path.exists(edf_path):
-    #             analysis_classification(edf_path, 'lstm', 2, False)
-    #         else:
-    #             print(f'{edf_path} does not exist')
-
 
     # Cmd test lines
     # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
