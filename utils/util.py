@@ -322,8 +322,13 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
             print('analysis duration:', (new_end_time - new_start_time))
             print('valid time in new bounds:', hours_conversion(valid_hours))
             print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
-            print("not enough valid signal (< 4h) in first selected bounds, let's try with a wider tolerance")
-            return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)
+            print(f"not enough valid signal (< 4h) in first selected bounds with threshold = {threshold}, let's try with a wider tolerance")
+            if threshold == 0.98:
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0.8)
+            if threshold == 0.8:
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0.5)
+            if threshold == 0.5:
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)
     new_bounds_classes = []
     for idx, row in classes_df.iterrows():
         new_bounds_classes.append((row.label, row.probability)) 

@@ -170,7 +170,7 @@ def analysis_classification(edf, model, num_class, out_graph):
     print('--------')
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
-    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.95)
+    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes, df_jawac.index[0], df_jawac.index[-1], segmentation_value, threshold=0.98)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
