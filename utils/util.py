@@ -9,10 +9,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from copy import copy
+from tqdm import tqdm
 from scipy import stats
 from keras import backend as K
 from keras.callbacks import Callback
 from datetime import datetime as dt
+from sklearn.model_selection import train_test_split
 
 
 def convert_string_to_time(time, date):
@@ -462,6 +464,47 @@ def signal_quality(classes):
         out = 0
     return out
 
+
+def stateful_fit(model, X_train, y_train, epochs):
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    print('Train...')
+    for epoch in range(epochs):
+        print(f'epoch #{epoch+1}')
+        print('--->')
+        mean_tr_acc = []
+        mean_tr_loss = []
+        for i in tqdm(range(len(X_train))):
+            for j in range(len(X_train[i])):
+                y_true = y_train[i][j]
+                tr_loss, tr_acc, *r = model.train_on_batch(np.expand_dims(np.expand_dims(X_train[i][j], axis=1), axis=1), np.array(y_true))
+                mean_tr_acc.append(tr_acc)
+                mean_tr_loss.append(tr_loss)
+            model.reset_states()
+
+        print('accuracy training = {}'.format(np.mean(mean_tr_acc)))
+        print('loss training = {}'.format(np.mean(mean_tr_loss)))
+
+        print('<---')
+        mean_te_acc = []
+        mean_te_loss = []
+        for i in tqdm(range(len(X_val))):
+            for j in range(len(X_val[i])):
+                y_true = y_val[i][j]
+                te_loss, te_acc, *r = model.test_on_batch(np.expand_dims(np.expand_dims(X_val[i][j], axis=1), axis=1), np.array(y_true))
+                mean_te_acc.append(te_acc)
+                mean_te_loss.append(te_loss)
+            model.reset_states()
+
+            # for j in range(len(X_val[i])):
+            #     y_pred, *r = model.predict_on_batch(np.expand_dims(np.expand_dims(X_val[i][j], axis=1), axis=1))
+            # model.reset_states()
+
+        print('accuracy testing = {}'.format(np.mean(mean_te_acc)))
+        print('loss testing = {}'.format(np.mean(mean_te_loss)))
+    
+    return model
+
+
 class TimingCallback(Callback):
     """
     Class used to save the training computation time after each epoch
@@ -481,3 +524,13 @@ class TimingCallback(Callback):
         if logs is None:
             logs = {}
         self.logs.append(time.time() - self.start_time)
+
+class ResetStatesCallback(Callback):
+    def __init__(self, max_len):
+        self.counter = 0
+        self.max_len = max_len
+
+    def on_batch_begin(self, batch, logs={}):
+        if self.counter % self.max_len == 0:
+            self.model.reset_states()
+        self.counter += 1

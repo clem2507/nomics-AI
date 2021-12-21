@@ -47,7 +47,7 @@ def analysis_classification(edf, model, num_class, out_graph):
                             -'is_valid'
     """
 
-    block_print()
+    # block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 

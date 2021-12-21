@@ -1,5 +1,3 @@
-# from comet_ml import Experiment
-
 import os
 import sys
 import time
@@ -22,10 +20,10 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_lo
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 
 from preprocessing import Preprocessing
-from util import plot_confusion_matrix, f1_m, num_of_correct_pred, TimingCallback
+from util import plot_confusion_matrix, f1_m, num_of_correct_pred, stateful_fit, TimingCallback, ResetStatesCallback
 
 
-def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time, stateful=False):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
@@ -38,18 +36,20 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -epochs: number of epochs to train the model
     -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
     -data_balancing: true if balanced data is needed, false otherwise
+    -log_time: save the time when the computation starts for the directory name
+    -stateful: true to use stateful parameter for LSTM training, false to use stateless
 
     Returns:
 
     -accuracy: model accuracy on the testing set
     """
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset()
-    n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
-    X_train, y_train = shuffle(X_train, y_train)
-    validation_split, verbose, batch_size = 0.1, 1, 32
     model = Sequential()
     if model_name == 'cnn':
+        X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset_cnn()
+        n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
+        X_train, y_train = shuffle(X_train, y_train)
+        validation_split, verbose, batch_size = 0.1, 1, 32
         if num_class == 2:
             # using 1Hz resolution and 1 minute window -- 60 sample size
             model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
@@ -93,16 +93,22 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Dense(n_outputs, activation='softmax'))   # fully connected layer -- 17 -- Output size 1 x 3
             model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
     elif model_name == 'lstm':
-        model.add(LSTM(128, activation='tanh', input_shape=(n_timesteps, n_features)))
-        model.add(Dropout(0.2))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dropout(0.2))
+        # model.add(LSTM(128, activation='tanh', stateful=stateful, batch_input_shape=(batch_size, n_timesteps, n_features)))
+        # model.add(Dropout(0.2))
+        # model.add(Dense(64, activation='relu'))
+        # model.add(Dropout(0.2))
+        X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset_lstm()
+        n_timesteps, n_features, n_outputs = X_train.shape[2], X_train.shape[3], y_train.shape[2]
+        X_train, y_train = shuffle(X_train, y_train)
+        batch_size = 32
         if num_class == 2:
+            model.add(LSTM(10, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful))
             # sigmoid activation function better than softmax for binary classification
             model.add(Dense(n_outputs, activation='sigmoid'))
             # binary crossentropy loss function better than categorical crossentropy for binary classification
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
         else:
+            model.add(LSTM(50, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful))
             # softmax activation function better than sigmoid for multinomial classification
             model.add(Dense(n_outputs, activation='softmax'))
             # categorical crossentropy loss function better than binary crossentropy for binary classification
@@ -111,150 +117,136 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         raise Exception('model type does not exist, please choose between LSTM and CNN')
     
     print(model.summary())
+
     time_callback = TimingCallback()
+
     # fit network
-    history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback])
-
-    # metrics history epochs after epochs
-    training_accuracy_history = history.history['accuracy']
-    training_f1_history = history.history['f1_m']
-    training_loss_history = history.history['loss']
-    validation_accuracy_history = history.history['val_accuracy']
-    validation_f1_history = history.history['val_f1_m']
-    validation_loss_history = history.history['val_loss']
-
-    # evaluate model
-    _, accuracy, *r = model.evaluate(X_test, y_test, batch_size=batch_size, verbose=verbose)
-
-    predictions = model.predict(X_test)
-    classes = np.argmax(predictions, axis=1)
-
-    int_y_test = []    # predicted label list
-    # loop that runs through the list of model predictions to keep the highest predicted probability values
-    for item in y_test:
-        int_y_test.append(np.argmax(item))
-
-    # 95 % confidence interval computation
-    interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
-    lower_bound, upper_bound = proportion_confint(num_of_correct_pred(y_true=int_y_test, y_pred=classes), len(classes), 0.05)
-
-    # confustion matrix np array creation based on the prediction made by the model on the test data
-    cm = confusion_matrix(y_true=int_y_test, y_pred=classes)
-
-    if num_class == 2:
-        # confusion matrix plot
-        labels = ['Invalid', 'Valid']
-        cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix')
-        model_type = 'binary'
+    if stateful and model_name == 'lstm':
+        # reset_callback = ResetStatesCallback(max_len=n_timesteps)
+        # history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback, reset_callback])
+        model = stateful_fit(model, X_train, y_train, epochs)
     else:
-        # confusion matrix plot
-        labels = ['Invalid', 'Valid', 'Awake']
-        cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix')
-        model_type = 'multinomial'
+        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback])
 
-    if data_balancing:
-        is_balanced = 'balanced'
-    else:
-        is_balanced = 'unbalanced'
+        # metrics history epochs after epochs
+        training_accuracy_history = history.history['accuracy']
+        training_f1_history = history.history['f1_m']
+        training_loss_history = history.history['loss']
+        validation_accuracy_history = history.history['val_accuracy']
+        validation_f1_history = history.history['val_f1_m']
+        validation_loss_history = history.history['val_loss']
 
-    # directory creation
-    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
-    os.mkdir(save_dir)
-    cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
-    cm_plt.close()
-    model_info_file = open(f'{save_dir}/info.txt', 'w')
-    model_info_file.write(f'This file contains information about the {model_name} model \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Num of classes = {num_class} \n')
-    model_info_file.write(f'Segmentation value = {segmentation_value} \n')
-    model_info_file.write(f'Downsampling value = {downsampling_value} \n')
-    model_info_file.write(f'Signal resolution = {1/downsampling_value} \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Is balanced = {is_balanced} \n')
-    model_info_file.write(f'Model type = {model_type} \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Num of epochs = {epochs} \n')
-    model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
-    model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(time_callback.logs)} \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
-    model_info_file.write(f'Training f1 score history = {training_f1_history} \n')
-    model_info_file.write(f'Training loss history = {training_loss_history} \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
-    model_info_file.write(f'Validation f1 score history = {validation_f1_history} \n')
-    model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Radius of the CI = {interval} \n')
-    model_info_file.write(f'True classification of the model is likely between {accuracy - interval} and {accuracy + interval} \n')
-    model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
-    model_info_file.write(f'Upper bound model classification accuracy = {upper_bound} \n')
-    model_info_file.write('--- \n')
-    model_info_file.write(f'Test accuracy = {accuracy} \n')
-    model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
-    model_info_file.write('--- \n')
-    model_info_file.close()
+        # evaluate model
+        _, accuracy, *r = model.evaluate(X_test, y_test, batch_size=batch_size, verbose=verbose)
 
-    # chart with the learning curves creation
-    figure, axes = plt.subplots(nrows=3, ncols=1)
+        predictions = model.predict(X_test)
+        classes = np.argmax(predictions, axis=1)
 
-    x = list(range(1, epochs + 1))
+        int_y_test = []    # predicted label list
+        # loop that runs through the list of model predictions to keep the highest predicted probability values
+        for item in y_test:
+            int_y_test.append(np.argmax(item))
 
-    axes[0].plot(x, training_accuracy_history, label='train acc')
-    axes[0].plot(x, validation_accuracy_history, label='val acc')
-    axes[0].set_title('Training and validation accuracy')
-    axes[0].set_xlabel('epochs')
-    axes[0].set_ylabel('accuracy')
-    axes[0].legend(loc='best')
-    axes[0].grid()
+        # 95 % confidence interval computation
+        interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
+        lower_bound, upper_bound = proportion_confint(num_of_correct_pred(y_true=int_y_test, y_pred=classes), len(classes), 0.05)
 
-    axes[1].plot(x, training_f1_history, label='train f1')
-    axes[1].plot(x, validation_f1_history, label='val f1')
-    axes[1].set_title('Training and validation f1 score')
-    axes[1].set_xlabel('epochs')
-    axes[1].set_ylabel('f1 score')
-    axes[1].legend(loc='best')
-    axes[1].grid()
+        # confustion matrix np array creation based on the prediction made by the model on the test data
+        cm = confusion_matrix(y_true=int_y_test, y_pred=classes)
 
-    axes[2].plot(x, training_loss_history, label='train loss')
-    axes[2].plot(x, validation_loss_history, label='val loss')
-    axes[2].set_title('Training and validation loss')
-    axes[2].set_xlabel('epochs')
-    axes[2].set_ylabel('loss')
-    axes[2].legend(loc='best')
-    axes[2].grid()
+        if num_class == 2:
+            # confusion matrix plot
+            labels = ['Invalid', 'Valid']
+            cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix')
+            model_type = 'binary'
+        else:
+            # confusion matrix plot
+            labels = ['Invalid', 'Valid', 'Awake']
+            cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix')
+            model_type = 'multinomial'
 
-    figure.set_figheight(10)
-    figure.set_figwidth(6)
-    figure.tight_layout()
-    # plot save
-    figure.savefig(f'{save_dir}/metrics_plt.png', bbox_inches='tight')
+        if data_balancing:
+            is_balanced = 'balanced'
+        else:
+            is_balanced = 'unbalanced'
 
-    plt.close(fig=figure)
+        # directory creation
+        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
+        os.mkdir(save_dir)
+        cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
+        cm_plt.close()
+        model_info_file = open(f'{save_dir}/info.txt', 'w')
+        model_info_file.write(f'This file contains information about the {model_name} model \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Num of classes = {num_class} \n')
+        model_info_file.write(f'Segmentation value = {segmentation_value} \n')
+        model_info_file.write(f'Downsampling value = {downsampling_value} \n')
+        model_info_file.write(f'Signal resolution = {1/downsampling_value} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Is balanced = {is_balanced} \n')
+        model_info_file.write(f'Model type = {model_type} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Num of epochs = {epochs} \n')
+        model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
+        model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(time_callback.logs)} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
+        model_info_file.write(f'Training f1 score history = {training_f1_history} \n')
+        model_info_file.write(f'Training loss history = {training_loss_history} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
+        model_info_file.write(f'Validation f1 score history = {validation_f1_history} \n')
+        model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Radius of the CI = {interval} \n')
+        model_info_file.write(f'True classification of the model is likely between {accuracy - interval} and {accuracy + interval} \n')
+        model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
+        model_info_file.write(f'Upper bound model classification accuracy = {upper_bound} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Test accuracy = {accuracy} \n')
+        model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
+        model_info_file.write('--- \n')
+        model_info_file.close()
+
+        # chart with the learning curves creation
+        figure, axes = plt.subplots(nrows=3, ncols=1)
+
+        x = list(range(1, epochs + 1))
+
+        axes[0].plot(x, training_accuracy_history, label='train acc')
+        axes[0].plot(x, validation_accuracy_history, label='val acc')
+        axes[0].set_title('Training and validation accuracy')
+        axes[0].set_xlabel('epochs')
+        axes[0].set_ylabel('accuracy')
+        axes[0].legend(loc='best')
+        axes[0].grid()
+
+        axes[1].plot(x, training_f1_history, label='train f1')
+        axes[1].plot(x, validation_f1_history, label='val f1')
+        axes[1].set_title('Training and validation f1 score')
+        axes[1].set_xlabel('epochs')
+        axes[1].set_ylabel('f1 score')
+        axes[1].legend(loc='best')
+        axes[1].grid()
+
+        axes[2].plot(x, training_loss_history, label='train loss')
+        axes[2].plot(x, validation_loss_history, label='val loss')
+        axes[2].set_title('Training and validation loss')
+        axes[2].set_xlabel('epochs')
+        axes[2].set_ylabel('loss')
+        axes[2].legend(loc='best')
+        axes[2].grid()
+
+        figure.set_figheight(10)
+        figure.set_figwidth(6)
+        figure.tight_layout()
+        # plot save
+        figure.savefig(f'{save_dir}/metrics_plt.png', bbox_inches='tight')
+
+        plt.close(fig=figure)
 
     # save of the model weights
     save_model(model, f'{save_dir}/saved_model')
-
-    # Create an experiment with your api key
-    # experiment = Experiment(
-    #     api_key='sPYygjS1kurlK8CM4iKoJZU8T',
-    #     project_name='nomics',
-    #     workspace='clem2507',
-    # )
-    # experiment.set_name(log_time)
-    # experiment.log_model(model_name, f'{save_dir}/saved_model')
-    # experiment.add_tags([model_name, model_type, is_balanced])
-    # experiment.log_confusion_matrix(labels=labels, matrix=cm)
-    # for i in range(epochs):
-    #     experiment.log_metric('train accuracy', training_accuracy_history[i], step=i+1)
-    #     experiment.log_metric('train f1', training_f1_history[i], step=i+1)
-    #     experiment.log_metric('train loss', training_loss_history[i], step=i+1)
-    #     experiment.log_metric('val accuracy', validation_accuracy_history[i], step=i+1)
-    #     experiment.log_metric('val f1', validation_f1_history[i], step=i+1)
-    #     experiment.log_metric('val loss', validation_loss_history[i], step=i+1)
-    # experiment.log_metric('epochs', epochs)
-    # experiment.log_metric('test accuracy', accuracy)
-    # experiment.end()
 
     return accuracy
 
@@ -361,7 +353,7 @@ def hyperparameters_tuning(model_name, segmentation_value, downsampling_value, m
     print('successfully saved!')
 
 
-def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time, stateful):
     """
     Callable method to start the training of the model
 
@@ -374,11 +366,13 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
     -epochs: number of epochs to train the model
     -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
     -data_balancing: true if balanced data is needed, false otherwise
+    -log_time: save the time when the computation starts for the directory name
+    -stateful: true to use stateful parameter for LSTM training, false to use stateless
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time)
+    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, num_class, data_balancing, log_time, stateful)
     score = score * 100.0
     print('score:', score, '%')
     print('-----')

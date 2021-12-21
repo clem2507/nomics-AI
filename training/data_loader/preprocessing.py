@@ -50,6 +50,9 @@ class Preprocessing:
         self.num_class = num_class
         self.data_balancing = data_balancing
         self.log_time = log_time
+        self.jawac_df_list = []
+        self.mk3_df_list = []
+        self.dataset = []
         if self.data_balancing:
             self.is_balanced = 'balanced'
         else:
@@ -121,9 +124,9 @@ class Preprocessing:
                 if dfs_names[i] not in dir_names:
                     shutil.rmtree(self.dfs_directory + f'/{dfs_names[i]}')
 
-    def split_dataframe(self):
+    def split_dataframe_cnn(self):
         """
-        Method used to segment the dataframes into one common dataframe
+        Method used to segment the dataframes into one common dataframe for the CNN
         """
 
         dir_names = sorted(os.listdir(self.dfs_directory))
@@ -207,9 +210,9 @@ class Preprocessing:
         print(self.dataset_df.label.value_counts())
         print('-----')
 
-    def create_dataset(self):
+    def create_dataset_cnn(self):
         """
-        Method that transforms the dataframe dataset into numpy array to better fit the learning models
+        Method that transforms the dataframe dataset into numpy array to better fit the CNN learning models
 
         Returns:
 
@@ -226,7 +229,7 @@ class Preprocessing:
         print(f'{self.num_class} classes classification')
         print(f'data balancing: {self.data_balancing}')
         print('-----')
-        self.split_dataframe()
+        self.split_dataframe_cnn()
 
         X = np.array(self.dataset_df.data.tolist())    # X data instances
         # padding function to make sure everything is the same size
@@ -283,6 +286,122 @@ class Preprocessing:
         df_info_file.write(f'Segmentation value = {self.segmentation_value} \n')
         df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')
         df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
+        df_info_file.write('--- \n')
+        df_info_file.write(f'X train shape = {X_train.shape} \n')
+        df_info_file.write(f'X test shape = {X_test.shape} \n')
+        df_info_file.write(f'y train shape = {y_train.shape} \n')
+        df_info_file.write(f'y test shape = {y_test.shape} \n')
+        df_info_file.write('--- \n')
+        df_info_file.write(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min \n')
+        df_info_file.write('---')
+        df_info_file.close()
+
+        print('----')
+        print(X_train.shape)
+        print(X_test.shape)
+        print(y_train.shape)
+        print(y_test.shape)
+        print('----')
+        print(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min')
+        print('----')
+
+        return X_train, y_train, X_test, y_test
+
+    def split_dataframe_lstm(self):
+        """
+        Method used to segment the dataframes into one common dataframe for the LSTM
+        """
+
+        dir_names = sorted(os.listdir(self.dfs_directory))
+        for i in tqdm(range(len(dir_names))):
+            if not dir_names[i].startswith('.'):
+                df_mk3 = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
+                df_jawac = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+                self.mk3_df_list.append(df_mk3)
+                self.jawac_df_list.append(df_jawac)
+
+        for i in tqdm(range(len(self.mk3_df_list))):
+            label_list = self.mk3_df_list[i].label.tolist()
+            for idx in range(len(label_list)):
+                if label_list[idx] == 'Out of Range':
+                    self.mk3_df_list[i].at[idx,'label'] = 0
+                else:
+                    self.mk3_df_list[i].at[idx,'label'] = 1
+        
+        # split of the dataframes
+        for i in tqdm(range(len(self.jawac_df_list))):
+            self.jawac_df_list[i] = self.jawac_df_list[i].resample(str(self.downsampling_value) + 'S').median()['data'].to_frame(name='data')
+            max_length = int(self.segmentation_value * (60 / self.downsampling_value))
+            split = [self.jawac_df_list[i][idx:idx + max_length] for idx in range(0, len(self.jawac_df_list[i]), max_length)][:-1]
+            start_idx = 0
+            temp = []
+            for arr in split:
+                labels = []
+                for time in arr.times.tolist():
+                    n = np.argmin(np.abs(self.jawac_df_list.index.to_pydatetime() - time))
+                    labels.append(self.mk3_df_list[i].iloc[n].label)
+                temp.append([arr.data.tolist(), max(labels, key=labels.count)])
+                start_idx += max_length
+            self.dataset.append(temp)
+            
+    def create_dataset_lstm(self):
+        """
+        Method that transforms the dataframe dataset into numpy array to better fit the LSTM learning model
+
+        Returns:
+
+        -X_train: x data instances for training the model
+        -y_train: y label instances for training the model
+        -X_test: x data instances for testing the model
+        -y_test: y label instances for testing the model
+        """
+
+        start_time = time.time()    # start timer variable used for the calculation of the total execution time 
+        print('-----')
+        print(f'{self.segmentation_value} min signal time split')
+        print(f'{self.downsampling_value} sec data resampling')
+        print(f'{self.num_class} classes classification')
+        print(f'data balancing: {self.data_balancing}')
+        print('-----')
+        self.split_dataframe_lstm()
+
+        valid_count = 0
+        invalid_count = 0
+        X, y = []
+        for arr in self.dataset:
+            temp_X, temp_y = []
+            for i in range(len(arr)):
+                temp_X.append(arr[i][0])
+                temp_y.append(arr[i][1])
+                if arr[i][1] == 0:
+                    invalid_count+=1
+                elif arr[i][1] == 1:
+                    valid_count+=1
+            X.append(temp_X)
+            y.append(temp_y)
+
+        X = np.array(X)    # X data instances
+        y = to_categorical(np.array(y))    # converting label list into categorical values
+
+        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.log_time}'
+        os.mkdir(save_dir)
+
+        # X numpy array resampling to fit model training
+        X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], 1))
+
+        # splitting the data into testing and training sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        end_time = time.time()    # end timer variable used for the calculation of the total execution time 
+
+        df_info_file = open(f'{save_dir}/info.txt', 'a')
+        df_info_file.write(f'Is balanced = {self.is_balanced} \n')
+        df_info_file.write(f'Segmentation value = {self.segmentation_value} \n')
+        df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')
+        df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
+        df_info_file.write('--- \n')
+        df_info_file.write(f'# valid samples = {valid_count} \n')
+        df_info_file.write(f'# invalid samples = {invalid_count} \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'X train shape = {X_train.shape} \n')
         df_info_file.write(f'X test shape = {X_test.shape} \n')
