@@ -5,22 +5,4 @@ Comment=
 -
 23:18:39:000;29.05.21;23:18:39:000;29.05.21;Logiciel;ep;START
 06:15:29:900;30.05.21;06:15:29:900;30.05.21;Logiciel;ep;STOP
-23:20:38:333;29.05.21;23:21:09:333;29.05.21;Logiciel;zs;4;Desaturation
-23:21:20:666;29.05.21;23:22:03:000;29.05.21;Logiciel;zs;4;Desaturation
-23:50:59:333;29.05.21;23:51:33:666;29.05.21;Logiciel;zs;4;Desaturation
-00:18:34:666;30.05.21;00:19:21:666;30.05.21;Logiciel;zs;4;Desaturation
-00:19:27:333;30.05.21;00:20:13:000;30.05.21;Logiciel;zs;4;Desaturation
-02:23:14:333;30.05.21;02:23:55:333;30.05.21;Logiciel;zs;4;Desaturation
-03:16:36:333;30.05.21;03:17:19:000;30.05.21;Logiciel;zs;4;Desaturation
-04:20:31:666;30.05.21;04:21:04:333;30.05.21;Logiciel;zs;4;Desaturation
-04:22:55:333;30.05.21;04:23:41:333;30.05.21;Logiciel;zs;4;Desaturation
-04:26:14:666;30.05.21;04:26:44:666;30.05.21;Logiciel;zs;4;Desaturation
-06:04:44:333;30.05.21;06:05:20:000;30.05.21;Logiciel;zs;4;Desaturation
 23:18:39:000;29.05.21;06:15:29:900;30.05.21;Logiciel;zs;1;Out of Range
-23:18:39:000;29.05.21;23:18:40:000;29.05.21;Logiciel;zs;4;Out of Range
-01:27:18:333;30.05.21;01:27:27:000;30.05.21;Logiciel;zs;4;Out of Range
-23:18:39:000;29.05.21;23:18:40:000;29.05.21;Logiciel;zs;5;Out of Range
-01:27:18:333;30.05.21;01:27:27:000;30.05.21;Logiciel;zs;5;Out of Range
-06:15:23:000;30.05.21;06:15:29:000;30.05.21;Logiciel;zs;6;Out of Range
-23:18:39:000;29.05.21;23:19:38:899;29.05.21;Logiciel;ze;Zone d'exclusion
-06:12:23:900;30.05.21;06:15:29:900;30.05.21;Logiciel;ze;Zone d'exclusion

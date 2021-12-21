@@ -98,13 +98,13 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         # model.add(Dense(64, activation='relu'))
         # model.add(Dropout(0.2))
         X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, num_class=num_class, data_balancing=data_balancing, log_time=log_time).create_dataset_lstm()
-        n_timesteps, n_features, n_outputs = X_train.shape[2], X_train.shape[3], y_train.shape[2]
+        n_timesteps, n_features, n_outputs = int(segmentation_value * (60 / downsampling_value)), 1, 2
         X_train, y_train = shuffle(X_train, y_train)
-        batch_size = 32
+        batch_size = int(n_timesteps/2)
         if num_class == 2:
-            model.add(LSTM(10, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful))
+            model.add(LSTM(10, batch_input_shape=(1, 1, 1), stateful=stateful))
             # sigmoid activation function better than softmax for binary classification
-            model.add(Dense(n_outputs, activation='sigmoid'))
+            model.add(Dense(1, activation='sigmoid'))
             # binary crossentropy loss function better than categorical crossentropy for binary classification
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
         else:
@@ -119,6 +119,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     print(model.summary())
 
     time_callback = TimingCallback()
+
+    # directory creation
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
+    os.mkdir(save_dir)
 
     # fit network
     if stateful and model_name == 'lstm':
@@ -170,9 +174,6 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         else:
             is_balanced = 'unbalanced'
 
-        # directory creation
-        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
-        os.mkdir(save_dir)
         cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
         cm_plt.close()
         model_info_file = open(f'{save_dir}/info.txt', 'w')

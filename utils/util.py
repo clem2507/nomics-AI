@@ -469,18 +469,17 @@ def stateful_fit(model, X_train, y_train, epochs):
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
     print('Train...')
     for epoch in range(epochs):
-        print(f'epoch #{epoch+1}')
+        print('epoch #{}'.format(epoch+1))
         print('--->')
         mean_tr_acc = []
         mean_tr_loss = []
         for i in tqdm(range(len(X_train))):
             for j in range(len(X_train[i])):
-                y_true = y_train[i][j]
-                tr_loss, tr_acc, *r = model.train_on_batch(np.expand_dims(np.expand_dims(X_train[i][j], axis=1), axis=1), np.array(y_true))
-                mean_tr_acc.append(tr_acc)
-                mean_tr_loss.append(tr_loss)
+                for k in range(len(X_train[i][j])):
+                    tr_loss, tr_acc, *r = model.train_on_batch(np.expand_dims(np.expand_dims([X_train[i][j][k]], axis=1), axis=1), np.array([y_train[i][j][k]]))
+                    mean_tr_acc.append(tr_acc)
+                    mean_tr_loss.append(tr_loss)
             model.reset_states()
-
         print('accuracy training = {}'.format(np.mean(mean_tr_acc)))
         print('loss training = {}'.format(np.mean(mean_tr_loss)))
 
@@ -489,10 +488,10 @@ def stateful_fit(model, X_train, y_train, epochs):
         mean_te_loss = []
         for i in tqdm(range(len(X_val))):
             for j in range(len(X_val[i])):
-                y_true = y_val[i][j]
-                te_loss, te_acc, *r = model.test_on_batch(np.expand_dims(np.expand_dims(X_val[i][j], axis=1), axis=1), np.array(y_true))
-                mean_te_acc.append(te_acc)
-                mean_te_loss.append(te_loss)
+                for k in range(len(X_val[i][j])):
+                    te_loss, te_acc, *r = model.test_on_batch(np.expand_dims(np.expand_dims([X_val[i][j][k]], axis=1), axis=1), np.array([y_val[i][j][k]]))
+                    mean_te_acc.append(te_acc)
+                    mean_te_loss.append(te_loss)
             model.reset_states()
 
             # for j in range(len(X_val[i])):

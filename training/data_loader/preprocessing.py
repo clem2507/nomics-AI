@@ -91,14 +91,9 @@ class Preprocessing:
                             if line.split(sep=';')[-2] == '1':
                                 temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
                                 df_mk3 = df_mk3.append(temp, ignore_index=True)
-                        else:
-                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
-                            df_mk3 = df_mk3.append(temp, ignore_index=True)
-                    if len(df_mk3) < 1:
-                        continue
-                    else:
-                        # dataframe saving
-                        df_mk3.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
+
+                    # dataframe saving
+                    df_mk3.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
 
                     block_print()
                     raw_data = mne.io.read_raw_edf(edf_file)    # edf file reading
@@ -317,31 +312,25 @@ class Preprocessing:
             if not dir_names[i].startswith('.'):
                 df_mk3 = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
                 df_jawac = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
+                df_jawac = df_jawac.resample(str(self.downsampling_value) + 'S').median()['data'].to_frame(name='data')
                 self.mk3_df_list.append(df_mk3)
                 self.jawac_df_list.append(df_jawac)
 
-        for i in tqdm(range(len(self.mk3_df_list))):
-            label_list = self.mk3_df_list[i].label.tolist()
-            for idx in range(len(label_list)):
-                if label_list[idx] == 'Out of Range':
-                    self.mk3_df_list[i].at[idx,'label'] = 0
-                else:
-                    self.mk3_df_list[i].at[idx,'label'] = 1
-        
+        for i in tqdm(range(len(self.jawac_df_list))):
+            self.jawac_df_list[i]['label'] = [1 for i in range(len(self.jawac_df_list[i]))]
+            for idx, row in self.mk3_df_list[i].iterrows():
+                mask = (self.jawac_df_list[i].index >= row.start) & (self.jawac_df_list[i].index <= row.end)
+                self.jawac_df_list[i].loc[mask, ['label']] = 0
+            
         # split of the dataframes
         for i in tqdm(range(len(self.jawac_df_list))):
-            self.jawac_df_list[i] = self.jawac_df_list[i].resample(str(self.downsampling_value) + 'S').median()['data'].to_frame(name='data')
             max_length = int(self.segmentation_value * (60 / self.downsampling_value))
             split = [self.jawac_df_list[i][idx:idx + max_length] for idx in range(0, len(self.jawac_df_list[i]), max_length)][:-1]
-            start_idx = 0
             temp = []
             for arr in split:
-                labels = []
-                for time in arr.times.tolist():
-                    n = np.argmin(np.abs(self.jawac_df_list.index.to_pydatetime() - time))
-                    labels.append(self.mk3_df_list[i].iloc[n].label)
-                temp.append([arr.data.tolist(), max(labels, key=labels.count)])
-                start_idx += max_length
+                # temp.append([arr.data.tolist(), max(arr.label.tolist(), key=arr.label.tolist().count)])
+                temp.append([arr.data.tolist(), arr.label.tolist()])
+                # arr.append(np.var(arr)*1000)
             self.dataset.append(temp)
             
     def create_dataset_lstm(self):
@@ -367,27 +356,31 @@ class Preprocessing:
 
         valid_count = 0
         invalid_count = 0
-        X, y = []
+        X = []
+        y = []
         for arr in self.dataset:
-            temp_X, temp_y = []
+            temp_X = []
+            temp_y = []
             for i in range(len(arr)):
                 temp_X.append(arr[i][0])
                 temp_y.append(arr[i][1])
-                if arr[i][1] == 0:
-                    invalid_count+=1
-                elif arr[i][1] == 1:
-                    valid_count+=1
+                invalid_count+=arr[i][1].count(0)
+                valid_count+=arr[i][1].count(1)
             X.append(temp_X)
             y.append(temp_y)
 
-        X = np.array(X)    # X data instances
-        y = to_categorical(np.array(y))    # converting label list into categorical values
+        X = np.array(X, dtype=object)    # X data instances
+        y_temp = []
+        for labels in y:
+            # y_temp.append(to_categorical(to_categorical(np.array(labels))))    # converting label list into categorical values
+            y_temp.append(np.array(labels))
+        y = np.array(y_temp)
 
         save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.log_time}'
         os.mkdir(save_dir)
 
         # X numpy array resampling to fit model training
-        X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], 1))
+        # X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], 1))
 
         # splitting the data into testing and training sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -400,8 +393,8 @@ class Preprocessing:
         df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')
         df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
         df_info_file.write('--- \n')
-        df_info_file.write(f'# valid samples = {valid_count} \n')
-        df_info_file.write(f'# invalid samples = {invalid_count} \n')
+        df_info_file.write(f'% valid data point = {valid_count/(valid_count+invalid_count)} \n')
+        df_info_file.write(f'% invalid data point = {invalid_count/(valid_count+invalid_count)} \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'X train shape = {X_train.shape} \n')
         df_info_file.write(f'X test shape = {X_test.shape} \n')

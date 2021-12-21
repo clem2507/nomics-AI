@@ -7,10 +7,3 @@ Comment=
 06:32:14:900;04.06.21;06:32:14:900;04.06.21;Logiciel;ep;STOP
 22:48:01:599;03.06.21;02:30:43:200;04.06.21;Logiciel;zs;1;Out of Range
 02:33:28:700;04.06.21;06:32:14:900;04.06.21;Logiciel;zs;1;Out of Range
-22:46:41:000;03.06.21;22:46:52:000;03.06.21;Logiciel;zs;4;Out of Range
-23:03:11:000;03.06.21;23:03:18:000;03.06.21;Logiciel;zs;4;Out of Range
-03:23:36:000;04.06.21;03:27:53:000;04.06.21;Logiciel;zs;4;Out of Range
-03:28:01:000;04.06.21;03:28:06:000;04.06.21;Logiciel;zs;4;Out of Range
-02:30:43:299;04.06.21;02:33:28:700;04.06.21;RejectWake;ze;Zone d'exclusion
-22:46:39:000;03.06.21;02:30:43:200;04.06.21;Logiciel;ze;Zone d'exclusion
-02:33:28:700;04.06.21;06:32:14:900;04.06.21;Logiciel;ze;Zone d'exclusion
