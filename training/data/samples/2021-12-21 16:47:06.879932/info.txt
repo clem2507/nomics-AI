@@ -1,0 +1,15 @@
+Is balanced = unbalanced 
+Segmentation value = 1.0 
+Downsampling value = 1.0 
+Signal resolution = 1.0 
+--- 
+% valid data point = 0.5164957882860679 
+% invalid data point = 0.48350421171393204 
+--- 
+X train shape = (91,) 
+X test shape = (23,) 
+y train shape = (91,) 
+y test shape = (23,) 
+--- 
+Total data preprocessing computation time = 30.44 sec | 0.51 min 
+---

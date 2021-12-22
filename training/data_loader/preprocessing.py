@@ -67,6 +67,7 @@ class Preprocessing:
         dir_names = sorted(os.listdir(self.directory))    # analyses directory names
         if not os.path.exists(self.dfs_directory):
             os.mkdir(self.dfs_directory)
+        print('----')
         for i in tqdm(range(len(dir_names))):
             # make sure file name is not invalid (had issue with the .DS_Store file)
             if not dir_names[i].startswith('.'):
@@ -374,7 +375,7 @@ class Preprocessing:
         for labels in y:
             # y_temp.append(to_categorical(to_categorical(np.array(labels))))    # converting label list into categorical values
             y_temp.append(np.array(labels))
-        y = np.array(y_temp)
+        y = np.array(y_temp, dtype=object)
 
         save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.log_time}'
         os.mkdir(save_dir)

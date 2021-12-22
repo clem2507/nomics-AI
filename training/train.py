@@ -75,7 +75,7 @@ def main(p):
 
 
 if __name__ == '__main__':
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     opt = parse_opt()
     main(p=opt)
