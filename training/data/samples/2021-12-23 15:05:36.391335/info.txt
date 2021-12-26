@@ -1,0 +1,11 @@
+Is balanced = unbalanced 
+Segmentation value = 1.0 
+Downsampling value = 5.0 
+Signal resolution = 0.2 
+--- 
+% valid data point = 51.65 
+% invalid data point = 48.35 
+--- 
+--- 
+Total data preprocessing computation time = 1.48 sec | 0.02 min 
+---

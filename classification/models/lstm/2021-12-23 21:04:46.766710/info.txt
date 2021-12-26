@@ -1,0 +1,13 @@
+This file contains information about the lstm model 
+--- 
+Downsampling value = 5.0 
+Signal resolution = 0.2 Hz 
+Batch size = 30 
+--- 
+Is balanced = unbalanced 
+--- 
+Test accuracy = 0.9365755803016543 
+Confusion matrix (invalid | valid) = 
+ [[2563   56]
+ [  42 1782]] 
+--- 

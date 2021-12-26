@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from matplotlib import pyplot as plt
 from tqdm import tqdm
+from matplotlib import pyplot as plt
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
@@ -33,11 +33,10 @@ class Preprocessing:
     -dataset_df: final dataframe containing the merged processed data
     -segmentation_value: window segmentation value in minute
     -downsampling_value: signal downsampling value in second
-    -num_class: number of classes for classification, 2 for (valid | invalid), 3 for (valid | invalid | awake)
     -data_balancing: true is balanced data is needed, false otherwise
     """
 
-    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, num_class=2, data_balancing=True, log_time=''):
+    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time=''):
         self.invalid_jawac_df_list = []
         self.invalid_mk3_df_list = []
         self.valid_jawac_df_list = []
@@ -47,7 +46,6 @@ class Preprocessing:
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
         self.downsampling_value = float(downsampling_value)
-        self.num_class = num_class
         self.data_balancing = data_balancing
         self.log_time = log_time
         self.jawac_df_list = []
@@ -167,29 +165,8 @@ class Preprocessing:
         # split of the valid dataframes
         for i in tqdm(range(len(self.valid_mk3_df_list))):
             self.valid_jawac_df_list[i] = self.valid_jawac_df_list[i].resample(str(self.downsampling_value) + 'S').median()['data'].to_frame(name='data')
-            if self.num_class == 2:
-                temp = [self.valid_jawac_df_list[i].data.tolist(), 1]
-                temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
-            else:
-                for idx, row in self.valid_mk3_df_list[i].iterrows():
-                    if row.label == "Zone d'exclusion":
-                        temp = [self.valid_jawac_df_list[i].loc[row['start']:row['end']].data.tolist(), 2]
-                        self.valid_jawac_df_list[i].drop(self.valid_jawac_df_list[i].loc[row['start']:row['end']].index.tolist(), inplace=True)
-                        temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
-
-                prev_time = None
-                temp = []
-                for idx, row in self.valid_jawac_df_list[i].iterrows():
-                    if prev_time is not None:
-                        if prev_time + datetime.timedelta(0, seconds=self.downsampling_value) == idx:
-                            temp.append(row.data)
-                        else:
-                            if len(temp) > 0:
-                                temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
-                            temp = []
-                    prev_time = idx
-                if len(temp) > 0:
-                    temp_dataset_df = temp_dataset_df.append(pd.Series([temp, 1], index=temp_dataset_df.columns), ignore_index=True)
+            temp = [self.valid_jawac_df_list[i].data.tolist(), 1]
+            temp_dataset_df = temp_dataset_df.append(pd.Series(temp, index=temp_dataset_df.columns), ignore_index=True)
 
         # valid and invalid jawac dataframes merging into dataset df
         max_length = int(self.segmentation_value * (60 / self.downsampling_value))
@@ -222,7 +199,6 @@ class Preprocessing:
         print('-----')
         print(f'{self.segmentation_value} min signal time split')
         print(f'{self.downsampling_value} sec data resampling')
-        print(f'{self.num_class} classes classification')
         print(f'data balancing: {self.data_balancing}')
         print('-----')
         self.split_dataframe_cnn()
@@ -238,12 +214,8 @@ class Preprocessing:
         save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.log_time}'
         os.mkdir(save_dir)
 
-        if self.num_class == 2:
-            x_values = ['Invalid', 'Valid']
-            y_values = [occ_counter[0], occ_counter[1]]
-        else:
-            x_values = ['Invalid', 'Valid', 'Awake']
-            y_values = [occ_counter[0], occ_counter[1], occ_counter[2]]
+        x_values = ['Invalid', 'Valid', 'Awake']
+        y_values = [occ_counter[0], occ_counter[1], occ_counter[2]]
 
         # bar plot with classes occurrences
         plt.bar(x_values, y_values)
@@ -260,8 +232,7 @@ class Preprocessing:
             oversample = SMOTE()
             X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
 
-            if self.num_class == 2:
-                y = to_categorical(y)
+            y = to_categorical(y)
 
             print('after balancing dataset:', occurrences_counter(y))
 
@@ -325,14 +296,7 @@ class Preprocessing:
             
         # split of the dataframes
         for i in tqdm(range(len(self.jawac_df_list))):
-            max_length = int(self.segmentation_value * (60 / self.downsampling_value))
-            split = [self.jawac_df_list[i][idx:idx + max_length] for idx in range(0, len(self.jawac_df_list[i]), max_length)][:-1]
-            temp = []
-            for arr in split:
-                # temp.append([arr.data.tolist(), max(arr.label.tolist(), key=arr.label.tolist().count)])
-                temp.append([arr.data.tolist(), arr.label.tolist()])
-                # arr.append(np.var(arr)*1000)
-            self.dataset.append(temp)
+            self.dataset.append([self.jawac_df_list[i].data.tolist(), self.jawac_df_list[i].label.tolist()])
             
     def create_dataset_lstm(self):
         """
@@ -348,9 +312,7 @@ class Preprocessing:
 
         start_time = time.time()    # start timer variable used for the calculation of the total execution time 
         print('-----')
-        print(f'{self.segmentation_value} min signal time split')
         print(f'{self.downsampling_value} sec data resampling')
-        print(f'{self.num_class} classes classification')
         print(f'data balancing: {self.data_balancing}')
         print('-----')
         self.split_dataframe_lstm()
@@ -360,57 +322,41 @@ class Preprocessing:
         X = []
         y = []
         for arr in self.dataset:
-            temp_X = []
-            temp_y = []
-            for i in range(len(arr)):
-                temp_X.append(arr[i][0])
-                temp_y.append(arr[i][1])
-                invalid_count+=arr[i][1].count(0)
-                valid_count+=arr[i][1].count(1)
-            X.append(temp_X)
-            y.append(temp_y)
-
-        X = np.array(X, dtype=object)    # X data instances
-        y_temp = []
-        for labels in y:
-            # y_temp.append(to_categorical(to_categorical(np.array(labels))))    # converting label list into categorical values
-            y_temp.append(np.array(labels))
-        y = np.array(y_temp, dtype=object)
+            invalid_count+=arr[1][:].count(0)
+            valid_count+=arr[1][:].count(1)
+            X.append(arr[0][:])
+            y.append(arr[1][:])
 
         save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/training/data/samples/{self.log_time}'
         os.mkdir(save_dir)
 
-        # X numpy array resampling to fit model training
-        # X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], 1))
-
         # splitting the data into testing and training sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
         df_info_file = open(f'{save_dir}/info.txt', 'a')
         df_info_file.write(f'Is balanced = {self.is_balanced} \n')
-        df_info_file.write(f'Segmentation value = {self.segmentation_value} \n')
         df_info_file.write(f'Downsampling value = {self.downsampling_value} \n')
-        df_info_file.write(f'Signal resolution = {1/self.downsampling_value} \n')
+        df_info_file.write(f'Signal resolution = {1/self.downsampling_value} Hz \n')
         df_info_file.write('--- \n')
-        df_info_file.write(f'% valid data point = {valid_count/(valid_count+invalid_count)} \n')
-        df_info_file.write(f'% invalid data point = {invalid_count/(valid_count+invalid_count)} \n')
+        df_info_file.write(f'% valid data point = {round(100*(valid_count/(valid_count+invalid_count)), 2)} \n')
+        df_info_file.write(f'% invalid data point = {round(100*(invalid_count/(valid_count+invalid_count)), 2)} \n')
         df_info_file.write('--- \n')
-        df_info_file.write(f'X train shape = {X_train.shape} \n')
-        df_info_file.write(f'X test shape = {X_test.shape} \n')
-        df_info_file.write(f'y train shape = {y_train.shape} \n')
-        df_info_file.write(f'y test shape = {y_test.shape} \n')
+        df_info_file.write(f'X train length = {len(X_train)} \n')
+        df_info_file.write(f'X test length = {len(X_test)} \n')
+        df_info_file.write(f'y train length = {len(y_train)} \n')
+        df_info_file.write(f'y test length = {len(y_test)} \n')
         df_info_file.write('--- \n')
         df_info_file.write(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min \n')
         df_info_file.write('---')
         df_info_file.close()
 
         print('----')
-        print(X_train.shape)
-        print(X_test.shape)
-        print(y_train.shape)
-        print(y_test.shape)
+        print(f'X train length = {len(X_train)}')
+        print(f'X test length = {len(X_test)}')
+        print(f'y train length = {len(y_train)}')
+        print(f'y test length = {len(y_test)}')
         print('----')
         print(f'Total data preprocessing computation time = {round(end_time-start_time, 2)} sec | {round((end_time-start_time)/60, 2)} min')
         print('----')

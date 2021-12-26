@@ -9,8 +9,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from copy import copy
-from tqdm import tqdm
-from scipy import stats
 from keras import backend as K
 from keras.callbacks import Callback
 from datetime import datetime as dt
@@ -230,7 +228,7 @@ def occurrences_counter(arr):
     return out
 
 
-def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold):
+def analysis_cutting(classes, analysis_start, analysis_end, batch_size, downsampling_value, threshold):
     """
     Method that computes new analysis bounds based on the different segmented windows label
 
@@ -239,7 +237,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
     -classes: analysis predicted classes
     -analysis_start: analysis start time
     -analysis_end: analysis end time
-    -time_step: segmentation time step in minutes
+    -downsampling_value: signal downsampling value in second
     -threshold: minimum threshold validity of the signal before stopping the reduction of the bounds
 
     Returns:
@@ -253,13 +251,15 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
     classes_copy = copy(classes)
     analysis_start_copy = copy(analysis_start)
     analysis_end_copy = copy(analysis_end)
-    time_step_copy = copy(time_step)
+    batch_size_copy = copy(batch_size)
+    downsampling_value_copy = copy(downsampling_value)
     classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label', 'probability'])
     curr_time = analysis_start
+    time_step = batch_size * downsampling_value
     for label in classes:
-        temp = [curr_time, curr_time + datetime.timedelta(minutes=time_step), label[0], label[1]]
+        temp = [curr_time, curr_time + datetime.timedelta(seconds=time_step), label[0], label[1]]
         classes_df = classes_df.append(pd.Series(temp, index=classes_df.columns), ignore_index=True)
-        curr_time += datetime.timedelta(minutes=time_step)
+        curr_time += datetime.timedelta(seconds=time_step)
 
     flag = False
     new_start_time = None
@@ -311,7 +311,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
     for idx, row in classes_df.iterrows():
         if row.label == 1:
             valid_count += 1
-    valid_hours = (valid_count * time_step) / 60
+    valid_hours = (valid_count * (downsampling_value * batch_size)) / 3600
     if len(classes_df) > 0:
         valid_rate = valid_count / len(classes_df)
     else:
@@ -326,11 +326,11 @@ def analysis_cutting(classes, analysis_start, analysis_end, time_step, threshold
             print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
             print(f"not enough valid signal (< 4h) in first selected bounds with threshold = {threshold}, let's try with a wider tolerance")
             if threshold == 0.98:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0.8)
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, batch_size_copy, downsampling_value_copy, threshold=0.8)
             if threshold == 0.8:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0.5)
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, batch_size_copy, downsampling_value_copy, threshold=0.5)
             if threshold == 0.5:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, time_step_copy, threshold=0)
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, batch_size_copy, downsampling_value_copy, threshold=0)
     new_bounds_classes = []
     for idx, row in classes_df.iterrows():
         new_bounds_classes.append((row.label, row.probability)) 
@@ -463,45 +463,6 @@ def signal_quality(classes):
     if out < 0:
         out = 0
     return out
-
-
-def stateful_fit(model, X_train, y_train, epochs):
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
-    print('Train...')
-    for epoch in range(epochs):
-        print('epoch #{}'.format(epoch+1))
-        print('--->')
-        mean_tr_acc = []
-        mean_tr_loss = []
-        for i in tqdm(range(len(X_train))):
-            for j in range(len(X_train[i])):
-                for k in range(len(X_train[i][j])):
-                    tr_loss, tr_acc, *r = model.train_on_batch(np.expand_dims(np.expand_dims([X_train[i][j][k]], axis=1), axis=1), np.array([y_train[i][j][k]]))
-                    mean_tr_acc.append(tr_acc)
-                    mean_tr_loss.append(tr_loss)
-            model.reset_states()
-        print('accuracy training = {}'.format(np.mean(mean_tr_acc)))
-        print('loss training = {}'.format(np.mean(mean_tr_loss)))
-
-        print('<---')
-        mean_te_acc = []
-        mean_te_loss = []
-        for i in tqdm(range(len(X_val))):
-            for j in range(len(X_val[i])):
-                for k in range(len(X_val[i][j])):
-                    te_loss, te_acc, *r = model.test_on_batch(np.expand_dims(np.expand_dims([X_val[i][j][k]], axis=1), axis=1), np.array([y_val[i][j][k]]))
-                    mean_te_acc.append(te_acc)
-                    mean_te_loss.append(te_loss)
-            model.reset_states()
-
-            # for j in range(len(X_val[i])):
-            #     y_pred, *r = model.predict_on_batch(np.expand_dims(np.expand_dims(X_val[i][j], axis=1), axis=1))
-            # model.reset_states()
-
-        print('accuracy testing = {}'.format(np.mean(mean_te_acc)))
-        print('loss testing = {}'.format(np.mean(mean_te_loss)))
-    
-    return model
 
 
 class TimingCallback(Callback):
