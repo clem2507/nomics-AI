@@ -1,22 +1,18 @@
 import os
 import sys
-import time
-import datetime
 import statistics
 import numpy as np
-import keras_tuner as kt
 
-from tqdm import tqdm
 from math import sqrt
-from matplotlib import pyplot as plt
-from statsmodels.stats.proportion import proportion_confint
-from keras_tuner.tuners import RandomSearch
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Bidirectional
 from tensorflow.keras.models import save_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
-from sklearn.utils import shuffle
+from statsmodels.stats.proportion import proportion_confint
+
+from tqdm import tqdm
+from matplotlib import pyplot as plt
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
@@ -25,7 +21,7 @@ from preprocessing import Preprocessing
 from util import plot_confusion_matrix, num_of_correct_pred, TimingCallback
 
 
-def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
@@ -39,41 +35,39 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -data_balancing: true if balanced data is needed, false otherwise
     -log_time: save the time when the computation starts for the directory name
     -batch_size: batch size for training
+    -standard_scale: true to perform a standardizatin by centering and scaling the data
+    -stateful: true to use stateful LSTM instead of stateless
 
     Returns:
 
     -accuracy: model accuracy on the testing set
     """
 
-    # directory creation
-    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
-    os.mkdir(save_dir)
 
-    if data_balancing:
-        is_balanced = 'balanced'
-    else:
-        is_balanced = 'unbalanced'
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale).create_dataset()
 
     model = Sequential()
-    if model_name == 'cnn':
-        X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time).create_dataset_cnn()
-        n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
-        X_train, y_train = shuffle(X_train, y_train)
-        validation_split, verbose = 0.1, 1
-        # using 1Hz resolution and 1 minute window -- 60 sample size
-        model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
-        model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))    # conv layer -- 2 -- Output size 32 x 27
-        model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 32 x 27
+    if not stateful:
+        n_timesteps, n_features, n_outputs, validation_split, verbose = X_train.shape[1], X_train.shape[2], y_train.shape[1], 0.1, 1
+        if model_name == 'cnn':
+            # using 1Hz resolution and 1 minute window -- 60 sample size
+            model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
+            model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))    # conv layer -- 2 -- Output size 32 x 27
+            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 32 x 27
+            model.add(Dropout(0.2))   # dropout -- 4 -- Output size 32 x 14
+            model.add(Flatten())   # flatten layer -- 5 -- Output size 1 x 448
+            model.add(Dense(64, activation='relu'))   # fully connected layer -- 6 -- Output size 1 x 64
+            model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
+            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
+            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-        model.add(Dropout(0.2))   # dropout -- 4 -- Output size 32 x 14
-
-        model.add(Flatten())   # flatten layer -- 5 -- Output size 1 x 448
-        model.add(Dense(64, activation='relu'))   # fully connected layer -- 6 -- Output size 1 x 64
-
-        model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
-
-        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        elif model_name == 'lstm':
+            model.add(LSTM(64, activation='tanh', input_shape=(n_timesteps, n_features), stateful=stateful))   # lstm layer -- 1 -- Output size None x 64
+            model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 64
+            model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
+            model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 32
+            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 2
+            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())
 
@@ -105,14 +99,24 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         # confustion matrix np array creation based on the prediction made by the model on the test data
         cm = confusion_matrix(y_true=int_y_test, y_pred=classes)
 
+        # directory creation
+        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
+        os.mkdir(save_dir)
+
+        # summary txt file
         model_info_file = open(f'{save_dir}/info.txt', 'w')
         model_info_file.write(f'This file contains information about the {model_name} model \n')
         model_info_file.write('--- \n')
         model_info_file.write(f'Segmentation value = {segmentation_value} \n')
         model_info_file.write(f'Downsampling value = {downsampling_value} \n')
         model_info_file.write(f'Signal resolution = {1/downsampling_value} Hz \n')
+        model_info_file.write(f'Batch size = {batch_size} \n')
+        model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
+        model_info_file.write(f'Stateful = {int(stateful)} \n')
         model_info_file.write('--- \n')
-        model_info_file.write(f'Is balanced = {is_balanced} \n')
+        model_info_file.write(f'Log time = {log_time} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
         model_info_file.write('--- \n')
         model_info_file.write(f'Num of epochs = {epochs} \n')
         model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
@@ -133,18 +137,11 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
         model_info_file.write('--- \n')
         model_info_file.close()
-    elif model_name == 'lstm':
-        X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time).create_dataset_lstm()
-        n_timesteps, n_features, n_outputs = None, 1, 1
-        X_train, y_train = shuffle(X_train, y_train)
-        validation_split = 0.15
-        stateful = True
-        # model.add(Bidirectional(LSTM(10, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=True)))
-        model.add(Bidirectional(LSTM(10, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=True)))
-        model.add(Dropout(0.2))
-        # sigmoid activation function better than softmax for binary classification
-        model.add(Dense(n_outputs, activation='sigmoid'))
-        # binary crossentropy loss function better than categorical crossentropy for binary classification
+    else:
+        n_timesteps, n_features, n_outputs, validation_split = None, 1, 1, 0.1
+        model.add(LSTM(10, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=True))   # lstm layer -- 1 -- Output size None x 10
+        model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 10
+        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 3 -- Output size None x 1
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())
@@ -155,9 +152,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         validation_loss_history = []
 
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
+
         print('Model train...')
         for epoch in range(epochs):
-            print('epoch #{}'.format(epoch+1))
+            print('----- EPOCH #{} -----'.format(epoch+1))
             print('---> Training')
             mean_tr_acc = []
             mean_tr_loss = []
@@ -214,14 +212,22 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         # confustion matrix np array creation based on the prediction made by the model on the test data
         cm = confusion_matrix(y_true=total_y_test, y_pred=total_y_pred)
 
+        # directory creation
+        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
+        os.mkdir(save_dir)
+
         model_info_file = open(f'{save_dir}/info.txt', 'w')
         model_info_file.write(f'This file contains information about the {model_name} model \n')
         model_info_file.write('--- \n')
         model_info_file.write(f'Downsampling value = {downsampling_value} \n')
         model_info_file.write(f'Signal resolution = {1/downsampling_value} Hz \n')
         model_info_file.write(f'Batch size = {batch_size} \n')
+        model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
+        model_info_file.write(f'Stateful = {int(stateful)} \n')
         model_info_file.write('--- \n')
-        model_info_file.write(f'Is balanced = {is_balanced} \n')
+        model_info_file.write(f'Log time = {log_time} \n')
+        model_info_file.write('--- \n')
+        model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
         model_info_file.write('--- \n')
         model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
         model_info_file.write(f'Training loss history = {training_loss_history} \n')
@@ -233,10 +239,6 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
         model_info_file.write('--- \n')
         model_info_file.close()
-
-    else:
-        raise Exception('model type does not exist, please choose between LSTM, CNN or KNN')
-
 
     # confusion matrix plot
     labels = ['Invalid', 'Valid']
@@ -280,7 +282,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     return accuracy
 
 
-def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful):
     """
     Callable method to start the training of the model
 
@@ -294,11 +296,13 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
     -data_balancing: true if balanced data is needed, false otherwise
     -log_time: save the time when the computation starts for the directory name
     -batch_size: batch size for training
+    -standard_scale: true to perform a standardizatin by centering and scaling the data
+    -stateful: true to use stateful LSTM instead of stateless
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size)
+    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful)
     score = score * 100.0
     print('test accuracy:', score, '%')
     print('-----')

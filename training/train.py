@@ -12,7 +12,7 @@ from ann import train_model as ann_train_model
 from knn import train_model as knn_train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch):
+def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, stateful):
     """
     Primary function for training the CNN, LSTM or KNN model
 
@@ -26,6 +26,8 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     -data_balancing (--data_balancing): true if balanced data is needed, false otherwise
     -neighbors (--neighbors): number of k-nearest neighbors to train the model for the KNN
     -batch (--batch): batch size for training
+    -standard_scaled: true to perform a standardizatin by centering and scaling the data
+    -stateful: true to use stateful LSTM instead of stateless
     """
 
     segmentation_value = float(segmentation_value)
@@ -34,16 +36,15 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     analysis_directory = os.path.dirname(os.path.abspath('util.py')) + '/' + analysis_directory
     log_time = str(datetime.datetime.fromtimestamp(time.time()))
 
-    print(analysis_directory)
     if os.path.exists(analysis_directory):
         Preprocessing(analysis_directory=analysis_directory).create_dataframes()
     else:
         raise Exception('input directory does not exist')
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
-        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch)
+        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful)
     elif model.lower() == 'knn':
-        knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time)
+        knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale)
     else:
         raise Exception('model type does not exist, please choose between LSTM, CNN and KNN')
 
@@ -57,7 +58,11 @@ def parse_opt():
     parser.add_argument('--no_balance', dest='data_balancing', action='store_false', help='invoke to not balance the dataset instances')
     parser.add_argument('--neighbors', type=int, default=3, help='neighbors: number of k-nearest neighbors to train the model for the KNN')
     parser.add_argument('--batch', type=int, default=30, help='batch size for training')
+    parser.add_argument('--standard_scale', dest='standard_scale', action='store_true', help='invoke to perform a standardizatin by centering and scaling the data')
+    parser.add_argument('--stateful', dest='stateful', action='store_true', help='invoke to use stateful LSTM instead of stateless')
     parser.set_defaults(data_balancing=True)
+    parser.set_defaults(standard_scale=False)
+    parser.set_defaults(standard_scale=False)
     return parser.parse_args()
 
 
@@ -66,6 +71,7 @@ def main(p):
 
 
 if __name__ == '__main__':
+    # statement to avoid useless warnings during training
     # export TF_CPP_MIN_LOG_LEVEL=3
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -73,10 +79,10 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN
-    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 5 --model 'cnn' --no_balance
+    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'cnn' --no_balance --batch 32
 
     # LSTM
-    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --downsampling_value 5 --epochs 3 --model 'lstm' --no_balance --batch 30
+    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'lstm' --no_balance --batch 32
 
     # KNN
     # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --neighbors 5 --model 'knn' --no_balance

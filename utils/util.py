@@ -9,10 +9,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from copy import copy
+
 from keras import backend as K
 from keras.callbacks import Callback
 from datetime import datetime as dt
-from sklearn.model_selection import train_test_split
 
 
 def convert_string_to_time(time, date):
@@ -484,13 +484,3 @@ class TimingCallback(Callback):
         if logs is None:
             logs = {}
         self.logs.append(time.time() - self.start_time)
-
-class ResetStatesCallback(Callback):
-    def __init__(self, max_len):
-        self.counter = 0
-        self.max_len = max_len
-
-    def on_batch_begin(self, batch, logs={}):
-        if self.counter % self.max_len == 0:
-            self.model.reset_states()
-        self.counter += 1

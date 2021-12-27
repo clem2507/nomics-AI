@@ -10,15 +10,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from tensorflow.python.keras.engine.sequential import Sequential
-from tensorflow.python.keras.layers import LSTM, Dense, Dropout
 
-from tqdm import tqdm
+from sklearn.preprocessing import StandardScaler
+
+from tensorflow.keras.models import load_model
+
 from pathlib import Path
 from datetime import timedelta
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
-from tensorflow.keras.models import load_model
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 
@@ -37,17 +37,22 @@ def analysis_classification(edf, model, out_graph):
 
     Returns:
 
-    -dictionary: dictionary containing information computed on the patient signal
-        dictionary keys:    -'percentage_signal_valid'
-                            -'percentage_signal_invalid'
-                            -'hours_signal_valid'
-                            -'hours_signal_invalid'
+    -dictionary: dictionary containing information computed on the jawac signal
+        dictionary keys:    -'model_path'
+                            -'total_hours'
+                            -'percentage_valid'
+                            -'percentage_invalid'
+                            -'hours_valid'
+                            -'hours_invalid'
+                            -'total_signal_quality'
                             -'new_bound_start'
                             -'new_bound_end'
-                            -'duration_in_bounds'
-                            -'hours_valid_in_bounds'
-                            -'percentage_valid_in_bounds'
+                            -'total_hours_new_bounds'
+                            -'hours_valid_new_bounds'
+                            -'percentage_valid_new_bounds'
+                            -'signal_quality_new_bounds'
                             -'is_valid'
+                            -'plot'
     """
 
     block_print()
@@ -58,20 +63,24 @@ def analysis_classification(edf, model, out_graph):
     model_name = model.lower()
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}'
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
+    most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
+    print(most_recent_folder_path)
     model_path = str(most_recent_folder_path[0]) + '/saved_model'
+    info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    info_file = open(info_path)
+    lines = info_file.readlines()
     if model_name in ['cnn', 'knn']:
-        info_path = str(most_recent_folder_path[0]) + '/info.txt'
-        info_file = open(info_path)
-        lines = info_file.readlines()
-        lines = lines[2:4]
-        segmentation_value = float(lines[1][-6:-2])    # window segmentation value in minute
-        downsampling_value = float(lines[2][-6:-2])    # signal downsampling value in second
+        lines = lines[2:7]
+        segmentation_value = float(lines[0][-6:-2])    # window segmentation value in minute
+        downsampling_value = float(lines[1][-6:-2])    # signal downsampling value in second
+        standard_scale = int(lines[4][-3:-2])    # boolean value for the standardizatin of the data
     else:
-        info_path = str(most_recent_folder_path[0]) + '/info.txt'
-        info_file = open(info_path)
-        lines = info_file.readlines()
-        lines = lines[2:3]
-        downsampling_value = float(lines[0][-6:-2])    # signal downsampling value in second
+        lines = lines[2:8]
+        segmentation_value = float(lines[0][-6:-2])    # window segmentation value in minute
+        downsampling_value = float(lines[1][-6:-2])    # signal downsampling value in second
+        prediction_batch_size = int(lines[3][-5:-2])    # batch size value for prediction
+        standard_scale = int(lines[4][-3:-2])    # boolean value for the standardizatin of the data
+        stateful = int(lines[5][-3:-2])    # boolean value for the stateful LSTM
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -81,17 +90,23 @@ def analysis_classification(edf, model, out_graph):
     df_jawac.insert(0, 'times', times)
     df_jawac.insert(1, 'data', data[0])
     df_jawac = df_jawac.resample(str(downsampling_value) + 'S', on='times').median()['data'].to_frame(name='data')
+    data = df_jawac.data.tolist()
+
+    if standard_scale:
+        scaler = StandardScaler()
+        temp = scaler.fit_transform(np.reshape(data, (-1, 1)))
+        data = np.reshape(temp, (len(temp))).tolist()
 
     start_class = time.time()    # start variable used for the calculation of the final classification time 
 
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
-    if model_name in ['cnn', 'knn']:
+    if not stateful:
         df_jawac.reset_index(inplace=True)
         size = int((60 / downsampling_value) * segmentation_value)
         X_test_seq = np.array([(df_jawac.loc[i:i + size - 1, :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
-            arr = np.append(arr, pd.Series([np.var(arr)*1000]))
+            arr = np.append(arr, pd.Series([np.var(arr)]))
             X_test_seq_temp.append(arr)
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
@@ -107,9 +122,9 @@ def analysis_classification(edf, model, out_graph):
     else:
         raise Exception('model path does not exist')
 
-    if model_name in ['cnn', 'knn']:
+    classes = []    # classes list holds the predicted labels
+    if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
-        classes = []    # classes list holds the predicted labels
         prediction_batch_size = segmentation_value * 60
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
@@ -125,17 +140,9 @@ def analysis_classification(edf, model, out_graph):
             else:
                 classes.append((idx, 1))
     else:
-        prediction_batch_size, n_timesteps, n_features, n_outputs = 1, None, 1, 1
-        prediction_model = Sequential()
-        prediction_model.add(LSTM(10, batch_input_shape=(prediction_batch_size, n_timesteps, n_features), stateful=True, return_sequences=True))
-        prediction_model.add(Dropout(0.2))
-        prediction_model.add(Dense(n_outputs, activation='sigmoid'))
-        prediction_model.set_weights(model.get_weights())
-        classes = []
-        data = df_jawac.data.tolist()
         for i in range(0, len(data), prediction_batch_size):
             if i+prediction_batch_size < len(data):
-                y_pred, *r = prediction_model.predict_on_batch(np.reshape(data[i:i+prediction_batch_size], (prediction_batch_size, 1, 1)))
+                y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+prediction_batch_size], (prediction_batch_size, 1, 1)))
                 label = round(y_pred[0][0])
                 if label == 0:
                     if 1-y_pred[0][0] > 0.9:
@@ -144,7 +151,7 @@ def analysis_classification(edf, model, out_graph):
                         classes.append((1, 0.5))
                 else:
                     classes.append((label, y_pred[0][0]))
-        prediction_model.reset_states()
+        model.reset_states()
     classes.append((0, 0.5))
 
     minimum_valid_time = 3   # in minutes
@@ -228,7 +235,7 @@ def analysis_classification(edf, model, out_graph):
     fig.set_size_inches(18.5, 10.5)
 
     # plot of the time series values
-    ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
+    ax.plot(df_jawac.index.tolist(), data)
     ax.axhline(y=0, color='r', linewidth=1)
     if new_start is not None and new_end is not None:
         ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
@@ -260,6 +267,8 @@ def analysis_classification(edf, model, out_graph):
     ax.legend(handles=legend_elements, loc='best')
 
     plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
+
+    # plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
     if out_graph:
@@ -293,23 +302,12 @@ def main(p):
 
 
 if __name__ == '__main__':
+    # statement to avoid useless warnings during training
     # export TF_CPP_MIN_LOG_LEVEL=3
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     opt = parse_opt()
     main(p=opt)
 
-    # Cmd test lines
+    # Cmd test lines - patient data from 1 to 13
     # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data2.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data3.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data4.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data5.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data6.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data7.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data8.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data9.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data10.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data11.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data12.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data13.edf' --view_graph --model 'LSTM'

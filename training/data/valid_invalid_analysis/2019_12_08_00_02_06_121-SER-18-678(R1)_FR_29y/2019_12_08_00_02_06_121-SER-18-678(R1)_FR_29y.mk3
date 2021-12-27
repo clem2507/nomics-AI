@@ -1,0 +1,8 @@
+MK_FILE_REV_0
+ANJAW_REV=2.11.2
+IsReportUpToDate=Yes
+Comment=
+-
+00:02:06:000;08.12.19;00:02:06:000;08.12.19;Logiciel;ep;START
+09:03:14:900;08.12.19;09:03:14:900;08.12.19;Logiciel;ep;STOP
+00:02:06:000;08.12.19;00:05:07:699;08.12.19;Logiciel;zs;1;Out of Range

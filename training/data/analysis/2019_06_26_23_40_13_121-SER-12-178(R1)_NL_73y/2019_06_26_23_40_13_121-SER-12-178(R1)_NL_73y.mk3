@@ -1,9 +1,0 @@
-MK_FILE_REV_0
-ANJAW_REV=2.11.2
-IsReportUpToDate=Yes
-Comment=
--
-23:46:54:000;26.06.19;23:46:54:000;26.06.19;Logiciel;ep;START
-07:28:27:900;27.06.19;07:28:27:900;27.06.19;Logiciel;ep;STOP
-23:46:54:000;26.06.19;23:48:39:799;26.06.19;Logiciel;zs;1;Out of Range
-07:14:47:000;27.06.19;07:28:27:900;27.06.19;Logiciel;zs;1;Out of Range
