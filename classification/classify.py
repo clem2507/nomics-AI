@@ -55,7 +55,7 @@ def analysis_classification(edf, model, out_graph):
                             -'plot'
     """
 
-    block_print()
+    # block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
@@ -123,15 +123,17 @@ def analysis_classification(edf, model, out_graph):
         raise Exception('model path does not exist')
 
     classes = []    # classes list holds the predicted labels
+    threshold = 0.7    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
     if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         prediction_batch_size = segmentation_value * 60
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
             idx = np.argmax(item)
+            print((idx, item[idx]), end='')
             if model_name in ['cnn', 'lstm']:
                 if idx == 0:
-                    if item[idx] > 0.9:
+                    if item[idx] > threshold:
                         classes.append((idx, item[idx]))
                     else:
                         classes.append((1, 0.5))
@@ -145,7 +147,7 @@ def analysis_classification(edf, model, out_graph):
                 y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+prediction_batch_size], (prediction_batch_size, 1, 1)))
                 label = round(y_pred[0][0])
                 if label == 0:
-                    if 1-y_pred[0][0] > 0.9:
+                    if 1-y_pred[0][0] > threshold:
                         classes.append((label, 1-y_pred[0][0]))
                     else:
                         classes.append((1, 0.5))
@@ -266,7 +268,7 @@ def analysis_classification(edf, model, out_graph):
 
     ax.legend(handles=legend_elements, loc='best')
 
-    plt.text(0.23, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
+    plt.text(0.15, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - signal quality in bounds: {dictionary["signal_quality_new_bounds"]} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
 
     # plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
 
