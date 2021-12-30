@@ -150,13 +150,14 @@ class Preprocessing:
 
         print('-----')
         print(f'{self.downsampling_value} sec data resampling --> signal resolution: {1/self.downsampling_value} Hz')
-        print(f'{self.downsampling_value} signal segmentation value (window size): {self.segmentation_value} min')
+        if not self.stateful:
+            print(f'{self.downsampling_value} signal segmentation value (window size): {self.segmentation_value} min')
         print(f'data balancing: {self.data_balancing}')
         print(f'stateful: {self.stateful}')
         print(f'standardization: {self.standard_scale}')
         print('-----')
 
-        self.split_dataframe_lstm()
+        self.split_dataframe()
 
         valid_count = 0
         invalid_count = 0
@@ -173,7 +174,7 @@ class Preprocessing:
                 temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), max_length)][:-1]
                 temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), max_length)][:-1]
                 for i in range(len(temp_X)):
-                    temp_X[i].append(np.var(temp_X[i]))
+                    temp_X[i].append(np.var(temp_X[i])*1000)
                     label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
                     if label == 0:
                         invalid_count += 1

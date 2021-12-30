@@ -34,7 +34,7 @@ def evaluate_model(analysis_directory, segmentation_value, downsampling_value, n
     -accuracy: model accuracy on the testing set
     """
 
-    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/knn/{log_time}'
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/knn/{log_time}'
     os.mkdir(save_dir)
 
     X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale).create_dataset()

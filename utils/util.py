@@ -228,7 +228,7 @@ def occurrences_counter(arr):
     return out
 
 
-def analysis_cutting(classes, analysis_start, analysis_end, batch_size, downsampling_value, threshold):
+def analysis_cutting(classes, analysis_start, analysis_end, minutes_per_class, downsampling_value, threshold):
     """
     Method that computes new analysis bounds based on the different segmented windows label
 
@@ -237,6 +237,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, batch_size, downsamp
     -classes: analysis predicted classes
     -analysis_start: analysis start time
     -analysis_end: analysis end time
+    -minutes_per_class: total number of minutes per predicted class
     -downsampling_value: signal downsampling value in second
     -threshold: minimum threshold validity of the signal before stopping the reduction of the bounds
 
@@ -251,11 +252,11 @@ def analysis_cutting(classes, analysis_start, analysis_end, batch_size, downsamp
     classes_copy = copy(classes)
     analysis_start_copy = copy(analysis_start)
     analysis_end_copy = copy(analysis_end)
-    batch_size_copy = copy(batch_size)
+    minutes_per_class_copy = copy(minutes_per_class)
     downsampling_value_copy = copy(downsampling_value)
     classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label', 'probability'])
     curr_time = analysis_start
-    time_step = batch_size * downsampling_value
+    time_step = minutes_per_class * 60
     for label in classes:
         temp = [curr_time, curr_time + datetime.timedelta(seconds=time_step), label[0], label[1]]
         classes_df = classes_df.append(pd.Series(temp, index=classes_df.columns), ignore_index=True)
@@ -311,7 +312,7 @@ def analysis_cutting(classes, analysis_start, analysis_end, batch_size, downsamp
     for idx, row in classes_df.iterrows():
         if row.label == 1:
             valid_count += 1
-    valid_hours = (valid_count * (downsampling_value * batch_size)) / 3600
+    valid_hours = (valid_count * minutes_per_class) / 60
     if len(classes_df) > 0:
         valid_rate = valid_count / len(classes_df)
     else:
@@ -326,11 +327,11 @@ def analysis_cutting(classes, analysis_start, analysis_end, batch_size, downsamp
             print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
             print(f"not enough valid signal (< 4h) in first selected bounds with threshold = {threshold}, let's try with a wider tolerance")
             if threshold == 0.98:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, batch_size_copy, downsampling_value_copy, threshold=0.8)
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, minutes_per_class_copy, downsampling_value_copy, threshold=0.8)
             if threshold == 0.8:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, batch_size_copy, downsampling_value_copy, threshold=0.5)
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, minutes_per_class_copy, downsampling_value_copy, threshold=0.5)
             if threshold == 0.5:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, batch_size_copy, downsampling_value_copy, threshold=0)
+                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, minutes_per_class_copy, downsampling_value_copy, threshold=0)
     new_bounds_classes = []
     for idx, row in classes_df.iterrows():
         new_bounds_classes.append((row.label, row.probability)) 

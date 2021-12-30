@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import statistics
 import numpy as np
 
@@ -7,18 +8,17 @@ from math import sqrt
 from tensorflow.keras.models import save_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
-from statsmodels.stats.proportion import proportion_confint
 
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense
+from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, TimeDistributed
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 
 from preprocessing import Preprocessing
-from util import plot_confusion_matrix, num_of_correct_pred, TimingCallback
+from util import plot_confusion_matrix, TimingCallback
 
 
 def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful):
@@ -44,9 +44,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     """
 
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale).create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, stateful=stateful).create_dataset()
 
     model = Sequential()
+    # Stateless model
     if not stateful:
         n_timesteps, n_features, n_outputs, validation_split, verbose = X_train.shape[1], X_train.shape[2], y_train.shape[1], 0.1, 1
         if model_name == 'cnn':
@@ -62,7 +63,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         elif model_name == 'lstm':
-            model.add(LSTM(64, activation='tanh', input_shape=(n_timesteps, n_features), stateful=stateful))   # lstm layer -- 1 -- Output size None x 64
+            model.add(LSTM(64, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1 -- Output size None x 64
             model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 64
             model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
             model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 32
@@ -87,61 +88,17 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         predictions = model.predict(X_test)
         classes = np.argmax(predictions, axis=1)
 
-        int_y_test = []    # predicted label list
+        total_y_test = []    # predicted label list
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in y_test:
-            int_y_test.append(np.argmax(item))
-
-        # 95 % confidence interval computation
-        interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
-        lower_bound, upper_bound = proportion_confint(num_of_correct_pred(y_true=int_y_test, y_pred=classes), len(classes), 0.05)
-
-        # confustion matrix np array creation based on the prediction made by the model on the test data
-        cm = confusion_matrix(y_true=int_y_test, y_pred=classes)
-
-        # directory creation
-        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
-        os.mkdir(save_dir)
-
-        # summary txt file
-        model_info_file = open(f'{save_dir}/info.txt', 'w')
-        model_info_file.write(f'This file contains information about the {model_name} model \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Segmentation value = {segmentation_value} \n')
-        model_info_file.write(f'Downsampling value = {downsampling_value} \n')
-        model_info_file.write(f'Signal resolution = {1/downsampling_value} Hz \n')
-        model_info_file.write(f'Batch size = {batch_size} \n')
-        model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
-        model_info_file.write(f'Stateful = {int(stateful)} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Log time = {log_time} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Num of epochs = {epochs} \n')
-        model_info_file.write(f'Epochs training computation time (in sec) = {time_callback.logs} \n')
-        model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(time_callback.logs)} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
-        model_info_file.write(f'Training loss history = {training_loss_history} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
-        model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Radius of the CI = {interval} \n')
-        model_info_file.write(f'True classification of the model is likely between {accuracy - interval} and {accuracy + interval} \n')
-        model_info_file.write(f'Lower bound model classification accuracy = {lower_bound} \n')
-        model_info_file.write(f'Upper bound model classification accuracy = {upper_bound} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Test accuracy = {accuracy} \n')
-        model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
-        model_info_file.write('--- \n')
-        model_info_file.close()
+            total_y_test.append(np.argmax(item))
+        y_test = total_y_test
+    # Stateful model
     else:
-        n_timesteps, n_features, n_outputs, validation_split = None, 1, 1, 0.1
-        model.add(LSTM(10, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=True))   # lstm layer -- 1 -- Output size None x 10
+        n_timesteps, n_features, n_outputs, validation_split, return_sequences = None, 1, 1, 0.1, True
+        model.add(LSTM(20, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=return_sequences))   # lstm layer -- 1 -- Output size None x 10
         model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 10
-        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 3 -- Output size None x 1
+        model.add(TimeDistributed(Dense(n_outputs, activation='sigmoid')))   # fully connected layer -- 3 -- Output size None x 1
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())
@@ -151,12 +108,15 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         validation_accuracy_history = []
         validation_loss_history = []
 
+        computation_time_history = []
+
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
 
         print('Model train...')
         for epoch in range(epochs):
             print('----- EPOCH #{} -----'.format(epoch+1))
             print('---> Training')
+            start = time.time()
             mean_tr_acc = []
             mean_tr_loss = []
             for i in tqdm(range(len(X_train))):
@@ -187,58 +147,69 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             validation_loss_history.append(np.mean(mean_val_loss))
             print('val accuracy = {}'.format(np.mean(mean_val_acc)))
             print('val loss = {}'.format(np.mean(mean_val_loss)))
+            end = time.time()
+
+            computation_time_history.append(end-start)
 
         print('---> Testing')
         mean_te_acc = []
-        total_y_test = []
-        total_y_pred = []
         for i in tqdm(range(len(X_test))):
             classes = []
-            temp_y_test = []
             for j in range(0, len(X_test[i]), batch_size):
                 if j+batch_size < len(X_test[i]):
                     y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+batch_size], (batch_size, 1, 1)))
-                    pred_label = round(y_pred[0][0])
-                    test_label = max(y_test[i][j:j+batch_size], key=y_test[i][j:j+batch_size].count)
-                    classes.append(pred_label)
-                    temp_y_test.append(test_label)
-                    total_y_pred.append(pred_label)
-                    total_y_test.append(test_label)
+                    for label in y_pred:
+                        pred_label = round(label[0])
+                        classes.append(pred_label)
             model.reset_states()
-            mean_te_acc.append(accuracy_score(temp_y_test, classes))
+            mean_te_acc.append(accuracy_score(y_test, classes))
 
         accuracy = np.mean(mean_te_acc)
 
-        # confustion matrix np array creation based on the prediction made by the model on the test data
-        cm = confusion_matrix(y_true=total_y_test, y_pred=total_y_pred)
+    # 95 % confidence interval computation
+    interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
 
-        # directory creation
-        save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}/{log_time}'
-        os.mkdir(save_dir)
+    # confustion matrix np array creation based on the prediction made by the model on the test data
+    cm = confusion_matrix(y_true=y_test, y_pred=classes)
 
-        model_info_file = open(f'{save_dir}/info.txt', 'w')
-        model_info_file.write(f'This file contains information about the {model_name} model \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Downsampling value = {downsampling_value} \n')
-        model_info_file.write(f'Signal resolution = {1/downsampling_value} Hz \n')
-        model_info_file.write(f'Batch size = {batch_size} \n')
-        model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
-        model_info_file.write(f'Stateful = {int(stateful)} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Log time = {log_time} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
-        model_info_file.write(f'Training loss history = {training_loss_history} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
-        model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
-        model_info_file.write('--- \n')
-        model_info_file.write(f'Test accuracy = {accuracy} \n')
-        model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
-        model_info_file.write('--- \n')
-        model_info_file.close()
+    # directory creation
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/{model_name}/{log_time}'
+    os.mkdir(save_dir)
+
+    # summary txt file
+    model_info_file = open(f'{save_dir}/info.txt', 'w')
+    model_info_file.write(f'This file contains information about the {model_name} model \n')
+    model_info_file.write('--- \n')
+    if not stateful:
+        model_info_file.write(f'Segmentation value = {segmentation_value} \n')
+    else:
+        model_info_file.write(f'Segmentation value = 0 \n')
+    model_info_file.write(f'Downsampling value = {downsampling_value} \n')
+    model_info_file.write(f'Signal frequency = {1/downsampling_value} Hz \n')
+    model_info_file.write(f'Batch size = {batch_size} \n')
+    model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
+    model_info_file.write(f'Stateful = {int(stateful)} \n')
+    model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Log time = {log_time} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Num of epochs = {epochs} \n')
+    model_info_file.write(f'Epochs training computation time history (in sec) = {time_callback.logs} \n')
+    model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(time_callback.logs)} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
+    model_info_file.write(f'Training loss history = {training_loss_history} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Validation accuracy history = {validation_accuracy_history} \n')
+    model_info_file.write(f'Validation loss history = {validation_loss_history} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Radius of the CI = {interval} \n')
+    model_info_file.write(f'True classification of the model is likely between {accuracy - interval} and {accuracy + interval} \n')
+    model_info_file.write('--- \n')
+    model_info_file.write(f'Test accuracy = {accuracy} \n')
+    model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
+    model_info_file.write('--- \n')
+    model_info_file.close()
 
     # confusion matrix plot
     labels = ['Invalid', 'Valid']

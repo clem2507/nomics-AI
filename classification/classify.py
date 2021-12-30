@@ -1,3 +1,4 @@
+from enum import Flag
 import os
 import sys
 import mne
@@ -25,7 +26,19 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
 from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, extract_data_from_line, string_datetime_conversion
 
 
-def analysis_classification(edf, model, out_graph):
+def get_value_in_line(line):
+    out = ''
+    flag = False
+    for i in range(len(line)):
+        if len(out) > 0 and flag and line[i] == ' ':
+            return out
+        if flag:
+            out += line[i]
+        if line[i] == '=':
+            flag = True
+    return out
+
+def analysis_classification(edf, model, view_graph, plt_save_path):
     """
     Primary function for classifying an edf patient file
 
@@ -33,7 +46,8 @@ def analysis_classification(edf, model, out_graph):
 
     -edf (--edf): edf file path containing time series data
     -model (--model): learning model architecture, either CNN, LSTM or KNN
-    -out_graph (--out_graph): true to show the output graph, false to skip it and only use the output dictionary
+    -view_graph (--view_graph): true to show the output graph, false to skip it and only use the output dictionary
+    -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
 
     Returns:
 
@@ -55,32 +69,27 @@ def analysis_classification(edf, model, out_graph):
                             -'plot'
     """
 
-    # block_print()
+    block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
-    # if condition to distinct binary and binary classification
     model_name = model.lower()
-    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/classification/models/{model_name}'
+    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/{model_name}'
+
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
-    print(most_recent_folder_path)
+
     model_path = str(most_recent_folder_path[0]) + '/saved_model'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
-    lines = info_file.readlines()
-    if model_name in ['cnn', 'knn']:
-        lines = lines[2:7]
-        segmentation_value = float(lines[0][-6:-2])    # window segmentation value in minute
-        downsampling_value = float(lines[1][-6:-2])    # signal downsampling value in second
-        standard_scale = int(lines[4][-3:-2])    # boolean value for the standardizatin of the data
-    else:
-        lines = lines[2:8]
-        segmentation_value = float(lines[0][-6:-2])    # window segmentation value in minute
-        downsampling_value = float(lines[1][-6:-2])    # signal downsampling value in second
-        prediction_batch_size = int(lines[3][-5:-2])    # batch size value for prediction
-        standard_scale = int(lines[4][-3:-2])    # boolean value for the standardizatin of the data
-        stateful = int(lines[5][-3:-2])    # boolean value for the stateful LSTM
+
+    lines = info_file.readlines()[2:8]
+
+    segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
+    downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
+    batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
+    standard_scale = int(get_value_in_line(lines[4]))    # boolean value for the standardizatin of the data
+    stateful = int(get_value_in_line(lines[5]))    # boolean value for the stateful model
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -106,7 +115,7 @@ def analysis_classification(edf, model, out_graph):
         X_test_seq = np.array([(df_jawac.loc[i:i + size - 1, :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
-            arr = np.append(arr, pd.Series([np.var(arr)]))
+            arr = np.append(arr, pd.Series([np.var(arr)*1000]))
             X_test_seq_temp.append(arr)
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
@@ -123,10 +132,10 @@ def analysis_classification(edf, model, out_graph):
         raise Exception('model path does not exist')
 
     classes = []    # classes list holds the predicted labels
-    threshold = 0.7    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
+    threshold = 0.5    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
     if not stateful:
+        minutes_per_class = segmentation_value
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
-        prediction_batch_size = segmentation_value * 60
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
             idx = np.argmax(item)
@@ -142,9 +151,10 @@ def analysis_classification(edf, model, out_graph):
             else:
                 classes.append((idx, 1))
     else:
-        for i in range(0, len(data), prediction_batch_size):
-            if i+prediction_batch_size < len(data):
-                y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+prediction_batch_size], (prediction_batch_size, 1, 1)))
+        minutes_per_class = (batch_size * downsampling_value)/60
+        for i in range(0, len(data), batch_size):
+            if i+batch_size < len(data):
+                y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size], (batch_size, 1, 1)))
                 label = round(y_pred[0][0])
                 if label == 0:
                     if 1-y_pred[0][0] > threshold:
@@ -155,9 +165,10 @@ def analysis_classification(edf, model, out_graph):
                     classes.append((label, y_pred[0][0]))
         model.reset_states()
     classes.append((0, 0.5))
+    print()
 
     minimum_valid_time = 3   # in minutes
-    valid_threshold = math.ceil((minimum_valid_time*60)/(prediction_batch_size*downsampling_value))
+    valid_threshold = math.ceil(minimum_valid_time/minutes_per_class)
     valid_idx = []
     for i in range(len(classes)):
         if classes[i][0] == 0:
@@ -168,7 +179,7 @@ def analysis_classification(edf, model, out_graph):
         else:
             valid_idx.append(i)
     minimum_invalid_time = 1   # in minutes
-    invalid_threshold = math.ceil((minimum_invalid_time*60)/(prediction_batch_size*downsampling_value))
+    invalid_threshold = math.ceil(minimum_invalid_time/minutes_per_class)
     invalid_idx = []
     for i in range(1, len(classes)-1):
         if classes[i][0] == 0:
@@ -196,8 +207,8 @@ def analysis_classification(edf, model, out_graph):
 
     print('--------')
 
-    print('valid hours:', hours_conversion((valid_total * (downsampling_value * prediction_batch_size)) / 3600))
-    print('invalid hours:', hours_conversion((invalid_total * (downsampling_value * prediction_batch_size)) / 3600))
+    print('valid hours:', hours_conversion((valid_total * minutes_per_class) / 60))
+    print('invalid hours:', hours_conversion((invalid_total * minutes_per_class) / 60))
 
     print('--------')
     
@@ -206,7 +217,7 @@ def analysis_classification(edf, model, out_graph):
     print('--------')
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
-    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes=classes, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], batch_size=prediction_batch_size, downsampling_value=downsampling_value, threshold=0.98)
+    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes=classes, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], minutes_per_class=minutes_per_class, downsampling_value=downsampling_value, threshold=0.98)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -230,7 +241,7 @@ def analysis_classification(edf, model, out_graph):
     print('--------')
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_valid': round((total_valid_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_valid': round(((valid_total * (downsampling_value * prediction_batch_size)) / 3600), 2), 'hours_invalid': round(((invalid_total * (downsampling_value * prediction_batch_size)) / 3600), 2), 'total_signal_quality': round((signal_quality(classes) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_valid_new_bounds': round(valid_hours, 2), 'percentage_valid_new_bounds': round(valid_rate * 100, 2), 'signal_quality_new_bounds': round((signal_quality(new_bounds_classes) * 100), 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
+    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_valid': round((total_valid_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_valid': round(((valid_total * minutes_per_class) / 60), 2), 'hours_invalid': round(((invalid_total * minutes_per_class) / 60), 2), 'total_signal_quality': round((signal_quality(classes) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_valid_new_bounds': round(valid_hours, 2), 'percentage_valid_new_bounds': round(valid_rate * 100, 2), 'signal_quality_new_bounds': round((signal_quality(new_bounds_classes) * 100), 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
 
     # graph
     fig, ax = plt.subplots()
@@ -256,10 +267,10 @@ def analysis_classification(edf, model, out_graph):
     # graph background color based on signal classified label
     for label in classes:
         if label[0] == 0:
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(seconds=prediction_batch_size*downsampling_value), facecolor='r', alpha=0.3*label[1])
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(seconds=minutes_per_class*60), facecolor='r', alpha=0.3*label[1])
         elif label[0] == 1:
-            plt.axvspan(curr_time, curr_time + datetime.timedelta(seconds=prediction_batch_size*downsampling_value), facecolor='g', alpha=0.3*label[1])
-        curr_time += datetime.timedelta(seconds=(prediction_batch_size*downsampling_value))
+            plt.axvspan(curr_time, curr_time + datetime.timedelta(seconds=minutes_per_class*60), facecolor='g', alpha=0.3*label[1])
+        curr_time += datetime.timedelta(seconds=minutes_per_class*60)
 
     # legend
     legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid area', alpha=0.2),
@@ -268,12 +279,13 @@ def analysis_classification(edf, model, out_graph):
 
     ax.legend(handles=legend_elements, loc='best')
 
-    plt.text(0.15, 0.04, f'total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - signal quality in bounds: {dictionary["signal_quality_new_bounds"]} - valid: {dictionary["is_valid"]}', fontsize=12, transform=plt.gcf().transFigure)
+    plt.text(0.14, 0.04, f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_valid"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_valid_new_bounds"])} - signal quality in bounds: {dictionary["signal_quality_new_bounds"]} - threshold: {threshold} - valid: {dictionary["is_valid"]}', fontsize=11, transform=plt.gcf().transFigure)
 
-    # plt.savefig(os.path.dirname(os.path.abspath('util.py')) + f'/training/data/output_graphs/output_{title}.png', bbox_inches='tight')
+    if plt_save_path != '':
+        plt.savefig(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
-    if out_graph:
+    if view_graph:
         plt.show()
     plt.close(fig=fig)
         
@@ -291,8 +303,9 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--edf', type=str, default='', help='edf file path containing time series data')
     parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
-    parser.add_argument('--view_graph', dest='out_graph', action='store_true', help='invoke to view the output graph')
-    parser.set_defaults(out_graph=False)
+    parser.add_argument('--view_graph', dest='view_graph', action='store_true', help='invoke to view the output graph')
+    parser.add_argument('--plt_save_path', type=str, default='', help='path to save a .png copy file of the output plot if desired')
+    parser.set_defaults(view_graph=False)
     return parser.parse_args()
 
 
@@ -313,3 +326,4 @@ if __name__ == '__main__':
 
     # Cmd test lines - patient data from 1 to 13
     # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
+    # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'CNN'

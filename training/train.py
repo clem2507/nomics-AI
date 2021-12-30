@@ -62,7 +62,7 @@ def parse_opt():
     parser.add_argument('--stateful', dest='stateful', action='store_true', help='invoke to use stateful LSTM instead of stateless')
     parser.set_defaults(data_balancing=True)
     parser.set_defaults(standard_scale=False)
-    parser.set_defaults(standard_scale=False)
+    parser.set_defaults(stateful=False)
     return parser.parse_args()
 
 
@@ -79,10 +79,10 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN
-    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'cnn' --no_balance --batch 32
+    # python3 training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'cnn' --no_balance --batch 32
 
     # LSTM
-    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'lstm' --no_balance --batch 32
+    # python3 training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'lstm' --no_balance --batch 32
 
-    # KNN
-    # python3 training/train.py --analysis_directory 'training/data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --neighbors 5 --model 'knn' --no_balance
+    # KNN - not working anymore
+    # python3 training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --neighbors 5 --model 'knn' --no_balance
