@@ -14,7 +14,7 @@ from tqdm import tqdm
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
 
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from util import extract_data_from_line, string_datetime_conversion, block_print, enable_print
 

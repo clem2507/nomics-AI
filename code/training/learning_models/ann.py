@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, TimeDistributed
 
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from preprocessing import Preprocessing
 from util import plot_confusion_matrix, TimingCallback

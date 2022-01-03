@@ -8,8 +8,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 
 from sklearn.neighbors import KNeighborsRegressor
 
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from preprocessing import Preprocessing
 from util import plot_confusion_matrix

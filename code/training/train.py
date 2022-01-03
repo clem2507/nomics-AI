@@ -4,8 +4,8 @@ import time
 import datetime
 import argparse
 
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/data_loader')
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/training/learning_models')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/learning_models')
 
 from preprocessing import Preprocessing
 from ann import train_model as ann_train_model
@@ -79,10 +79,10 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN
-    # python3 training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'cnn' --no_balance --batch 32
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --no_balance --batch 32
 
     # LSTM
-    # python3 training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 20 --model 'lstm' --no_balance --batch 32
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'lstm' --no_balance --batch 32
 
     # KNN - not working anymore
-    # python3 training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --neighbors 5 --model 'knn' --no_balance
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --neighbors 5 --model 'knn' --no_balance

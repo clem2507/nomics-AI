@@ -21,7 +21,7 @@ from datetime import timedelta
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/utils')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, extract_data_from_line, string_datetime_conversion
 
@@ -84,7 +84,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     info_file = open(info_path)
 
     lines = info_file.readlines()[2:8]
-
+    
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
     batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
@@ -325,5 +325,5 @@ if __name__ == '__main__':
     main(p=opt)
 
     # Cmd test lines - patient data from 1 to 13
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
-    # python3 classification/classify.py --edf 'classification/test_data/patient_data1.edf' --view_graph --model 'CNN'
+    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
+    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'CNN'
