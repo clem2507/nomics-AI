@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
-from util import extract_data_from_line, string_datetime_conversion, block_print, enable_print
+from util import extract_data_from_line, datetime_conversion, block_print, enable_print
 
 
 class Preprocessing:
@@ -32,9 +32,10 @@ class Preprocessing:
     -log_time: save the time when the computation starts for the directory name
     -standard_scaled: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
+    -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
-    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False):
+    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, task=1):
         self.directory = analysis_directory
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
@@ -43,6 +44,7 @@ class Preprocessing:
         self.log_time = log_time
         self.standard_scale = standard_scale
         self.stateful = stateful
+        self.task = task
         self.jawac_df_list = []
         self.mk3_df_list = []
         self.dataset = []
@@ -70,17 +72,15 @@ class Preprocessing:
                         continue
                     data_mk3 = open(mk3_file)    # mk3 file reading
                     lines = data_mk3.readlines()    # list with the mk3 lines
-                    start_record_time = lines[5].split(';')[0]
-                    start_record_date = lines[5].split(';')[1]
+                    # start_record_time = lines[5].split(';')[0]
+                    # start_record_date = lines[5].split(';')[1]
                     lines = lines[7:]    # log file information removed (not needed anymore)
                     col_names = ['start', 'end', 'label']
                     df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
                     for line in lines:
-                        # Out of Range is the label for invalid signal area
-                        if line.split(sep=';')[-1][:-1] == 'Out of Range':
-                            if line.split(sep=';')[-2] == '1':
-                                temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
-                                df_mk3 = df_mk3.append(temp, ignore_index=True)
+                        if len(line) > 0:
+                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
+                            df_mk3 = df_mk3.append(temp, ignore_index=True)
 
                     # dataframe saving
                     df_mk3.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
@@ -89,13 +89,23 @@ class Preprocessing:
                     raw_data = mne.io.read_raw_edf(edf_file)    # edf file reading
                     enable_print()
 
-                    data, times = raw_data[:]    # edf file data extraction
-                    times = string_datetime_conversion(times, start_record_time, start_record_date)    # conversion to usable date dtype 
                     df_jawac = pd.DataFrame()    # dataframe creation to store time series data
-                    df_jawac.insert(0, 'times', times)
-                    df_jawac.insert(1, 'data', data[0])
-                    # downsamping signal to 10Hz to have normalized data (some devices record with higher frequency)
-                    df_jawac = df_jawac.resample('0.1S', on='times').median()['data'].to_frame(name='data')
+                    if self.task == 1:
+                        data, times = raw_data[:]    # edf file data extraction
+                        times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
+                        df_jawac.insert(0, 'times', times)
+                        df_jawac.insert(1, 'data', data[0])
+                        df_jawac = df_jawac.resample('0.1S', on='times').median()
+                    elif self.task == 2:
+                        data = raw_data[0][0][0]
+                        times = raw_data[1][1]
+                        labels = raw_data[1][0][0]
+                        times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
+                        df_jawac.insert(0, 'times', times)
+                        df_jawac.insert(1, 'data', data)
+                        df_jawac.insert(2, 'label', labels)
+                        df_jawac = df_jawac.resample('0.1S', on='times').median()
+
                     # dataframe saving
                     df_jawac.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
                 else:
@@ -120,15 +130,16 @@ class Preprocessing:
             if not dir_names[i].startswith('.'):
                 df_mk3 = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')
                 df_jawac = pd.read_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
-                df_jawac = df_jawac.resample(str(self.downsampling_value) + 'S').median()['data'].to_frame(name='data')
+                df_jawac = df_jawac.resample(str(self.downsampling_value) + 'S').median()
                 self.mk3_df_list.append(df_mk3)
                 self.jawac_df_list.append(df_jawac)
 
-        for i in tqdm(range(len(self.jawac_df_list))):
-            self.jawac_df_list[i]['label'] = [1 for i in range(len(self.jawac_df_list[i]))]
-            for idx, row in self.mk3_df_list[i].iterrows():
-                mask = (self.jawac_df_list[i].index >= row.start) & (self.jawac_df_list[i].index <= row.end)
-                self.jawac_df_list[i].loc[mask, ['label']] = 0
+        if self.task == 1:
+            for i in tqdm(range(len(self.jawac_df_list))):
+                self.jawac_df_list[i]['label'] = [1 for n in range(len(self.jawac_df_list[i]))]
+                for idx, row in self.mk3_df_list[i].iterrows():
+                    mask = (self.jawac_df_list[i].index >= row.start) & (self.jawac_df_list[i].index <= row.end)
+                    self.jawac_df_list[i].loc[mask, ['label']] = 0
             
         for i in tqdm(range(len(self.jawac_df_list))):
             self.dataset.append([self.jawac_df_list[i].data.tolist(), self.jawac_df_list[i].label.tolist()])
@@ -159,27 +170,28 @@ class Preprocessing:
 
         self.split_dataframe()
 
-        valid_count = 0
-        invalid_count = 0
+        one_count = 0
+        zero_count = 0
         X = []
         y = []
         max_length = int(self.segmentation_value * (60 / self.downsampling_value))
         for arr in self.dataset:
             if self.stateful:
-                invalid_count+=arr[1][:].count(0)
-                valid_count+=arr[1][:].count(1)
+                zero_count+=arr[1][:].count(0)
+                one_count+=arr[1][:].count(1)
                 X.append(arr[0][:])
                 y.append(arr[1][:])
             else:
                 temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), max_length)][:-1]
                 temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), max_length)][:-1]
                 for i in range(len(temp_X)):
-                    temp_X[i].append(np.var(temp_X[i])*1000)
+                    if self.task == 1:
+                        temp_X[i].append(np.var(temp_X[i])*1000)
                     label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
                     if label == 0:
-                        invalid_count += 1
+                        zero_count += 1
                     elif label == 1:
-                        valid_count += 1
+                        one_count += 1
                     X.append(temp_X[i])
                     y.append(label)
 
@@ -205,8 +217,8 @@ class Preprocessing:
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
         print('----')
-        print(f'% valid data point = {round(100*(valid_count/(valid_count+invalid_count)), 2)}')
-        print(f'% invalid data point = {round(100*(invalid_count/(valid_count+invalid_count)), 2)}')
+        print(f'% 1 data point = {round(100*(one_count/(one_count+zero_count)), 2)}')
+        print(f'% 0 data point = {round(100*(zero_count/(one_count+zero_count)), 2)}')
         print('----')
         print(f'X train length = {len(X_train)}')
         print(f'X test length = {len(X_test)}')

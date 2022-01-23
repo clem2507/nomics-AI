@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import itertools
 import statistics
 import numpy as np
 
@@ -18,10 +19,10 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/da
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from preprocessing import Preprocessing
-from util import plot_confusion_matrix, TimingCallback
+from util import reduction, plot_confusion_matrix, TimingCallback
 
 
-def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
@@ -37,6 +38,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -batch_size: batch size for training
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
+    -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
 
     Returns:
 
@@ -44,7 +46,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     """
 
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, stateful=stateful).create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, stateful=stateful, task=task).create_dataset()
 
     model = Sequential()
     # Stateless model
@@ -75,6 +77,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         time_callback = TimingCallback()
 
         history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback])
+
+        computation_time_history = time_callback.logs
 
         # metrics history epochs after epochs
         training_accuracy_history = history.history['accuracy']
@@ -147,11 +151,12 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             validation_loss_history.append(np.mean(mean_val_loss))
             print('val accuracy = {}'.format(np.mean(mean_val_acc)))
             print('val loss = {}'.format(np.mean(mean_val_loss)))
-            end = time.time()
 
-            computation_time_history.append(end-start)
+            computation_time_history.append(time.time()-start)
 
         print('---> Testing')
+        total_classes = []
+        total_y_test = []
         mean_te_acc = []
         for i in tqdm(range(len(X_test))):
             classes = []
@@ -161,10 +166,15 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                     for label in y_pred:
                         pred_label = round(label[0])
                         classes.append(pred_label)
+                        total_classes.append(pred_label)
             model.reset_states()
-            mean_te_acc.append(accuracy_score(y_test, classes))
+            reducted_y = reduction(y_test[i], batch_size=batch_size)
+            total_y_test.append(reducted_y)
+            mean_te_acc.append(accuracy_score(reducted_y, classes))
 
         accuracy = np.mean(mean_te_acc)
+        classes = total_classes
+        y_test = list(itertools.chain.from_iterable(total_y_test))
 
     # 95 % confidence interval computation
     interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
@@ -173,12 +183,13 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     cm = confusion_matrix(y_true=y_test, y_pred=classes)
 
     # directory creation
-    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/{model_name}/{log_time}'
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
     os.mkdir(save_dir)
 
     # summary txt file
     model_info_file = open(f'{save_dir}/info.txt', 'w')
     model_info_file.write(f'This file contains information about the {model_name} model \n')
+    model_info_file.write(f'Analysis directory = {analysis_directory} \n')
     model_info_file.write('--- \n')
     if not stateful:
         model_info_file.write(f'Segmentation value = {segmentation_value} \n')
@@ -194,8 +205,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.write(f'Log time = {log_time} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Num of epochs = {epochs} \n')
-    model_info_file.write(f'Epochs training computation time history (in sec) = {time_callback.logs} \n')
-    model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(time_callback.logs)} \n')
+    model_info_file.write(f'Epochs training computation time history (in sec) = {computation_time_history} \n')
+    model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(computation_time_history)} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Training accuracy history = {training_accuracy_history} \n')
     model_info_file.write(f'Training loss history = {training_loss_history} \n')
@@ -212,7 +223,11 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.close()
 
     # confusion matrix plot
-    labels = ['Invalid', 'Valid']
+    if task == 1:
+        labels = ['Invalid', 'Valid']
+    elif task == 2:
+        labels = ['Awake', 'Sleep']
+    
     cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix')
 
     cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
@@ -253,7 +268,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     return accuracy
 
 
-def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task):
     """
     Callable method to start the training of the model
 
@@ -269,11 +284,12 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
     -batch_size: batch size for training
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
+    -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful)
+    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task)
     score = score * 100.0
     print('test accuracy:', score, '%')
     print('-----')

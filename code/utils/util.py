@@ -456,13 +456,56 @@ def signal_quality(classes):
     if len(classes) == 0:
         return score
     for c in classes:
-        if c[0] == 0:
-            score += 1-c[1]
-        elif c[0] == 1:
+        if c[0] == 1:
             score += c[1]
+        else:
+            score += 1-c[1]
     out = score/len(classes)
     if out < 0:
         out = 0
+    return out
+
+
+def reduction(y_test, batch_size):
+    """
+    Method used to reduce the y test label according to the batch size
+
+    Parameters:
+
+    -batch_size: number of instances used for training the model each time
+
+    Returns:
+
+    -out: the processed list
+    """
+    out = []
+    for i in range(0, len(y_test), batch_size):
+        if i + batch_size < len(y_test):
+            out.append(round(max(y_test[i:i+batch_size], key = y_test[i:i+batch_size].count)))
+    return out
+
+
+def get_value_in_line(line):
+    """
+    Method used to access the correct value in the info.txt file from models
+
+    Parameters:
+
+    -line: line to find the value in
+
+    Returns:
+
+    -out: the correct value
+    """
+    out = ''
+    flag = False
+    for i in range(len(line)):
+        if len(out) > 0 and flag and line[i] == ' ':
+            return out
+        if flag:
+            out += line[i]
+        if line[i] == '=':
+            flag = True
     return out
 
 

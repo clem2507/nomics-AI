@@ -12,7 +12,7 @@ from ann import train_model as ann_train_model
 from knn import train_model as knn_train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, stateful):
+def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, stateful, task):
     """
     Primary function for training the CNN, LSTM or KNN model
 
@@ -26,8 +26,9 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     -data_balancing (--data_balancing): true if balanced data is needed, false otherwise
     -neighbors (--neighbors): number of k-nearest neighbors to train the model for the KNN
     -batch (--batch): batch size for training
-    -standard_scaled: true to perform a standardizatin by centering and scaling the data
-    -stateful: true to use stateful LSTM instead of stateless
+    -standard_scaled (--standard_scale): true to perform a standardizatin by centering and scaling the data
+    -stateful (--stateful): true to use stateful LSTM instead of stateless
+    -task: (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
     segmentation_value = float(segmentation_value)
@@ -37,12 +38,12 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     log_time = str(datetime.datetime.fromtimestamp(time.time()))
 
     if os.path.exists(analysis_directory):
-        Preprocessing(analysis_directory=analysis_directory).create_dataframes()
+        Preprocessing(analysis_directory=analysis_directory, task=task).create_dataframes()
     else:
         raise Exception('input directory does not exist')
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
-        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful)
+        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful, task=task)
     elif model.lower() == 'knn':
         knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale)
     else:
@@ -60,6 +61,7 @@ def parse_opt():
     parser.add_argument('--batch', type=int, default=30, help='batch size for training')
     parser.add_argument('--standard_scale', dest='standard_scale', action='store_true', help='invoke to perform a standardizatin by centering and scaling the data')
     parser.add_argument('--stateful', dest='stateful', action='store_true', help='invoke to use stateful LSTM instead of stateless')
+    parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
     parser.set_defaults(data_balancing=True)
     parser.set_defaults(standard_scale=False)
     parser.set_defaults(stateful=False)
@@ -78,11 +80,14 @@ if __name__ == '__main__':
     opt = parse_opt()
     main(p=opt)
 
-    # CNN
-    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --no_balance --batch 32
+    # CNN - valid/invalid
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --no_balance --batch 32 --task 1
+    # CNN - awake/sleep
+    # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --no_balance --batch 32 --task 2
 
-    # LSTM
-    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'lstm' --no_balance --batch 32
+    # LSTM - valid/invalid
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'lstm' --no_balance --batch 32 --task 1
+    # LSTM - awake/sleep
+    # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 1 --epochs 200 --model 'lstm' --no_balance --batch 32 --stateful --task 2
 
     # KNN - not working anymore
-    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --neighbors 5 --model 'knn' --no_balance
