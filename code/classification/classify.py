@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from enum import Flag
 import os
 import sys
@@ -55,7 +58,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                             -'total_hours_new_bounds'
                             -'hours_sleep_new_bounds'
                             -'percentage_sleep_new_bounds'
-                            -'signal_quality_new_bounds'
                             -'is_valid'
                             -'plot'
     """
@@ -203,10 +205,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     print('invalid hours:', hours_conversion(invalid_hours))
 
     print('--------')
-    
-    print('total signal quality', round((signal_quality(classes) * 100), 2))
-
-    print('--------')
 
     if not is_valid(times[-1] - times[0], (valid_total * minutes_per_class) / 60):
         raise Exception('---> Analysis invalid')
@@ -217,10 +215,13 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     step_size = int((60 / downsampling_value) * segmentation_value)
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
+    df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
     for i in range(len(classes)):
         if classes[i][0] == 0:
-            if (i*step_size)+step_size < len(df_jawac):
-                df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 0
+            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 0
+        elif classes[i][0] == 1:
+            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 1
+        df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'proba'] = classes[i][1]
 
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name}'
 
@@ -246,7 +247,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     else:
         raise Exception('model path does not exist')
 
-    X = df_jawac[df_jawac['label']!=0].data.tolist()
+    X = df_jawac[df_jawac['label']==1].data.tolist()
 
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
     if not stateful:
@@ -288,24 +289,40 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 label = round(y_pred[0][0])
                 if label == 0:
                     if 1-y_pred[0][0] > threshold:
+                        print((label, 1-y_pred[0][0]), end='')
                         classes.append((label, 1-y_pred[0][0]))
                     else:
+                        print((label, y_pred[0][0]), end='')
                         classes.append((1, 0.5))
                 else:
                     classes.append((label, y_pred[0][0]))
             model.reset_states()
     print()
 
+    df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):
         if classes[i][0] == 0:
-            if (i*step_size)+step_size < len(df_jawac):
-                mask = df_jawac[df_jawac['label']==1].index[i*step_size:i*step_size+step_size]
-                df_jawac.loc[mask, ['label']] = 2
+            mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
+            df_jawac.loc[mask, ['label']] = 2
 
-    df_jawac.set_index('times', inplace=True)
+    df_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba'])
+    saved_label = df_jawac.iloc[0].label
+    saved_start = df_jawac.iloc[0].times
+    proba = []
+    for idx, row in df_jawac.iterrows():
+        if len(row) > 0:
+            proba.append(row.proba)
+            if row.label != saved_label:
+                a_row = {'start': saved_start, 'end': row.times, 'label': saved_label, 'proba': np.mean(proba), 'data_num': len(proba)}
+                df_label = df_label.append(a_row, ignore_index=True)
+                saved_label = row.label
+                saved_start = row.times
+                proba = []
+    a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label, 'proba': np.mean(proba)}
+    df_label = df_label.append(a_row, ignore_index=True)
 
-    # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis - TODO - adapt this function to the new problem
-    new_bounds_classes, valid_hours, valid_rate, new_start, new_end = analysis_cutting(classes=classes, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], minutes_per_class=minutes_per_class, downsampling_value=downsampling_value, threshold=0.98)
+    # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
+    df_label, valid_hours, valid_rate, new_start, new_end = analysis_cutting(df=df_label, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], downsampling_value=downsampling_value, threshold=0.98)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -320,7 +337,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     print('--------')
     
-    print('signal quality in new bounds', round((signal_quality(new_bounds_classes) * 100), 2))
+    print('total signal quality:', round((signal_quality(df_label) * 100), 2))
 
     print('--------')
 
@@ -341,23 +358,25 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     else:
         awake_count = 0
 
-    print(invalid_count)
-    print(valid_count)
-    print(awake_count)
+    print('invalid count:', invalid_count)
+    print('valid count:', valid_count)
+    print('awake count:', awake_count)
 
     total_invalid_rate = invalid_count/len(df_jawac)
     total_valid_rate = valid_count/len(df_jawac)
     total_awake_rate = awake_count/len(df_jawac)
 
-    # creation of the output dictionary with computed information about the signal - TODO - redo the signal quality function
-    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_sleep': round((total_valid_rate * 100), 2), 'percentage_awake': round((total_awake_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 'total_signal_quality': round((signal_quality(classes) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_sleep_new_bounds': round(valid_hours, 2), 'percentage_sleep_new_bounds': round(valid_rate * 100, 2), 'signal_quality_new_bounds': round((signal_quality(new_bounds_classes) * 100), 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
+    # creation of the output dictionary with computed information about the signal
+    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_sleep': round((total_valid_rate * 100), 2), 'percentage_awake': round((total_awake_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 'total_signal_quality': round((signal_quality(df_label) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_sleep_new_bounds': round(valid_hours, 2), 'percentage_sleep_new_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
 
     # graph
     fig, ax = plt.subplots()
     fig.set_size_inches(18.5, 10.5)
 
+    df_jawac.set_index('times', inplace=True)
+
     # plot of the time series values
-    ax.plot(df_jawac.index.tolist(), data)
+    ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
     ax.axhline(y=0, color='r', linewidth=1)
     if new_start is not None and new_end is not None:
         ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
@@ -371,20 +390,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     title = title[::-1]
     ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title}')
     ax.grid()
-
-    df_jawac.reset_index(inplace=True)
-    df_label = pd.DataFrame(columns=['start', 'end', 'label'])
-    saved_label = df_jawac.iloc[0].label
-    saved_start = df_jawac.iloc[0].times
-    for idx, row in df_jawac.iterrows():
-        if len(row) > 0:
-            if row.label != saved_label:
-                a_row = {'start': saved_start, 'end': row.times, 'label': saved_label}
-                df_label = df_label.append(a_row, ignore_index=True)
-                saved_label = row.label
-                saved_start = row.times
-    a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label}
-    df_label = df_label.append(a_row, ignore_index=True)
 
     curr_time = raw_data.__dict__['info']['meas_date']    # starting time of the analysis -- Not needed anymore
     # graph background color based on signal classified label
@@ -404,7 +409,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     ax.legend(handles=legend_elements, loc='best')
 
-    plt.text(0.14, 0.04, f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - valid time: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds valid time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - signal quality in bounds: {dictionary["signal_quality_new_bounds"]} - threshold: {threshold} - valid: {dictionary["is_valid"]}', fontsize=11, transform=plt.gcf().transFigure)
+    plt.text(0.14, 0.04, f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - threshold: {threshold} - valid: {dictionary["is_valid"]}', fontsize=11, transform=plt.gcf().transFigure)
 
     if plt_save_path != '':
         plt.savefig(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png', bbox_inches='tight')
@@ -445,6 +450,11 @@ if __name__ == '__main__':
     # statement to avoid useless warnings during training
     # export TF_CPP_MIN_LOG_LEVEL=3
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+
+    # Test cmd lines - patient data from 1 to 13
+    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
+    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'CNN'
 
 
     opt = parse_opt()
@@ -488,9 +498,9 @@ if __name__ == '__main__':
             
     #         for idx, row in df_mk3.iterrows():
     #             if row.label == 'OE':
-    #                 plt.axvspan(row.start, row.end, facecolor='y', alpha=1)
+    #                 plt.axvspan(row.start, row.end, facecolor='y', alpha=0.8)
     #             elif row.label == 'Out of Range':
-    #                 plt.axvspan(row.start, row.end, facecolor='r', alpha=1)
+    #                 plt.axvspan(row.start, row.end, facecolor='r', alpha=0.8)
     #         for idx, row in df_label.iterrows():
     #             if row.label == 0:
     #                 plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3)
@@ -663,8 +673,3 @@ if __name__ == '__main__':
     #             os.mkdir(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}')
     #         shutil.copy(edf_file, f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}/{i}.edf')
     #         shutil.copy(mk3_file, f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}/{i}.mk3')
-
-
-    # Cmd test lines - patient data from 1 to 13
-    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
-    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'CNN'

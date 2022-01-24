@@ -1,4 +1,5 @@
 import os
+from tkinter import E
 import mne
 import sys
 import time
@@ -134,12 +135,16 @@ class Preprocessing:
                 self.mk3_df_list.append(df_mk3)
                 self.jawac_df_list.append(df_jawac)
 
-        if self.task == 1:
-            for i in tqdm(range(len(self.jawac_df_list))):
+        for i in tqdm(range(len(self.jawac_df_list))):
+            if self.task == 1:
                 self.jawac_df_list[i]['label'] = [1 for n in range(len(self.jawac_df_list[i]))]
-                for idx, row in self.mk3_df_list[i].iterrows():
-                    mask = (self.jawac_df_list[i].index >= row.start) & (self.jawac_df_list[i].index <= row.end)
+            self.jawac_df_list[i].index = pd.to_datetime(self.jawac_df_list[i].index).tz_localize(None)
+            for idx, row in self.mk3_df_list[i].iterrows():
+                mask = (self.jawac_df_list[i].index >= row.start) & (self.jawac_df_list[i].index <= row.end)
+                if self.task == 1:
                     self.jawac_df_list[i].loc[mask, ['label']] = 0
+                else:
+                    self.jawac_df_list[i] = self.jawac_df_list[i][~mask]
             
         for i in tqdm(range(len(self.jawac_df_list))):
             self.dataset.append([self.jawac_df_list[i].data.tolist(), self.jawac_df_list[i].label.tolist()])
@@ -185,8 +190,8 @@ class Preprocessing:
                 temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), max_length)][:-1]
                 temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), max_length)][:-1]
                 for i in range(len(temp_X)):
-                    if self.task == 1:
-                        temp_X[i].append(np.var(temp_X[i])*1000)
+                    # if self.task == 1:
+                    temp_X[i].append(np.var(temp_X[i])*1000)
                     label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
                     if label == 0:
                         zero_count += 1

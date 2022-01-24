@@ -75,14 +75,11 @@ The advantage of using the LSTM model is its ability to learn and remember the i
 pip install -r requirements.txt
 ```
 
-3. Three analyses are available to test the classification tool on by running:
+3. 13 anonymous patient analyses are available to test the classification tool on by running:
 
 ```
-python3 classification/classify_jawac.py --edf 'training/test_data/patient_data1.edf' --out_graph True --model 'LSTM' --num_class 3
-python3 classification/classify_jawac.py --edf 'training/test_data/patient_data2.edf' --out_graph True --model 'LSTM' --num_class 3
-python3 classification/classify_jawac.py --edf 'training/test_data/patient_data3.edf' --out_graph True --model 'LSTM' --num_class 3
+python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --out_graph --model 'LSTM'
 ```
-- The model parameter can be changed between CNN and LSTM and the num_class parameter can be switched from 2 to 3 for binary or multinomial classification.
 
 ## Links
 - [Nomics Sleep & Care](https://www.brizzy.eu)

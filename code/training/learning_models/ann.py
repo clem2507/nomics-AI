@@ -102,7 +102,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         n_timesteps, n_features, n_outputs, validation_split, return_sequences = None, 1, 1, 0.1, True
         model.add(LSTM(20, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=return_sequences))   # lstm layer -- 1 -- Output size None x 10
         model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 10
-        model.add(TimeDistributed(Dense(n_outputs, activation='sigmoid')))   # fully connected layer -- 3 -- Output size None x 1
+        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 3 -- Output size None x 1
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())

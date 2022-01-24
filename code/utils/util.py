@@ -102,6 +102,7 @@ def datetime_conversion(times, start):
     for i in range(len(times)):
         temp_time = start + datetime.timedelta(0, times[i])
         out.append(temp_time)
+        # out.append(pd.Timestamp(temp_time))
     return out
 
 
@@ -228,16 +229,15 @@ def occurrences_counter(arr):
     return out
 
 
-def analysis_cutting(classes, analysis_start, analysis_end, minutes_per_class, downsampling_value, threshold):
+def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, threshold):
     """
     Method that computes new analysis bounds based on the different segmented windows label
 
     Parameters:
 
-    -classes: analysis predicted classes
+    -df: analysis predicted df
     -analysis_start: analysis start time
     -analysis_end: analysis end time
-    -minutes_per_class: total number of minutes per predicted class
     -downsampling_value: signal downsampling value in second
     -threshold: minimum threshold validity of the signal before stopping the reduction of the bounds
 
@@ -249,93 +249,83 @@ def analysis_cutting(classes, analysis_start, analysis_end, minutes_per_class, d
     -new_end_time: time of the new ending bound
     """
 
-    classes_copy = copy(classes)
+    df_copy = copy(df)
     analysis_start_copy = copy(analysis_start)
     analysis_end_copy = copy(analysis_end)
-    minutes_per_class_copy = copy(minutes_per_class)
     downsampling_value_copy = copy(downsampling_value)
-    classes_df = pd.DataFrame(columns=['start_time', 'end_time', 'label', 'probability'])
-    curr_time = analysis_start
-    time_step = minutes_per_class * 60
-    for label in classes:
-        temp = [curr_time, curr_time + datetime.timedelta(seconds=time_step), label[0], label[1]]
-        classes_df = classes_df.append(pd.Series(temp, index=classes_df.columns), ignore_index=True)
-        curr_time += datetime.timedelta(seconds=time_step)
 
     flag = False
     new_start_time = None
     new_end_time = None
     while flag is False:
         if new_start_time is None or flag is False:
-            for idx, row in classes_df.iterrows():
+            for idx, row in df.iterrows():
                 if row.label == 1:
-                    new_start_time = row.start_time
+                    new_start_time = row.start
                     break
                 else:
-                    classes_df.drop(index=idx, inplace=True)
+                    df.drop(index=idx, inplace=True)
 
         if new_end_time is None or flag is False:
-            for idx, row in classes_df.iloc[::-1].iterrows():
+            for idx, row in df.iloc[::-1].iterrows():
                 if row.label == 1:
-                    new_end_time = row.end_time
+                    new_end_time = row.end
                     break
                 else:
-                    classes_df.drop(index=idx, inplace=True)
+                    df.drop(index=idx, inplace=True)
 
         if threshold == 0:
             break
 
-        if 0 in classes_df.label.values and 1 in classes_df.label.values:
-            if (classes_df.label.value_counts()[1] / len(classes_df)) > threshold:
+        if (0 in df.label.values and 1 in df.label.values) or (1 in df.label.values and 2 in df.label.values):
+            if (df.label.value_counts()[1] / len(df)) > threshold:
                 flag = True
             else:
-                first_half = classes_df.iloc[:int(len(classes_df) / 2), :]
-                second_half = classes_df.iloc[int(len(classes_df) / 2):, :]
-                if 0 in first_half.label.values and 0 in second_half.label.values:
+                first_half = df.iloc[:int(len(df) / 2), :]
+                second_half = df.iloc[int(len(df) / 2):, :]
+                if (0 in first_half.label.values and 0 in second_half.label.values):
                     if first_half.label.value_counts()[0] > second_half.label.value_counts()[0]:
-                        classes_df = classes_df[1:]
+                        df = df[1:]
                     else:
-                        classes_df = classes_df[:-1]
-                if 0 in first_half.label.values and 0 not in second_half.label.values:
-                    classes_df = classes_df[1:]
-                if 0 not in first_half.label.values and 0 in second_half.label.values:
-                    classes_df = classes_df[:-1]
+                        df = df[:-1]
+                if (2 in first_half.label.values and 2 in second_half.label.values):
+                    if first_half.label.value_counts()[2] > second_half.label.value_counts()[2]:
+                        df = df[1:]
+                    else:
+                        df = df[:-1]
+                if (0 in first_half.label.values and 0 not in second_half.label.values) or (2 in first_half.label.values and 2 not in second_half.label.values):
+                    df = df[1:]
+                if (0 not in first_half.label.values and 0 in second_half.label.values) or (2 not in first_half.label.values and 2 in second_half.label.values):
+                    df = df[:-1]
         else:
             flag = True
 
-        if len(classes_df) < 1:
+        if len(df) < 1:
             flag = True
             new_start_time = analysis_start
             new_end_time = analysis_end
 
-    valid_count = 0
-    for idx, row in classes_df.iterrows():
-        if row.label == 1:
-            valid_count += 1
-    valid_hours = (valid_count * minutes_per_class) / 60
-    if len(classes_df) > 0:
-        valid_rate = valid_count / len(classes_df)
-    else:
-        valid_rate = 0
+    sleep_count = sum(df[df['label']==1].data_num.tolist())
+    sleep_hours = (sleep_count * downsampling_value) / 3600
+    sleep_rate = 0
+    if len(df) > 0:
+        sleep_rate = sleep_count / len(df)
 
     if threshold != 0:
-        if not is_valid(analysis_end - analysis_start, valid_hours):
+        if not is_valid(analysis_end - analysis_start, sleep_hours):
             print('new start analysis time:', new_start_time)
             print('new end analysis time:', new_end_time)
             print('analysis duration:', (new_end_time - new_start_time))
-            print('valid time in new bounds:', hours_conversion(valid_hours))
-            print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
+            print('sleep time in new bounds:', hours_conversion(sleep_hours))
+            print('sleep rate in new bounds:', round((sleep_rate * 100), 2), '%')
             print(f"not enough valid signal (< 4h) in first selected bounds with threshold = {threshold}, let's try with a wider tolerance")
             if threshold == 0.98:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, minutes_per_class_copy, downsampling_value_copy, threshold=0.8)
+                return analysis_cutting(df_copy, analysis_start_copy, analysis_end_copy, downsampling_value_copy, threshold=0.8)
             if threshold == 0.8:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, minutes_per_class_copy, downsampling_value_copy, threshold=0.5)
+                return analysis_cutting(df_copy, analysis_start_copy, analysis_end_copy, downsampling_value_copy, threshold=0.5)
             if threshold == 0.5:
-                return analysis_cutting(classes_copy, analysis_start_copy, analysis_end_copy, minutes_per_class_copy, downsampling_value_copy, threshold=0)
-    new_bounds_classes = []
-    for idx, row in classes_df.iterrows():
-        new_bounds_classes.append((row.label, row.probability)) 
-    return new_bounds_classes, valid_hours, valid_rate, new_start_time, new_end_time
+                return analysis_cutting(df_copy, analysis_start_copy, analysis_end_copy, downsampling_value_copy, threshold=0)
+    return df_copy, sleep_hours, sleep_rate, new_start_time, new_end_time
 
 
 def recall_m(y_true, y_pred):
@@ -418,7 +408,7 @@ def num_of_correct_pred(y_true, y_pred):
     return count
 
 
-def is_valid(total_hours, valid_hours):
+def is_valid(total_hours, sleep_hours):
     """
     Function that takes the decision about the validity of an analysis based on its total number of valid hours and rate
     
@@ -428,42 +418,48 @@ def is_valid(total_hours, valid_hours):
 
     Parameters:
 
-    -valid_hours: total number of valid hours
-    -valid_rate: total rate of valid hours
+    -total_hours: total number of hours
+    -sleep_hours: total hours of sleep
 
     Returns:
 
     True if the entire analysis is valid, false otherwise
     """
-    if (total_hours.total_seconds() / 3600.0) > 6 and valid_hours > 4:
-        return True
+    if type(total_hours) == int:
+        if (total_hours / 3600.0) > 6 and sleep_hours > 4:
+            return True
+    else:
+        if (total_hours.total_seconds() / 3600.0) > 6 and sleep_hours > 4:
+            return True
     return False
 
 
-def signal_quality(classes):
+def signal_quality(df):
     """
     Method used to give an estimate of the valid quality of the signal based on the output probabilities of the model
 
     Parameters:
 
-    -classes: list with the output predicted classes with their probabilities
+    -df: df with the output predicted classes with their probabilities
 
     Returns:
 
     -out: signal quality estimation (in %)
     """
     score = 0
-    if len(classes) == 0:
+    start = df.start.tolist()[0]
+    end = df.end.tolist()[-1]
+    time_interval = end - start
+    if len(df) == 0:
         return score
-    for c in classes:
-        if c[0] == 1:
-            score += c[1]
+    for idx, row in df.iterrows():
+        if row.label == 1:
+            score += row.proba*((row.end-row.start)/time_interval)
         else:
-            score += 1-c[1]
-    out = score/len(classes)
-    if out < 0:
-        out = 0
-    return out
+            score += (1-row.proba)*((row.end-row.start)/time_interval)
+    if score < 0:
+        score = 0
+    return score
 
 
 def reduction(y_test, batch_size):
