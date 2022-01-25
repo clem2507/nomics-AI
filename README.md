@@ -80,7 +80,6 @@ pip install -r requirements.txt
 ```
 python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --out_graph --model 'LSTM'
 ```
-- The model parameter can be changed between CNN and LSTM and the num_class parameter can be switched from 2 to 3 for binary or multinomial classification.
 
 ## Links
 - [Nomics Sleep & Care](https://www.brizzy.eu)
