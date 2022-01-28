@@ -1,7 +1,6 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from enum import Flag
 import os
 import sys
 import mne
@@ -15,8 +14,8 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
-
 from tensorflow.keras.models import load_model
 
 from pathlib import Path
@@ -72,7 +71,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/saved_model'
+    model_path = str(most_recent_folder_path[0]) + '/best'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
@@ -81,8 +80,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
     batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
-    standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data
-    stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model
+    standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
+    stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -228,17 +227,18 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/saved_model'
+    model_path = str(most_recent_folder_path[0]) + '/best'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:9]
+    lines = lines[3:10]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
     batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
-    standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data
-    stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model
+    standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
+    stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
+    sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
 
     # model loader
     if os.path.exists(model_path):
@@ -252,22 +252,27 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
     if not stateful:
         size = int((60 / downsampling_value) * segmentation_value)
-        X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), size)], dtype=object)
+        if not sliding_window:
+            X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), size)], dtype=object)
+        else:
+            size = 300   # in sec, 60 because sliding window of 1 min
+            center_of_interest = 30   # in sec, corresponding to the size of the center window of interest
+            X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
-            arr = np.append(arr, pd.Series([np.var(arr)*1000]))
+            # arr = np.append(arr, pd.Series([np.var(arr)*1000]))
             X_test_seq_temp.append(arr)
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.5
+    threshold = 0.9
     minutes_per_class = (batch_size * downsampling_value)/60
     classes = []
+    step_size = int((60 / downsampling_value) * segmentation_value)
     if not stateful:
         minutes_per_class = segmentation_value
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
-        step_size = int((60 / downsampling_value) * segmentation_value)
         for item in predictions[:-1]:
             idx = np.argmax(item)
             print((idx, item[idx]), end='')
@@ -282,30 +287,36 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
             else:
                 classes.append((idx, 1))
     else:
-        step_size = batch_size
-        for i in range(0, len(X), batch_size):
-            if i+batch_size < len(X):
-                y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size], (batch_size, 1, 1)))
-                label = round(y_pred[0][0])
-                if label == 0:
-                    if 1-y_pred[0][0] > threshold:
-                        print((label, 1-y_pred[0][0]), end='')
-                        classes.append((label, 1-y_pred[0][0]))
+        for i in range(0, len(X), batch_size*step_size):
+            if i+(batch_size*step_size) < len(X):
+                y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size], (batch_size, step_size, 1)))
+                for label in y_pred:
+                    pred_label = round(label[0])
+                    if pred_label == 0:
+                        if 1-y_pred[0][0] > threshold:
+                            print((pred_label, 1-label[0]), end='')
+                            classes.append((pred_label, 1-label[0]))
+                        else:
+                            print((pred_label, label[0]), end='')
+                            classes.append((1, 0.5))
                     else:
-                        print((label, y_pred[0][0]), end='')
-                        classes.append((1, 0.5))
-                else:
-                    classes.append((label, y_pred[0][0]))
+                        print((pred_label, label[0]), end='')
+                        classes.append((label, label[0]))
             model.reset_states()
     print()
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):
         if classes[i][0] == 0:
-            mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
+            if sliding_window:
+                size = 300   # in sec, 60 because sliding window of 1 min
+                center_of_interest = 30   # in sec, corresponding to the size of the center window of interest
+                mask = df_jawac_only_valid.index[(size//2)+(i*center_of_interest)-(center_of_interest//2):(size//2)+(i*center_of_interest)+(center_of_interest//2)]
+            else:
+                mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
             df_jawac.loc[mask, ['label']] = 2
 
-    df_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba'])
+    df_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba', 'data_num'])
     saved_label = df_jawac.iloc[0].label
     saved_start = df_jawac.iloc[0].times
     proba = []
@@ -318,11 +329,11 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 saved_label = row.label
                 saved_start = row.times
                 proba = []
-    a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label, 'proba': np.mean(proba)}
+    a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label, 'proba': np.mean(proba), 'data_num': len(proba)}
     df_label = df_label.append(a_row, ignore_index=True)
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
-    df_label, valid_hours, valid_rate, new_start, new_end = analysis_cutting(df=df_label, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], downsampling_value=downsampling_value, threshold=0.98)
+    df_label, sleep_hours, sleep_rate, new_start, new_end = analysis_cutting(df=df_label, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], downsampling_value=downsampling_value, threshold=0.98)
 
     print('new start analysis time:', new_start)
     print('new end analysis time:', new_end)
@@ -332,8 +343,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     else:
         duration = timedelta(seconds=0)
         print('analysis duration: Unknown')
-    print('valid time in new bounds:', hours_conversion(valid_hours))
-    print('valid rate in new bounds:', round((valid_rate * 100), 2), '%')
+    print('sleep time in new bounds:', hours_conversion(sleep_hours))
+    print('sleep rate in new bounds:', round((sleep_rate * 100), 2), '%')
 
     print('--------')
     
@@ -341,7 +352,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     print('--------')
 
-    print('is analysis valid:', is_valid(times[-1] - times[0], valid_hours))
+    print('is analysis valid:', is_valid(times[-1] - times[0], sleep_hours))
 
     print('--------')
 
@@ -367,7 +378,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     total_awake_rate = awake_count/len(df_jawac)
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_sleep': round((total_valid_rate * 100), 2), 'percentage_awake': round((total_awake_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 'total_signal_quality': round((signal_quality(df_label) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_sleep_new_bounds': round(valid_hours, 2), 'percentage_sleep_new_bounds': round(valid_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], valid_hours)}
+    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_sleep': round((total_valid_rate * 100), 2), 'percentage_awake': round((total_awake_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 'total_signal_quality': round((signal_quality(df_label) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_sleep_new_bounds': round(sleep_hours, 2), 'percentage_sleep_new_bounds': round(sleep_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], sleep_hours)}
 
     # graph
     fig, ax = plt.subplots()
@@ -392,14 +403,15 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     ax.grid()
 
     curr_time = raw_data.__dict__['info']['meas_date']    # starting time of the analysis -- Not needed anymore
+    print('Curr Time:', curr_time)
     # graph background color based on signal classified label
     for idx, row in df_label.iterrows():
         if row.label == 0:
-            plt.axvspan(row.start, row.end, facecolor='r', alpha=0.3)
+            plt.axvspan(row.start, row.end, facecolor='r', alpha=0.3*row.proba)
         elif row.label == 1:
-            plt.axvspan(row.start, row.end, facecolor='g', alpha=0.3)
+            plt.axvspan(row.start, row.end, facecolor='g', alpha=0.3*row.proba)
         elif row.label == 2:
-            plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3)
+            plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3*row.proba)
 
     # legend
     legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid', alpha=0.25),
@@ -483,29 +495,31 @@ if __name__ == '__main__':
     #         ax.grid()
 
     #         df_jawac.reset_index(inplace=True)
-    #         df_label = pd.DataFrame(columns=['start', 'end', 'label'])
-    #         saved_label = df_jawac.iloc[0].label
-    #         saved_start = df_jawac.iloc[0].times
-    #         for idx, row in df_jawac.iterrows():
-    #             if len(row) > 0:
-    #                 if row.label != saved_label:
-    #                     a_row = {'start': saved_start, 'end': row.times, 'label': saved_label}
-    #                     df_label = df_label.append(a_row, ignore_index=True)
-    #                     saved_label = row.label
-    #                     saved_start = row.times
-    #         a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label}
-    #         df_label = df_label.append(a_row, ignore_index=True)
+    #         # df_label = pd.DataFrame(columns=['start', 'end', 'label'])
+    #         # saved_label = df_jawac.iloc[0].label
+    #         # saved_start = df_jawac.iloc[0].times
+    #         # for idx, row in df_jawac.iterrows():
+    #         #     if len(row) > 0:
+    #         #         if row.label != saved_label:
+    #         #             a_row = {'start': saved_start, 'end': row.times, 'label': saved_label}
+    #         #             df_label = df_label.append(a_row, ignore_index=True)
+    #         #             saved_label = row.label
+    #         #             saved_start = row.times
+    #         # a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label}
+    #         # df_label = df_label.append(a_row, ignore_index=True)
             
     #         for idx, row in df_mk3.iterrows():
     #             if row.label == 'OE':
     #                 plt.axvspan(row.start, row.end, facecolor='y', alpha=0.8)
     #             elif row.label == 'Out of Range':
     #                 plt.axvspan(row.start, row.end, facecolor='r', alpha=0.8)
-    #         for idx, row in df_label.iterrows():
-    #             if row.label == 0:
-    #                 plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3)
-    #             elif row.label == 1:
-    #                 plt.axvspan(row.start, row.end, facecolor='g', alpha=0.3)
+    #             elif row.label == 'W':
+    #                 plt.axvspan(row.start, row.end, facecolor='b', alpha=0.2)
+    #         # for idx, row in df_label.iterrows():
+    #         #     if row.label == 0:
+    #         #         plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3)
+    #             # elif row.label == 1:
+    #             #     plt.axvspan(row.start, row.end, facecolor='g', alpha=0.3)
 
     #         legend_elements = [Patch(facecolor='b', edgecolor='w', label='awake', alpha=0.3),
     #                             Patch(facecolor='g', edgecolor='w', label='sleep', alpha=0.3),
@@ -520,6 +534,62 @@ if __name__ == '__main__':
     #         print(edf_file)
     #         print(mk3_file)
     #         print('---')
+
+
+
+    # dir_path = '/home/ckemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis'
+    # filenames = sorted(os.listdir(dir_path))
+    # for i in tqdm(range(len(filenames))):
+    #     edf_file = f'{dir_path}/{filenames[i]}/{filenames[i]}.edf'
+    #     if os.path.exists(edf_file):
+
+    #         block_print()
+    #         raw_data = mne.io.read_raw_edf(edf_file)    # edf file reading
+    #         enable_print()
+
+    #         df_jawac = pd.DataFrame()
+
+    #         data = raw_data[0][0][0]
+    #         times = raw_data[1][1]
+    #         labels = raw_data[1][0][0]
+    #         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
+    #         df_jawac.insert(0, 'times', times)
+    #         df_jawac.insert(1, 'data', data)
+    #         df_jawac.insert(2, 'label', labels)
+    #         df_jawac = df_jawac.resample('0.1S', on='times').median()
+
+    #         df_jawac.reset_index(inplace=True)
+
+    #         df_label = pd.DataFrame(columns=['start', 'end', 'label'])
+    #         saved_label = df_jawac.iloc[0].label
+    #         saved_start = df_jawac.iloc[0].times
+    #         for idx, row in df_jawac.iterrows():
+    #             if len(row) > 0:
+    #                 if row.label != saved_label:
+    #                     a_row = {'start': saved_start, 'end': row.times, 'label': saved_label}
+    #                     df_label = df_label.append(a_row, ignore_index=True)
+    #                     saved_label = row.label
+    #                     saved_start = row.times
+    #         a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label}
+    #         df_label = df_label.append(a_row, ignore_index=True)
+
+    #         mk3_file = open(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{filenames[i]}/{filenames[i]}.mk3','a')
+
+    #         for idx, row in df_label.iterrows():
+    #             if len(row) > 0:
+    #                 if row.label == 0:
+    #                     if (row.end - row.start).total_seconds() > 180:
+    #                         out_line = []
+    #                         out_line.append(str(row.start)[11:19]+':000')
+    #                         out_line.append(f'{str(row.start)[8:10]}.{str(row.start)[5:7]}.{str(row.start)[2:4]}')
+    #                         out_line.append(str(row.end)[11:19]+':000')
+    #                         out_line.append(f'{str(row.end)[8:10]}.{str(row.end)[5:7]}.{str(row.end)[2:4]}')
+    #                         out_line.append('ApiosUser')
+    #                         out_line.append('zs')
+    #                         out_line.append('1,2')
+    #                         out_line.append('W')
+    #                         out = ';'.join(out_line)
+    #                         mk3_file.write(out+'\n')
 
 
 

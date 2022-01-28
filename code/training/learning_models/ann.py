@@ -14,6 +14,7 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, TimeDistributed
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
@@ -22,7 +23,7 @@ from preprocessing import Preprocessing
 from util import reduction, plot_confusion_matrix, TimingCallback
 
 
-def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, task):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
@@ -38,6 +39,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -batch_size: batch size for training
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
+    -sliding_window: true to use sliding window with a small center portion of interest
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
 
     Returns:
@@ -45,8 +47,20 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -accuracy: model accuracy on the testing set
     """
 
+    # directory creation
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
+    os.mkdir(save_dir)
+    os.mkdir(f'{save_dir}/best')
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, stateful=stateful, task=task).create_dataset()
+    checkpoint_filepath = f'{save_dir}/best'
+    model_checkpoint_callback = ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        monitor='val_accuracy',
+        mode='max',
+        save_best_only=True
+    )
+
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, task=task).create_dataset()
 
     model = Sequential()
     # Stateless model
@@ -63,20 +77,24 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
             model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
         elif model_name == 'lstm':
-            model.add(LSTM(64, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1 -- Output size None x 64
-            model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 64
-            model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
-            model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 32
-            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 2
+            # model.add(LSTM(64, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1 -- Output size None x 64
+            # model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 64
+            # model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
+            # model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 32
+            # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 2
+            # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+            model.add(LSTM(20, input_shape=(n_timesteps, n_features)))
+            model.add(Dense(10, activation='relu'))
+            model.add(Dropout(0.2))
+            model.add(Dense(n_outputs, activation='sigmoid'))
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())
 
         time_callback = TimingCallback()
 
-        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback])
+        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback, model_checkpoint_callback])
 
         computation_time_history = time_callback.logs
 
@@ -99,10 +117,19 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         y_test = total_y_test
     # Stateful model
     else:
-        n_timesteps, n_features, n_outputs, validation_split, return_sequences = None, 1, 1, 0.1, True
-        model.add(LSTM(20, batch_input_shape=(batch_size, n_timesteps, n_features), stateful=stateful, return_sequences=return_sequences))   # lstm layer -- 1 -- Output size None x 10
-        model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 10
-        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 3 -- Output size None x 1
+        max_length = int(segmentation_value * (60 / downsampling_value))
+        n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 1, 0.1, True
+        # model.add(LSTM(64, batch_input_shape=(batch_size, max_length, n_features), stateful=stateful, return_sequences=return_sequences))   # lstm layer -- 1 -- Output size None x 10
+        # model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 10
+        # model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
+        # model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 10
+        # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 1
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        model.add(LSTM(20, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))
+        model.add(Dense(10, activation='relu'))
+        model.add(Dropout(0.2))
+        model.add(Dense(n_outputs, activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())
@@ -114,7 +141,39 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
         computation_time_history = []
 
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split)
+
+        # X_train = []
+        # X_val = []
+        # X_test = []
+        # y_train = []
+        # y_val = []
+        # y_test = []
+
+
+        # for idx in tqdm(range(len(X_train))):
+        #     X_train.append([X_train[idx][i:i + max_length] for i in range(0, len(X_train[idx]), max_length)][:-1])
+        #     temp_y = [y_train[idx][i:i + max_length] for i in range(0, len(y_train[idx]), max_length)][:-1]
+        #     temp = []
+        #     for idxx in range(len(temp_y)):
+        #         temp.append((int(max(temp_y[idxx], key=temp_y[idxx].count))))
+        #     y_train.append(temp)
+
+        # for idx in tqdm(range(len(X_val))):
+        #     X_val.append([X_val[idx][i:i + max_length] for i in range(0, len(X_val[idx]), max_length)][:-1])
+        #     temp_y = [y_val[idx][i:i + max_length] for i in range(0, len(y_val[idx]), max_length)][:-1]
+        #     temp = []
+        #     for idxx in range(len(temp_y)):
+        #         temp.append(int(max(temp_y[idxx], key=temp_y[idxx].count)))
+        #     y_val.append(temp)
+
+        # for idx in tqdm(range(len(X_test))):
+        #     X_test.append([X_test[idx][i:i + max_length] for i in range(0, len(X_test[idx]), max_length)][:-1])
+        #     temp_y = [y_test[idx][i:i + max_length] for i in range(0, len(y_test[idx]), max_length)][:-1]
+        #     temp = []
+        #     for idxx in range(len(temp_y)):
+        #         temp.append(int(max(temp_y[idxx], key=temp_y[idxx].count)))
+        #     y_test.append(temp)
 
         print('Model train...')
         for epoch in range(epochs):
@@ -124,9 +183,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             mean_tr_acc = []
             mean_tr_loss = []
             for i in tqdm(range(len(X_train))):
-                for j in range(0, len(X_train[i]), batch_size):
-                    if j+batch_size < len(X_train[i]):
-                        tr_loss, tr_acc, *r = model.train_on_batch(np.reshape(X_train[i][j:j+batch_size], (batch_size, 1, 1)), np.reshape(y_train[i][j:j+batch_size], (batch_size, 1, 1)))
+                for j in range(0, len(X_train[i]), batch_size*max_length):
+                    if j+(batch_size*max_length) < len(X_train[i]):
+                        tr_loss, tr_acc, *r = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)), np.reshape([y_train[i][j:j+(batch_size*max_length)]], (batch_size, max_length, 1)))
                         mean_tr_acc.append(tr_acc)
                         mean_tr_loss.append(tr_loss)
                 model.reset_states()
@@ -140,11 +199,11 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             mean_val_acc = []
             mean_val_loss = []
             for i in tqdm(range(len(X_val))):
-                for j in range(0, len(X_val[i]), batch_size):
-                    if j+batch_size < len(X_val[i]):
-                        te_loss, te_acc, *r = model.test_on_batch(np.reshape(X_val[i][j:j+batch_size], (batch_size, 1, 1)), np.reshape(y_val[i][j:j+batch_size], (batch_size, 1, 1)))
-                        mean_val_acc.append(te_acc)
-                        mean_val_loss.append(te_loss)
+                for j in range(0, len(X_val[i]), batch_size*max_length):
+                    if j+(batch_size*max_length) < len(X_val[i]):
+                        val_loss, val_acc, *r = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)), np.reshape([y_val[i][j:j+(batch_size*max_length)]], (batch_size, max_length, 1)))
+                        mean_val_acc.append(val_acc)
+                        mean_val_loss.append(val_loss)
                 model.reset_states()
 
             validation_accuracy_history.append(np.mean(mean_val_acc))
@@ -160,17 +219,19 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         mean_te_acc = []
         for i in tqdm(range(len(X_test))):
             classes = []
-            for j in range(0, len(X_test[i]), batch_size):
-                if j+batch_size < len(X_test[i]):
-                    y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+batch_size], (batch_size, 1, 1)))
+            for j in range(0, len(X_test[i]), batch_size*max_length):
+                if j+(batch_size*max_length) < len(X_test[i]):
+                    y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)))
                     for label in y_pred:
                         pred_label = round(label[0])
                         classes.append(pred_label)
                         total_classes.append(pred_label)
             model.reset_states()
-            reducted_y = reduction(y_test[i], batch_size=batch_size)
-            total_y_test.append(reducted_y)
-            mean_te_acc.append(accuracy_score(reducted_y, classes))
+            # reducted_y = reduction(y_test[i], batch_size=batch_size)
+            # total_y_test.append(reducted_y)
+            # mean_te_acc.append(accuracy_score(reducted_y, classes))
+            total_y_test.append(y_test[i][:len(classes)])
+            mean_te_acc.append(accuracy_score(y_test[i][:len(classes)], classes))
 
         accuracy = np.mean(mean_te_acc)
         classes = total_classes
@@ -181,10 +242,6 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
     # confustion matrix np array creation based on the prediction made by the model on the test data
     cm = confusion_matrix(y_true=y_test, y_pred=classes)
-
-    # directory creation
-    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
-    os.mkdir(save_dir)
 
     # summary txt file
     model_info_file = open(f'{save_dir}/info.txt', 'w')
@@ -200,6 +257,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.write(f'Batch size = {batch_size} \n')
     model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
     model_info_file.write(f'Stateful = {int(stateful)} \n')
+    model_info_file.write(f'Sliding window = {int(sliding_window)} \n')
     model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Log time = {log_time} \n')
@@ -228,7 +286,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     elif task == 2:
         labels = ['Awake', 'Sleep']
     
-    cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix')
+    cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix', normalize=True)
 
     cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
     cm_plt.close()
@@ -263,12 +321,13 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     plt.close(fig=figure)
 
     # save of the model weights
-    save_model(model, f'{save_dir}/saved_model')
+    os.mkdir(f'{save_dir}/last')
+    save_model(model, f'{save_dir}/last/saved_model')
 
     return accuracy
 
 
-def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, task):
     """
     Callable method to start the training of the model
 
@@ -284,12 +343,13 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
     -batch_size: batch size for training
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
+    -sliding_window: true to use sliding window with a small center portion of interest
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task)
+    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, task)
     score = score * 100.0
     print('test accuracy:', score, '%')
     print('-----')

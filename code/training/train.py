@@ -1,8 +1,9 @@
 import os
 import sys
 import time
-import datetime
 import argparse
+
+from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/learning_models')
@@ -12,7 +13,7 @@ from ann import train_model as ann_train_model
 from knn import train_model as knn_train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, stateful, task):
+def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, sliding_window, stateful, task):
     """
     Primary function for training the CNN, LSTM or KNN model
 
@@ -28,6 +29,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     -batch (--batch): batch size for training
     -standard_scaled (--standard_scale): true to perform a standardizatin by centering and scaling the data
     -stateful (--stateful): true to use stateful LSTM instead of stateless
+    -sliding_window (--sliding_window): true to use sliding window with a small center portion of interest
     -task: (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
@@ -35,7 +37,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     downsampling_value = float(downsampling_value)
 
     analysis_directory = os.path.dirname(os.path.abspath('util.py')) + '/' + analysis_directory
-    log_time = str(datetime.datetime.fromtimestamp(time.time()))
+    log_time = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
 
     if os.path.exists(analysis_directory):
         Preprocessing(analysis_directory=analysis_directory, task=task).create_dataframes()
@@ -43,7 +45,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
         raise Exception('input directory does not exist')
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
-        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful, task=task)
+        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful, sliding_window=sliding_window, task=task)
     elif model.lower() == 'knn':
         knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale)
     else:
@@ -61,10 +63,12 @@ def parse_opt():
     parser.add_argument('--batch', type=int, default=30, help='batch size for training')
     parser.add_argument('--standard_scale', dest='standard_scale', action='store_true', help='invoke to perform a standardizatin by centering and scaling the data')
     parser.add_argument('--stateful', dest='stateful', action='store_true', help='invoke to use stateful LSTM instead of stateless')
+    parser.add_argument('--sliding_window', dest='sliding_window', action='store_true', help='invoke to use sliding window with a small center portion of interest')
     parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
     parser.set_defaults(data_balancing=True)
     parser.set_defaults(standard_scale=False)
     parser.set_defaults(stateful=False)
+    parser.set_defaults(sliding_window=False)
     return parser.parse_args()
 
 
