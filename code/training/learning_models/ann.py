@@ -110,8 +110,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         predictions = model.predict(X_test)
         classes = np.argmax(predictions, axis=1)
 
-        total_y_test = []    # predicted label list
-        # loop that runs through the list of model predictions to keep the highest predicted probability values
+        total_y_test = []
         for item in y_test:
             total_y_test.append(np.argmax(item))
         y_test = total_y_test
@@ -125,6 +124,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         # model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 10
         # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 1
         # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        max_length = None
 
         model.add(LSTM(20, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))
         model.add(Dense(10, activation='relu'))
@@ -140,102 +141,132 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         validation_loss_history = []
 
         computation_time_history = []
-
+        
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split)
 
-        # X_train = []
-        # X_val = []
-        # X_test = []
-        # y_train = []
-        # y_val = []
-        # y_test = []
+        print(f'# train samples = {len(X_train)}')
+        print(f'# val samples = {len(X_val)}')
+        print(f'# test samples = {len(X_test)}')
 
-
-        # for idx in tqdm(range(len(X_train))):
-        #     X_train.append([X_train[idx][i:i + max_length] for i in range(0, len(X_train[idx]), max_length)][:-1])
-        #     temp_y = [y_train[idx][i:i + max_length] for i in range(0, len(y_train[idx]), max_length)][:-1]
-        #     temp = []
-        #     for idxx in range(len(temp_y)):
-        #         temp.append((int(max(temp_y[idxx], key=temp_y[idxx].count))))
-        #     y_train.append(temp)
-
-        # for idx in tqdm(range(len(X_val))):
-        #     X_val.append([X_val[idx][i:i + max_length] for i in range(0, len(X_val[idx]), max_length)][:-1])
-        #     temp_y = [y_val[idx][i:i + max_length] for i in range(0, len(y_val[idx]), max_length)][:-1]
-        #     temp = []
-        #     for idxx in range(len(temp_y)):
-        #         temp.append(int(max(temp_y[idxx], key=temp_y[idxx].count)))
-        #     y_val.append(temp)
-
-        # for idx in tqdm(range(len(X_test))):
-        #     X_test.append([X_test[idx][i:i + max_length] for i in range(0, len(X_test[idx]), max_length)][:-1])
-        #     temp_y = [y_test[idx][i:i + max_length] for i in range(0, len(y_test[idx]), max_length)][:-1]
-        #     temp = []
-        #     for idxx in range(len(temp_y)):
-        #         temp.append(int(max(temp_y[idxx], key=temp_y[idxx].count)))
-        #     y_test.append(temp)
-
-        print('Model train...')
-        for epoch in range(epochs):
-            print('----- EPOCH #{} -----'.format(epoch+1))
-            print('---> Training')
+        # Stateful implementation with fit
+        for i in range(epochs):
+            print(f'----- EPOCH #{i+1} -----')
+            print('Model train...')
             start = time.time()
-            mean_tr_acc = []
-            mean_tr_loss = []
-            for i in tqdm(range(len(X_train))):
-                for j in range(0, len(X_train[i]), batch_size*max_length):
-                    if j+(batch_size*max_length) < len(X_train[i]):
-                        tr_loss, tr_acc, *r = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)), np.reshape([y_train[i][j:j+(batch_size*max_length)]], (batch_size, max_length, 1)))
-                        mean_tr_acc.append(tr_acc)
-                        mean_tr_loss.append(tr_loss)
+            temp_train_accuracy = []
+            temp_train_loss = []
+            for j in range(0, len(X_train), batch_size):
+                history = model.fit(np.reshape(X_train[j], (batch_size, len(X_train[j]), n_features)), np.reshape(y_train[j], (batch_size, len(y_train[j]), n_features)), epochs=1, batch_size=batch_size, verbose=2, shuffle=False)
+                temp_train_accuracy.append(history.history['accuracy'])
+                temp_train_loss.append(history.history['loss'])
                 model.reset_states()
+            training_accuracy_history.append(np.mean(temp_train_accuracy))
+            training_loss_history.append(np.mean(temp_train_loss))
+            print(f'Train accuracy: {np.mean(temp_train_accuracy)}')
+            print(f'Train loss: {np.mean(temp_train_loss)}')
 
-            training_accuracy_history.append(np.mean(mean_tr_acc))
-            training_loss_history.append(np.mean(mean_tr_loss))
-            print('train accuracy = {}'.format(np.mean(mean_tr_acc)))
-            print('train loss = {}'.format(np.mean(mean_tr_loss)))
-
-            print('---> Validation')
-            mean_val_acc = []
-            mean_val_loss = []
-            for i in tqdm(range(len(X_val))):
-                for j in range(0, len(X_val[i]), batch_size*max_length):
-                    if j+(batch_size*max_length) < len(X_val[i]):
-                        val_loss, val_acc, *r = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)), np.reshape([y_val[i][j:j+(batch_size*max_length)]], (batch_size, max_length, 1)))
-                        mean_val_acc.append(val_acc)
-                        mean_val_loss.append(val_loss)
+            print('Model validation...')
+            temp_val_accuracy = []
+            temp_val_loss = []
+            for j in range(0, len(X_val), batch_size):
+                history = model.fit(np.reshape(X_val[j], (batch_size, len(X_val[j]), n_features)), np.reshape(y_val[j], (batch_size, len(y_val[j]), n_features)), epochs=1, batch_size=batch_size, verbose=2, shuffle=False)
+                temp_val_accuracy.append(history.history['accuracy'])
+                temp_val_loss.append(history.history['loss'])
                 model.reset_states()
-
-            validation_accuracy_history.append(np.mean(mean_val_acc))
-            validation_loss_history.append(np.mean(mean_val_loss))
-            print('val accuracy = {}'.format(np.mean(mean_val_acc)))
-            print('val loss = {}'.format(np.mean(mean_val_loss)))
+            validation_accuracy_history.append(np.mean(temp_val_accuracy))
+            validation_loss_history.append(np.mean(temp_val_loss))
+            print(f'Val accuracy: {np.mean(temp_val_accuracy)}')
+            print(f'Val loss: {np.mean(temp_val_loss)}')
 
             computation_time_history.append(time.time()-start)
 
-        print('---> Testing')
-        total_classes = []
-        total_y_test = []
-        mean_te_acc = []
-        for i in tqdm(range(len(X_test))):
-            classes = []
-            for j in range(0, len(X_test[i]), batch_size*max_length):
-                if j+(batch_size*max_length) < len(X_test[i]):
-                    y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)))
-                    for label in y_pred:
-                        pred_label = round(label[0])
-                        classes.append(pred_label)
-                        total_classes.append(pred_label)
+        print('Model test...')
+        scores = []
+        for i in range(0, len(X_test), batch_size):
+            scores.append(model.evaluate(np.reshape(X_test[i], (batch_size, len(X_test[i]), n_features)), np.reshape(y_test[i], (batch_size, len(y_test[i]), n_features)), batch_size=batch_size, verbose=2)[1])
             model.reset_states()
-            # reducted_y = reduction(y_test[i], batch_size=batch_size)
-            # total_y_test.append(reducted_y)
-            # mean_te_acc.append(accuracy_score(reducted_y, classes))
-            total_y_test.append(y_test[i][:len(classes)])
-            mean_te_acc.append(accuracy_score(y_test[i][:len(classes)], classes))
+        accuracy = round(np.mean(scores), 2)
+        print(f'Model Accuracy: {accuracy*100}')
+        
+        classes = []
+        for arr in X_test:
+            predictions = model.predict(np.reshape(arr, (batch_size, len(arr), n_features)))
+            for item in predictions[0]:
+                classes.append(round(item[0]))
 
-        accuracy = np.mean(mean_te_acc)
-        classes = total_classes
-        y_test = list(itertools.chain.from_iterable(total_y_test))
+        total_y_test = []
+        for arr in y_test:
+            for item in arr:
+                total_y_test.append(item)
+        y_test = total_y_test
+
+
+
+        # Stateful implementation with train_on_batch
+        # print('Model train...')
+        # for epoch in range(epochs):
+        #     print('----- EPOCH #{} -----'.format(epoch+1))
+        #     print('---> Training')
+        #     start = time.time()
+        #     mean_tr_acc = []
+        #     mean_tr_loss = []
+        #     for i in tqdm(range(len(X_train))):
+        #         for j in range(0, len(X_train[i]), batch_size*max_length):
+        #             if j+(batch_size*max_length) < len(X_train[i]):
+        #                 tr_loss, tr_acc, *r = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)), np.reshape([y_train[i][j:j+(batch_size*max_length)]], (batch_size, max_length, 1)))
+        #                 mean_tr_acc.append(tr_acc)
+        #                 mean_tr_loss.append(tr_loss)
+        #         model.reset_states()
+
+        #     training_accuracy_history.append(np.mean(mean_tr_acc))
+        #     training_loss_history.append(np.mean(mean_tr_loss))
+        #     print('train accuracy = {}'.format(np.mean(mean_tr_acc)))
+        #     print('train loss = {}'.format(np.mean(mean_tr_loss)))
+
+        #     print('---> Validation')
+        #     mean_val_acc = []
+        #     mean_val_loss = []
+        #     for i in tqdm(range(len(X_val))):
+        #         for j in range(0, len(X_val[i]), batch_size*max_length):
+        #             if j+(batch_size*max_length) < len(X_val[i]):
+        #                 val_loss, val_acc, *r = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)), np.reshape([y_val[i][j:j+(batch_size*max_length)]], (batch_size, max_length, 1)))
+        #                 mean_val_acc.append(val_acc)
+        #                 mean_val_loss.append(val_loss)
+        #         model.reset_states()
+
+        #     validation_accuracy_history.append(np.mean(mean_val_acc))
+        #     validation_loss_history.append(np.mean(mean_val_loss))
+        #     print('val accuracy = {}'.format(np.mean(mean_val_acc)))
+        #     print('val loss = {}'.format(np.mean(mean_val_loss)))
+
+        #     computation_time_history.append(time.time()-start)
+
+        # print('---> Testing')
+        # total_classes = []
+        # total_y_test = []
+        # mean_te_acc = []
+        # for i in tqdm(range(len(X_test))):
+        #     classes = []
+        #     for j in range(0, len(X_test[i]), batch_size*max_length):
+        #         if j+(batch_size*max_length) < len(X_test[i]):
+        #             y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*max_length)], (batch_size, max_length, 1)))
+        #             for label in y_pred:
+        #                 pred_label = round(label[0])
+        #                 classes.append(pred_label)
+        #                 total_classes.append(pred_label)
+        #     model.reset_states()
+        #     # reducted_y = reduction(y_test[i], batch_size=batch_size)
+        #     # total_y_test.append(reducted_y)
+        #     # mean_te_acc.append(accuracy_score(reducted_y, classes))
+        #     total_y_test.append(y_test[i][:len(classes)])
+        #     mean_te_acc.append(accuracy_score(y_test[i][:len(classes)], classes))
+
+        # accuracy = np.mean(mean_te_acc)
+        # classes = total_classes
+        # y_test = list(itertools.chain.from_iterable(total_y_test))
+
+
+
 
     # 95 % confidence interval computation
     interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))

@@ -1,4 +1,4 @@
-This file contains information about the lstm model 
+This file contains information about the lstm model (max_len = 300, center_of_interest = 30)
 Analysis directory = /home/ckemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis 
 --- 
 Segmentation value = 1.0 

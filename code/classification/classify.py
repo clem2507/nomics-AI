@@ -227,8 +227,10 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/best'
+    model_path = str(most_recent_folder_path[0]) + '/last/saved_model'   # TODO change to /best
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    # model_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task2/lstm/09-02-2022 14-18-38/last/saved_model'
+    # info_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task2/lstm/09-02-2022 14-18-38/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
     lines = lines[3:10]
@@ -265,7 +267,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.9
+    threshold = 0.7
     minutes_per_class = (batch_size * downsampling_value)/60
     classes = []
     step_size = int((60 / downsampling_value) * segmentation_value)
@@ -287,22 +289,43 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
             else:
                 classes.append((idx, 1))
     else:
-        for i in range(0, len(X), batch_size*step_size):
-            if i+(batch_size*step_size) < len(X):
-                y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size], (batch_size, step_size, 1)))
-                for label in y_pred:
-                    pred_label = round(label[0])
-                    if pred_label == 0:
-                        if 1-y_pred[0][0] > threshold:
-                            print((pred_label, 1-label[0]), end='')
-                            classes.append((pred_label, 1-label[0]))
-                        else:
-                            print((pred_label, label[0]), end='')
-                            classes.append((1, 0.5))
-                    else:
-                        print((pred_label, label[0]), end='')
-                        classes.append((label, label[0]))
-            model.reset_states()
+        # for i in range(0, len(X), batch_size*step_size):
+        #     if i+(batch_size*step_size) < len(X):
+        #         y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size], (batch_size, step_size, 1)))
+        #         for label in y_pred:
+        #             pred_label = round(label[0])
+        #             if pred_label == 0:
+        #                 if 1-y_pred[0][0] > threshold:
+        #                     print((pred_label, 1-label[0]), end='')
+        #                     classes.append((pred_label, 1-label[0]))
+        #                 else:
+        #                     print((pred_label, label[0]), end='')
+        #                     classes.append((1, 0.5))
+        #             else:
+        #                 print((pred_label, label[0]), end='')
+        #                 classes.append((label, label[0]))
+        #     model.reset_states()
+        step_size = 1
+        predictions = model.predict(np.reshape(X, (batch_size, len(X), 1)))
+        for item in predictions[0]:
+            pred_label = round(item[0])
+            # if pred_label == 0:
+            #     if 1-item[0] > threshold:
+            #         print((pred_label, 1-item[0]), end='')
+            #         classes.append((pred_label, 1-item[0]))
+            #     else:
+            #         print((1, 0.5), end='')
+            #         classes.append((1, 0.5))
+            # else:
+            #     # print((pred_label, item[0]), end='')
+            #     classes.append((pred_label, item[0]))
+            if pred_label == 1:
+                if item[0] > threshold:
+                    classes.append((pred_label, item[0]))
+                else:
+                    classes.append((0, 0.5))
+            else:
+                classes.append((pred_label, 1-item[0]))
     print()
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
