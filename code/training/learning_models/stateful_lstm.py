@@ -1,10 +1,14 @@
 # Not working yet
 
+from multiprocessing.spawn import _main
 import os
 import sys
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+
+from datetime import datetime
+
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
 
@@ -12,11 +16,8 @@ from keras import models, layers
 from preprocessing import Preprocessing
 
 
-def define_model(len_ts,
-                 hidden_neurons = 10,
-                 nfeature=1,
-                 batch_size=None,
-                 stateful=False):
+def define_model(len_ts=None, hidden_neurons=10, nfeature=1, batch_size=None, stateful=False):
+
     in_out_neurons = 1
     
     inp = layers.Input(batch_shape= (batch_size, len_ts, nfeature),
@@ -36,14 +37,17 @@ def define_model(len_ts,
     return(model,(inp,rnn,dens))
 
 
-def train_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, stateful, task):
+def train_model(analysis_directory, model_name='lstm', segmentation_value=1, downsampling_value=1, epochs=10, data_balancing=False, batch_size=1, standard_scale=False, stateful=True, task=2):
     h_units = 64
+    len_ts = 30
     model_stateful, _ = define_model(
-        hidden_units=h_units,
+        hidden_neurons=h_units,
         batch_size=batch_size,
         stateful=True,
-        len_ts=None
+        len_ts=len_ts
     )
+
+    log_time = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
 
     model_stateful.summary()
 
@@ -51,15 +55,34 @@ def train_model(analysis_directory, model_name, segmentation_value, downsampling
 
     start = time.time()
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, stateful=stateful, task=task).create_dataset()
-    history = s_model.fit(X_train, y_train, )
+    X_train, y_train, X_val, y_val = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, stateful=stateful, task=task).create_dataset()
+
+    X_tr = []
+    y_tr = []
+    X_v = []
+    y_v = []
+
+    for idx in range(len(X_train)):
+        X_tr.append(np.array([X_train[idx][i:i + len_ts] for i in range(0, len(X_train[idx]), len_ts)][:-1]))
+        y_tr.append(np.array([y_train[idx][i:i + len_ts] for i in range(0, len(y_train[idx]), len_ts)][:-1]))
+    
+    for idx in range(len(X_val)):
+        X_v.append(np.array([X_val[idx][i:i + len_ts] for i in range(0, len(X_val[idx]), len_ts)][:-1]))
+        y_v.append(np.array([y_val[idx][i:i + len_ts] for i in range(0, len(y_val[idx]), len_ts)][:-1]))
+
+    X_tr = np.array(X_tr)
+    y_tr = np.array(y_tr)
+    X_v = np.array(X_v)
+    y_v = np.array(y_v)
+
+    history = s_model.fit(X_tr, y_tr, [], X_v, y_v, [], Nepoch=epochs)
 
     end = time.time()
     print("Time Took {:3.2f} min".format((end - start)/60))
 
 
 class statefulModel(object):
-    def __init__(self,model,save_dir,print_val_every = 500,):
+    def __init__(self, model, save_dir, print_val_every=500):
         '''
         model must be stateful keras model object
         batch_input_shape must be specified
@@ -71,9 +94,10 @@ class statefulModel(object):
         self.Nfeat      = bis[2]
         self.model      = model
         self.save_dir   = save_dir
-        self.print_val_every = print_val_every 
+        self.print_val_every = print_val_every
+        os.mkdir(self.save_dir)
 
-    def get_mse(self,true,est,w=None):
+    def get_mse(self, true, est, w=None):
         '''
         calculate MSE for weights == 1
         '''
@@ -88,7 +112,7 @@ class statefulModel(object):
         MSE = SSE/N
         return MSE, (SSE,N)
 
-    def X_val_shape_adj(self,X,X_val_orig,y_val_orig,w_val_orig):
+    def X_val_shape_adj(self, X ,X_val_orig, y_val_orig, w_val_orig):
         '''
         Make the dimension of X_val the same as the dimension of X
         by adding zeros. 
@@ -110,9 +134,9 @@ class statefulModel(object):
         w_val = np.zeros(myshape)
         w_val[:w_val_orig.shape[0]] = w_val_orig
         
-        return X_val,y_val,w_val
+        return X_val, y_val, w_val
 
-    def train1epoch(self,X,y,w,epoch=None):
+    def train1epoch(self, X, y, w, epoch=None):
         '''
         devide the training set of time series into batches. 
         '''
@@ -132,10 +156,10 @@ class statefulModel(object):
             X_batch = X[pick]
             y_batch = y[pick]
             w_batch = w[pick]
-            self.fit_across_time(X_batch,y_batch,w_batch,epoch,ibatch)
+            self.fit_across_time(X_batch, y_batch, w_batch, epoch, ibatch)
             count += 1
     
-    def fit_across_time(self,X,y,w,epoch=None,ibatch=None):
+    def fit_across_time(self, X, y, w, epoch=None, ibatch=None):
         '''
         training for the given set of time series 
         It always starts at the time point 0 so we need to reset states to zero.
@@ -157,15 +181,13 @@ class statefulModel(object):
                         sample_weight=wtime,
                         verbose=False)
             if itime % self.print_val_every == 0:
-                print("      {start:4d}:{end:4d} loss={val:.3f}".format(
-                start=itime-self.ts, end=itime, val=val.history["loss"][0]))
+                print("{start:4d}:{end:4d} loss={val:.3f}".format(start=itime-self.ts, end=itime, val=val.history["loss"][0]))
                 sys.stdout.flush()
                 ## uncomment below if you do not want to save weights for every epoch every batch and every time
                 if epoch is not None:
-                    self.model.save_weights(
-                        "weights_epoch{:03d}_batch{:01d}_time{:04d}.hdf5".format(epoch,ibatch,itime))
+                    self.model.save_weights("weights_epoch{:03d}_batch{:01d}_time{:04d}.hdf5".format(epoch,ibatch,itime))
 
-    def validate1epoch(self,X_val_adj,y_val_adj,w_val_adj):
+    def validate1epoch(self, X_val_adj, y_val_adj, w_val_adj):
         batch_index = np.arange(X_val_adj.shape[0])
         print("Validating..")
         val_loss = 0
@@ -173,8 +195,6 @@ class statefulModel(object):
         for ibatch in range(self.batch_size,
                             X_val_adj.shape[0]+1,
                             self.batch_size):
-  
-            
             pick = batch_index[(ibatch-self.batch_size):ibatch]
             if len(pick) < self.batch_size:
                 continue
@@ -187,8 +207,8 @@ class statefulModel(object):
             SSE,N = self.validate_across_time(
                                      X_val_adj_batch,
                                      y_val_adj_batch,
-                                     w_val_adj_batch
-                                    )
+                                     w_val_adj_batch)
+
             val_loss += SSE
             count += N
         val_loss /=count
@@ -200,14 +220,9 @@ class statefulModel(object):
         y_pred_adj = np.zeros(y_val_adj.shape)
         y_pred_adj[:] = np.NaN
         self.model.reset_states()
-        for itime in range(self.ts,
-                           X_val_adj.shape[1]+1,
-                           self.ts):
-            y_pred_adj[:,itime-self.ts:itime,:] = self.model.predict(
-                X_val_adj[:,itime-self.ts:itime,:],
-                batch_size=X_val_adj.shape[0])
+        for itime in range(self.ts, X_val_adj.shape[1]+1, self.ts):
+            y_pred_adj[:,itime-self.ts:itime,:] = self.model.predict(X_val_adj[:,itime-self.ts:itime,:], batch_size=X_val_adj.shape[0])
             
-
             loss,_ = self.get_mse(y_pred_adj[:,itime-self.ts:itime,:],
                                 y_val_adj[:,itime-self.ts:itime,:],
                                 w_val_adj[:,itime-self.ts:itime])
@@ -232,12 +247,9 @@ class statefulModel(object):
                                 w_val_adj[:,:itime])
         return SSE,N
 
-    def fit(self,
-            X,y,w,X_val,y_val,w_val,
-            Nepoch=300):
+    def fit(self, X, y, w, X_val, y_val, w_val, Nepoch=300):
         
-        X_val_adj,y_val_adj,w_val_adj = self.X_val_shape_adj(
-            X,X_val,y_val,w_val)
+        X_val_adj, y_val_adj, w_val_adj = self.X_val_shape_adj(X, X_val, y_val, w_val)
         
         past_val_loss = np.Inf
         history = []
@@ -246,11 +258,9 @@ class statefulModel(object):
             print("--------------------------------")
             print("Epoch {}".format(iepoch+1))
 
-            self.train1epoch(X,y,w,iepoch)
+            self.train1epoch(X, y, w, iepoch)
     
-            val_loss = self.validate1epoch(X_val_adj,
-                                           y_val_adj,
-                                           w_val_adj)
+            val_loss = self.validate1epoch(X_val_adj, y_val_adj, w_val_adj)
             print("-----------------> Epoch {iepoch:d} overall valoss={loss:.6f}".format(
             iepoch=iepoch+1,loss=val_loss)),
             
@@ -263,3 +273,6 @@ class statefulModel(object):
             history.append(val_loss)
 
         return history
+
+if __name__ == '__main__':
+    train_model('data/awake_sleep_analysis')

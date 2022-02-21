@@ -1,0 +1,32 @@
+This file contains information about the lstm model 
+Analysis directory = /Users/clemdetry/Documents/Nomics/jawac_processing_nomics/data/awake_sleep_analysis 
+--- 
+Segmentation value = 0 
+Downsampling value = 1.0 
+Signal frequency = 1.0 Hz 
+Batch size = 1 
+Standard scale = 0 
+Stateful = 1 
+Sliding window = 0 
+Data balancing = 0 
+--- 
+Log time = 18-02-2022 13-48-46 
+--- 
+Num of epochs = 3 
+Epochs training computation time history (in sec) = [309.9175717830658, 307.79204297065735, 308.0726218223572] 
+Epochs training computation time mean (in sec) = 308.5940788586934 
+--- 
+Training accuracy history = [0.7969464570987355, 0.8005546666470122, 0.8044713151055685] 
+Training loss history = [0.49528333759188603, 0.45912330548185304, 0.4462798232972216] 
+--- 
+Validation accuracy history = [0.643800788450444, 0.643800788450444, 0.643800788450444] 
+Validation loss history = [0.7392380726587764, 0.8328990758687345, 0.7640729897819422] 
+--- 
+Radius of the CI = 0.27701863679726735 
+True classification of the model is likely between 0.39695079819324297 and 0.9509880717877777 
+--- 
+Test accuracy = 0.6739694349905103 
+Confusion matrix (invalid | valid) = 
+ [[     0 141451]
+ [     0 285509]] 
+--- 
