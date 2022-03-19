@@ -13,7 +13,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, TimeDistributed
+from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense
 from tensorflow.keras.callbacks import ModelCheckpoint
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
@@ -23,7 +23,7 @@ from preprocessing import Preprocessing
 from util import reduction, plot_confusion_matrix, TimingCallback
 
 
-def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, task):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
@@ -40,6 +40,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
     -sliding_window: true to use sliding window with a small center portion of interest
+    -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
 
     Returns:
@@ -60,7 +61,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         save_best_only=True
     )
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, task=task).create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task).create_dataset()
 
     model = Sequential()
     # Stateless model
@@ -78,16 +79,21 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         elif model_name == 'lstm':
-            # model.add(LSTM(64, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1 -- Output size None x 64
-            # model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 64
-            # model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
-            # model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 32
-            # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 2
-            # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-            model.add(LSTM(20, input_shape=(n_timesteps, n_features)))
-            model.add(Dense(10, activation='relu'))
-            model.add(Dropout(0.2))
-            model.add(Dense(n_outputs, activation='sigmoid'))
+            # model.add(LSTM(500, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            # model.add(Dropout(0.2))   # dropout -- 2
+            # model.add(Dense(500, activation='relu'))   # fully connected layer -- 3
+            # model.add(Dropout(0.2))   # dropout -- 4
+            # model.add(Dense(200, activation='relu'))   # fully connected layer -- 5
+            # model.add(Dropout(0.2))   # dropout -- 6
+            # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 7
+
+            model.add(LSTM(20, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            model.add(Dense(20, activation='relu'))   # fully connected layer -- 2
+            model.add(Dropout(0.2))   # dropout -- 3
+            model.add(Dense(10, activation='relu'))   # fully connected layer -- 4
+            model.add(Dropout(0.2))   # dropout -- 5
+            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 6
+
             model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         print(model.summary())
@@ -118,20 +124,22 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     else:
         max_length = int(segmentation_value * (60 / downsampling_value))
         n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 1, 0.1, True
-        # model.add(LSTM(64, batch_input_shape=(batch_size, max_length, n_features), stateful=stateful, return_sequences=return_sequences))   # lstm layer -- 1 -- Output size None x 10
-        # model.add(Dropout(0.2))   # dropout -- 2 -- Output size None x 10
-        # model.add(Dense(32, activation='relu'))   # fully connected layer -- 3 -- Output size None x 32
-        # model.add(Dropout(0.2))   # dropout -- 4 -- Output size None x 10
-        # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 5 -- Output size None x 1
-        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        # model.add(LSTM(500, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
+        # model.add(Dropout(0.2))   # dropout -- 2
+        # model.add(Dense(500, activation='relu'))   # fully connected layer -- 3
+        # model.add(Dropout(0.2))   # dropout -- 4
+        # model.add(Dense(200, activation='relu'))   # fully connected layer -- 5
+        # model.add(Dropout(0.2))   # dropout -- 6
+        # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 7
 
-        max_length = 180
+        model.add(LSTM(20, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
+        model.add(Dense(20, activation='relu'))   # fully connected layer -- 2
+        model.add(Dropout(0.2))   # dropout -- 3
+        model.add(Dense(10, activation='relu'))   # fully connected layer -- 4
+        model.add(Dropout(0.2))   # dropout -- 5
+        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 6
 
-        model.add(LSTM(20, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))
-        model.add(Dense(10, activation='relu'))
-        model.add(Dropout(0.2))
-        model.add(Dense(n_outputs, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['mse'])
 
         print(model.summary())
 
@@ -266,8 +274,6 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         y_test = list(itertools.chain.from_iterable(total_y_test))
 
 
-
-
     # 95 % confidence interval computation
     interval = 1.96 * sqrt((accuracy * (1 - accuracy)) / len(X_test))
 
@@ -289,6 +295,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.write(f'Standard scale = {int(standard_scale)} \n')
     model_info_file.write(f'Stateful = {int(stateful)} \n')
     model_info_file.write(f'Sliding window = {int(sliding_window)} \n')
+    model_info_file.write(f'Center of interest = {center_of_interest} \n')
     model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Log time = {log_time} \n')
@@ -353,12 +360,12 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
     # save of the model weights
     os.mkdir(f'{save_dir}/last')
-    save_model(model, f'{save_dir}/last/saved_model')
+    save_model(model, f'{save_dir}/last')
 
     return accuracy
 
 
-def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, task):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task):
     """
     Callable method to start the training of the model
 
@@ -375,12 +382,13 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
     -sliding_window: true to use sliding window with a small center portion of interest
+    -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, task)
+    score = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task)
     score = score * 100.0
     print('test accuracy:', score, '%')
     print('-----')

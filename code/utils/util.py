@@ -264,7 +264,7 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
                     new_start_time = row.start
                     break
                 else:
-                    df.drop(index=idx, inplace=True)
+                    df = df.drop(index=idx)
 
         if new_end_time is None or flag is False:
             for idx, row in df.iloc[::-1].iterrows():
@@ -272,7 +272,7 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
                     new_end_time = row.end
                     break
                 else:
-                    df.drop(index=idx, inplace=True)
+                    df = df.drop(index=idx)
 
         if threshold == 0:
             break
@@ -309,16 +309,18 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
     sleep_hours = (sleep_count * downsampling_value) / 3600
     sleep_rate = 0
     if len(df) > 0:
-        sleep_rate = sleep_count / len(df)
+        sleep_rate = sleep_count / df['data_num'].sum()
 
     if threshold != 0:
         if not is_valid(analysis_end - analysis_start, sleep_hours):
+            print('threshold:', threshold)
             print('new start analysis time:', new_start_time)
             print('new end analysis time:', new_end_time)
             print('analysis duration:', (new_end_time - new_start_time))
             print('sleep time in new bounds:', hours_conversion(sleep_hours))
             print('sleep rate in new bounds:', round((sleep_rate * 100), 2), '%')
             print(f"not enough valid signal (< 4h) in first selected bounds with threshold = {threshold}, let's try with a wider tolerance")
+            print()
             if threshold == 0.98:
                 return analysis_cutting(df_copy, analysis_start_copy, analysis_end_copy, downsampling_value_copy, threshold=0.8)
             if threshold == 0.8:

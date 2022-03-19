@@ -5,6 +5,7 @@ import time
 import shutil
 import numpy as np
 import pandas as pd
+from scipy.misc import central_diff_weights
 
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
@@ -33,10 +34,11 @@ class Preprocessing:
     -standard_scaled: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
     -sliding_window: true to use sliding window with a small center portion of interest
+    -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     """
 
-    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, task=1):
+    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1):
         self.directory = analysis_directory
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
@@ -46,6 +48,7 @@ class Preprocessing:
         self.standard_scale = standard_scale
         self.sliding_window = sliding_window
         self.stateful = stateful
+        self.center_of_interest = center_of_interest
         self.task = task
         self.jawac_df_list = []
         self.mk3_df_list = []
@@ -74,8 +77,6 @@ class Preprocessing:
                         continue
                     data_mk3 = open(mk3_file)    # mk3 file reading
                     lines = data_mk3.readlines()    # list with the mk3 lines
-                    # start_record_time = lines[5].split(';')[0]
-                    # start_record_date = lines[5].split(';')[1]
                     if self.task == 1:
                         lines = lines[7:]    # log file information
                     elif self.task == 2:
@@ -104,11 +105,9 @@ class Preprocessing:
                     elif self.task == 2:
                         data = raw_data[0][0][0]
                         times = raw_data[1][1]
-                        # labels = raw_data[1][0][0]
                         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
                         df_jawac.insert(0, 'times', times)
                         df_jawac.insert(1, 'data', data)
-                        # df_jawac.insert(2, 'label', labels)
                         df_jawac = df_jawac.resample('0.1S', on='times').median()
 
                     # dataframe saving
@@ -140,7 +139,6 @@ class Preprocessing:
                 self.jawac_df_list.append(df_jawac)
 
         for i in tqdm(range(len(self.jawac_df_list))):
-            # if self.task == 1:
             self.jawac_df_list[i]['label'] = [1 for n in range(len(self.jawac_df_list[i]))]
             self.jawac_df_list[i].index = pd.to_datetime(self.jawac_df_list[i].index).tz_localize(None)
             for idx, row in self.mk3_df_list[i].iterrows():
@@ -196,10 +194,8 @@ class Preprocessing:
                 y.append(arr[1][:])
             else:
                 if self.sliding_window:
-                    max_length = 300   # in sec, 60 because sliding window of 1min
-                    center_of_interest = 30   # in sec, corresponding to the size of the center window of interest
-                    temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), center_of_interest)][:-max_length//center_of_interest]
-                    temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), center_of_interest)][:-max_length//center_of_interest]
+                    temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), self.center_of_interest)][:-max_length//self.center_of_interest]
+                    temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), self.center_of_interest)][:-max_length//self.center_of_interest]
                 else:
                     temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), max_length)][:-1]
                     temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), max_length)][:-1]
@@ -222,10 +218,20 @@ class Preprocessing:
 
         if self.data_balancing:
             oversample = SMOTE()
+            X = np.array(X)
+            y = np.array(y)
             X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
+            X = np.reshape(X, (len(X), len(X[0]), 1))
             y = to_categorical(y)
+            zero_count = 0
+            one_count = 0
+            for label in y:
+                if label[0] == 1:
+                    zero_count += 1
+                else:
+                    one_count += 1
 
-        if not self.stateful:
+        if not self.stateful and not self.data_balancing:
             X = np.reshape(X, (len(X), len(X[0]), 1))
             y = to_categorical(np.array(y))
             X, y = shuffle(X, y)

@@ -9,6 +9,7 @@ import math
 import pickle
 import argparse
 import datetime
+import mplcursors
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -71,18 +72,19 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    # model_path = str(most_recent_folder_path[0]) + '/best'
-    model_path = str(most_recent_folder_path[0]) + '/last/saved_model'
+    model_path = str(most_recent_folder_path[0]) + '/best'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:9]
+    lines = lines[3:11]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
     batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
     standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
     stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
+    sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
+    center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -102,10 +104,16 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     start_class = time.time()    # start variable used for the calculation of the final classification time 
 
+    print('Task 1...')
+
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
     if not stateful:
         size = int((60 / downsampling_value) * segmentation_value)
-        X_test_seq = np.array([(df_jawac.loc[i:i + size - 1, :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
+        if not sliding_window:
+            X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
+        else:
+            size = int(segmentation_value * 60)   # in sec
+            X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
             arr = np.append(arr, pd.Series([np.var(arr)*1000]))
@@ -128,7 +136,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
             idx = np.argmax(item)
-            print((idx, item[idx]), end='')
             if model_name in ['cnn', 'lstm']:
                 if idx == 0:
                     if item[idx] > threshold:
@@ -149,55 +156,48 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                     pred_label = round(label[0])
                     if pred_label == 0:
                         if 1-y_pred[0][0] > threshold:
-                            print((pred_label, 1-label[0]), end='')
                             classes.append((pred_label, 1-label[0]))
                         else:
-                            print((pred_label, label[0]), end='')
                             classes.append((1, 0.5))
                     else:
-                        print((pred_label, label[0]), end='')
                         classes.append((label, label[0]))
-        # model.reset_states()
     classes.append((0, 0.5))
-    print()
 
-    # minimum_valid_time = 3   # in minutes
-    # valid_threshold = math.ceil(minimum_valid_time/minutes_per_class)
-    # valid_idx = []
-    # for i in range(len(classes)):
-    #     if classes[i][0] == 0:
-    #         if len(valid_idx) > 0 and len(valid_idx) <= valid_threshold:
-    #             for pos in valid_idx:
-    #                 classes[pos] = (0, 0.5)
-    #         valid_idx = []
-    #     else:
-    #         valid_idx.append(i)
-    # minimum_invalid_time = 1   # in minutes
-    # invalid_threshold = math.ceil(minimum_invalid_time/minutes_per_class)
-    # invalid_idx = []
-    # for i in range(1, len(classes)-1):
-    #     if classes[i][0] == 0:
-    #         invalid_idx.append(i)
-    #     else:
-    #         if len(invalid_idx) > 0 and len(invalid_idx) <= invalid_threshold:
-    #             for pos in invalid_idx:
-    #                 classes[pos] = (1, 0.5)
-    #         invalid_idx = []
+    step_size = int((60 / downsampling_value) * segmentation_value)
+    df_jawac['label'] = [1 for n in range(len(df_jawac))]
+    df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
+    for i in range(len(classes)):
+        if classes[i][0] == 0:
+            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 0
+            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'proba'] = classes[i][1]
 
-    valid_total = 0    # counter for the total number of valid regions found
-    invalid_total = 0    # counter for the total number of invalid regions found
-    for label in classes:
-        if label[0] == 0:
-            invalid_total += 1
-        else:
-            valid_total += 1
-    total_valid_rate = valid_total / len(classes)
-    total_invalid_rate = invalid_total / len(classes)
+    min_gap_time = int((60 / downsampling_value) * 2)   # in minutes
+    previous_label = df_jawac.label[0]
+    idx = []
+    for i in range(len(df_jawac.label)):
+        idx.append(i)
+        if df_jawac.label[i] != previous_label:
+            if len(idx) <= min_gap_time:
+                if previous_label == 0:
+                    df_jawac.loc[idx, 'label'] = 1
+                elif previous_label == 1:
+                    df_jawac.loc[idx, 'label'] = 0
+                df_jawac.loc[idx, 'proba'] = 0.5
+            else:
+                idx = []
+                idx.append(i)
+        previous_label = df_jawac.label[i]
+
+    valid_total = df_jawac['label'].value_counts()[1]    # counter for the total number of valid regions found
+    invalid_total = df_jawac['label'].value_counts()[0]    # counter for the total number of invalid regions found
+
+    total_valid_rate = valid_total / len(df_jawac)
+    total_invalid_rate = invalid_total / len(df_jawac)
 
     valid_percentage = total_valid_rate * 100
     invalid_percentage = total_invalid_rate * 100
-    valid_hours = (valid_total * minutes_per_class) / 60
-    invalid_hours = (invalid_total * minutes_per_class) / 60
+    valid_hours = (valid_total * (1/downsampling_value)) / 3600
+    invalid_hours = (invalid_total * (1/downsampling_value)) / 3600
 
     print('--------')
 
@@ -218,28 +218,16 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     print('Task 2...')
     print()
 
-    step_size = int((60 / downsampling_value) * segmentation_value)
-    df_jawac['label'] = [1 for n in range(len(df_jawac))]
-    df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
-    for i in range(len(classes)):
-        if classes[i][0] == 0:
-            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 0
-        elif classes[i][0] == 1:
-            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 1
-        df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'proba'] = classes[i][1]
-
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name}'
 
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/last/saved_model'   # TODO change to /best
+    model_path = str(most_recent_folder_path[0]) + '/best'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
-    # model_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task2/lstm/28-01-2022 13-56-04/last/saved_model'
-    # info_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task2/lstm/28-01-2022 13-56-04/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:10]
+    lines = lines[3:11]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
@@ -247,6 +235,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
     stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
+    center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
 
     # model loader
     if os.path.exists(model_path):
@@ -263,8 +252,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         if not sliding_window:
             X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), size)], dtype=object)
         else:
-            size = 300   # in sec, 60 because sliding window of 1 min
-            center_of_interest = 30   # in sec, corresponding to the size of the center window of interest
+            size = int(segmentation_value * 60)   # in sec
             X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
@@ -273,7 +261,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.6
+    threshold = 0.9
     minutes_per_class = (batch_size * downsampling_value)/60
     classes = []
     step_size = int((60 / downsampling_value) * segmentation_value)
@@ -283,7 +271,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
             idx = np.argmax(item)
-            print((idx, item[idx]), end='')
             if model_name in ['cnn', 'lstm']:
                 if idx == 0:
                     if item[idx] > threshold:
@@ -301,60 +288,48 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size*step_size], (batch_size, step_size, 1)))
                 for label in y_pred:
                     pred_label = round(label[0])
-                    if pred_label == 1:
-                        if y_pred[0][0] > threshold:
-                            print((pred_label, label[0]), end='')
-                            classes.append((pred_label, label[0]))
-                        else:
-                            print((0, 0.5), end='')
-                            classes.append((0, 0.5))
-                    else:
-                        print((pred_label, 1-label[0]), end='')
-                        classes.append((pred_label, 1-label[0]))
-                    # if pred_label == 0:
-                    #     if 1-y_pred[0][0] > threshold:
-                    #         print((pred_label, 1-label[0]), end='')
-                    #         classes.append((pred_label, 1-label[0]))
+                    # if pred_label == 1:
+                    #     if y_pred[0][0] > threshold:
+                    #         classes.append((pred_label, label[0]))
                     #     else:
-                    #         print((pred_label, label[0]), end='')
-                    #         classes.append((1, 0.5))
+                    #         classes.append((0, 0.5))
                     # else:
-                    #     print((pred_label, label[0]), end='')
-                    #     classes.append((label, label[0]))
-            # model.reset_states()
-        # step_size = 1
-        # predictions = model.predict(np.reshape(X, (batch_size, len(X), 1)))
-        # for item in predictions[0]:
-        #     pred_label = round(item[0])
-            # if pred_label == 0:
-            #     if 1-item[0] > threshold:
-            #         print((pred_label, 1-item[0]), end='')
-            #         classes.append((pred_label, 1-item[0]))
-            #     else:
-            #         print((1, 0.5), end='')
-            #         classes.append((1, 0.5))
-            # else:
-            #     # print((pred_label, item[0]), end='')
-            #     classes.append((pred_label, item[0]))
-            # if pred_label == 1:
-            #     if item[0] > threshold:
-            #         classes.append((pred_label, item[0]))
-            #     else:
-            #         classes.append((0, 0.5))
-            # else:
-            #     classes.append((pred_label, 1-item[0]))
-    print()
+                    #     classes.append((pred_label, 1-label[0]))
+                    if pred_label == 0:
+                        if 1-y_pred[0][0] > threshold:
+                            classes.append((pred_label, 1-label[0]))
+                        else:
+                            classes.append((1, 0.5))
+                    else:
+                        classes.append((label, label[0]))
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):
+        if sliding_window:
+            mask = df_jawac_only_valid.index[(step_size//2)+(i*center_of_interest)-(center_of_interest//2):(step_size//2)+(i*center_of_interest)+(center_of_interest//2)]
+        else:
+            mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
         if classes[i][0] == 0:
-            if sliding_window:
-                size = 300   # in sec, 60 because sliding window of 1 min
-                center_of_interest = 30   # in sec, corresponding to the size of the center window of interest
-                mask = df_jawac_only_valid.index[(size//2)+(i*center_of_interest)-(center_of_interest//2):(size//2)+(i*center_of_interest)+(center_of_interest//2)]
-            else:
-                mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
             df_jawac.loc[mask, ['label']] = 2
+        df_jawac.loc[mask, ['proba']] = classes[i][1]
+
+    min_gap_time = int((60 / downsampling_value) * 2)   # in minutes
+    previous_label = df_jawac.label[0]
+    idx = []
+    for i in range(len(df_jawac.label)):
+        idx.append(i)
+        if df_jawac.label[i] != previous_label:
+            if len(idx) <= min_gap_time:
+                if previous_label == 1:
+                    df_jawac.loc[idx, 'label'] = 2
+                    df_jawac.loc[idx, 'proba'] = 0.5
+                elif previous_label == 2:
+                    df_jawac.loc[idx, 'label'] = 1
+                    df_jawac.loc[idx, 'proba'] = 0.5
+            else:
+                idx = []
+                idx.append(i)
+        previous_label = df_jawac.label[i]
 
     df_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba', 'data_num'])
     saved_label = df_jawac.iloc[0].label
@@ -388,7 +363,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     print('--------')
     
-    print('total signal quality:', round((signal_quality(df_label) * 100), 2))
+    print('total signal quality score (/100):', round((signal_quality(df_label) * 100), 2))
 
     print('--------')
 
@@ -409,9 +384,9 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     else:
         awake_count = 0
 
-    print('invalid count:', invalid_count)
-    print('valid count:', valid_count)
-    print('awake count:', awake_count)
+    print(f'invalid count: {invalid_count} --> {round((invalid_count/(invalid_count+valid_count+awake_count)*100), 2)} %')
+    print(f'valid count: {valid_count} --> {round((valid_count/(invalid_count+valid_count+awake_count)*100), 2)} %')
+    print(f'awake count: {awake_count} --> {round((awake_count/(invalid_count+valid_count+awake_count)*100), 2)} %')
 
     total_invalid_rate = invalid_count/len(df_jawac)
     total_valid_rate = valid_count/len(df_jawac)
@@ -419,6 +394,11 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     # creation of the output dictionary with computed information about the signal
     dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_sleep': round((total_valid_rate * 100), 2), 'percentage_awake': round((total_awake_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 'total_signal_quality': round((signal_quality(df_label) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_sleep_new_bounds': round(sleep_hours, 2), 'percentage_sleep_new_bounds': round(sleep_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], sleep_hours)}
+
+    end = time.time()    # end timer variable used for the calculation of the total execution time 
+
+    print('classification execution time =', round((end - start_class), 2), 'sec')
+    print('total execution time =', round((end - start), 2), 'sec')
 
     # graph
     fig, ax = plt.subplots()
@@ -443,7 +423,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     ax.grid()
 
     curr_time = raw_data.__dict__['info']['meas_date']    # starting time of the analysis -- Not needed anymore
-    print('Curr Time:', curr_time)
     # graph background color based on signal classified label
     for idx, row in df_label.iterrows():
         if row.label == 0:
@@ -461,20 +440,20 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     ax.legend(handles=legend_elements, loc='best')
 
-    plt.text(0.14, 0.04, f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - threshold: {threshold} - valid: {dictionary["is_valid"]}', fontsize=11, transform=plt.gcf().transFigure)
+    cursor = mplcursors.cursor(hover=True)
+    cursor.connect("add", lambda sel: sel.annotation.set_text(round(df_jawac.proba[int(sel.index)], 4)))
+
+    plt.text(0.14, 0.04, f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - valid: {dictionary["is_valid"]}', fontsize=11, transform=plt.gcf().transFigure)
 
     if plt_save_path != '':
         plt.savefig(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png', bbox_inches='tight')
+
+    pickle.dump(fig, open('/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task2/lstm/13-03-2022 18-56-57/figures/fig3.fig.pickle', 'wb'))
 
     dictionary['plot'] = plt
     if view_graph:
         plt.show()
     plt.close(fig=fig)
-        
-    end = time.time()    # end timer variable used for the calculation of the total execution time 
-
-    print('classification execution time =', round((end - start_class), 2), 'sec')
-    print('total execution time =', round((end - start), 2), 'sec')
 
     enable_print()
 
@@ -505,281 +484,9 @@ if __name__ == '__main__':
 
 
     # Test cmd lines - patient data from 1 to 13
-    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'LSTM'
-    # python3 code/classification/classify.py --edf 'code/classification/test_data/patient_data1.edf' --view_graph --model 'CNN'
+    # python3 code/classification/classify.py --view_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
+    # python3 code/classification/classify.py --view_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
 
 
     opt = parse_opt()
     main(p=opt)
-
-
-    # main_dir = 'data/awake_sleep_analysis_edf_dfs'
-    # out = sorted(os.listdir(main_dir))
-    # for filename in out:
-
-    #     mk3_file = f'{main_dir}/{filename}/{filename}_mk3.pkl'
-    #     edf_file = f'{main_dir}/{filename}/{filename}_jawac.pkl'
-    #     if os.path.exists(mk3_file) and os.path.exists(edf_file):
-
-    #         df_mk3 = pd.read_pickle(mk3_file)
-    #         df_jawac = pd.read_pickle(edf_file)
-    #         df_jawac = df_jawac.resample('1S').median()
-
-    #         # graph
-    #         fig, ax = plt.subplots()
-    #         fig.set_size_inches(18.5, 10.5)
-
-    #         ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-    #         ax.axhline(y=0, color='r', linewidth=1)
-    #         ax.set(xlabel='time (s)', ylabel='opening (mm)', title=f'Jawac Signal - {filename}')
-    #         ax.grid()
-
-    #         df_jawac.reset_index(inplace=True)
-    #         # df_label = pd.DataFrame(columns=['start', 'end', 'label'])
-    #         # saved_label = df_jawac.iloc[0].label
-    #         # saved_start = df_jawac.iloc[0].times
-    #         # for idx, row in df_jawac.iterrows():
-    #         #     if len(row) > 0:
-    #         #         if row.label != saved_label:
-    #         #             a_row = {'start': saved_start, 'end': row.times, 'label': saved_label}
-    #         #             df_label = df_label.append(a_row, ignore_index=True)
-    #         #             saved_label = row.label
-    #         #             saved_start = row.times
-    #         # a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label}
-    #         # df_label = df_label.append(a_row, ignore_index=True)
-            
-    #         for idx, row in df_mk3.iterrows():
-    #             if row.label == 'OE':
-    #                 plt.axvspan(row.start, row.end, facecolor='y', alpha=0.8)
-    #             elif row.label == 'Out of Range':
-    #                 plt.axvspan(row.start, row.end, facecolor='r', alpha=0.8)
-    #             elif row.label == 'W':
-    #                 plt.axvspan(row.start, row.end, facecolor='b', alpha=0.2)
-    #         # for idx, row in df_label.iterrows():
-    #         #     if row.label == 0:
-    #         #         plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3)
-    #             # elif row.label == 1:
-    #             #     plt.axvspan(row.start, row.end, facecolor='g', alpha=0.3)
-
-    #         legend_elements = [Patch(facecolor='b', edgecolor='w', label='awake', alpha=0.3),
-    #                             Patch(facecolor='g', edgecolor='w', label='sleep', alpha=0.3),
-    #                             Patch(facecolor='y', edgecolor='w', label='oe', alpha=0.3),
-    #                             Patch(facecolor='r', edgecolor='w', label='oor', alpha=0.3),]
-    #         ax.legend(handles=legend_elements, loc='best')
-
-    #         plt.show()
-    #         # plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/graphs/out_{filename}.png', bbox_inches='tight')
-    #         # plt.close(fig=fig)
-    #     else:
-    #         print(edf_file)
-    #         print(mk3_file)
-    #         print('---')
-
-
-
-    # dir_path = '/home/ckemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis'
-    # filenames = sorted(os.listdir(dir_path))
-    # for i in tqdm(range(len(filenames))):
-    #     edf_file = f'{dir_path}/{filenames[i]}/{filenames[i]}.edf'
-    #     if os.path.exists(edf_file):
-
-    #         block_print()
-    #         raw_data = mne.io.read_raw_edf(edf_file)    # edf file reading
-    #         enable_print()
-
-    #         df_jawac = pd.DataFrame()
-
-    #         data = raw_data[0][0][0]
-    #         times = raw_data[1][1]
-    #         labels = raw_data[1][0][0]
-    #         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
-    #         df_jawac.insert(0, 'times', times)
-    #         df_jawac.insert(1, 'data', data)
-    #         df_jawac.insert(2, 'label', labels)
-    #         df_jawac = df_jawac.resample('0.1S', on='times').median()
-
-    #         df_jawac.reset_index(inplace=True)
-
-    #         df_label = pd.DataFrame(columns=['start', 'end', 'label'])
-    #         saved_label = df_jawac.iloc[0].label
-    #         saved_start = df_jawac.iloc[0].times
-    #         for idx, row in df_jawac.iterrows():
-    #             if len(row) > 0:
-    #                 if row.label != saved_label:
-    #                     a_row = {'start': saved_start, 'end': row.times, 'label': saved_label}
-    #                     df_label = df_label.append(a_row, ignore_index=True)
-    #                     saved_label = row.label
-    #                     saved_start = row.times
-    #         a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label}
-    #         df_label = df_label.append(a_row, ignore_index=True)
-
-    #         mk3_file = open(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{filenames[i]}/{filenames[i]}.mk3','a')
-
-    #         for idx, row in df_label.iterrows():
-    #             if len(row) > 0:
-    #                 if row.label == 0:
-    #                     if (row.end - row.start).total_seconds() > 180:
-    #                         out_line = []
-    #                         out_line.append(str(row.start)[11:19]+':000')
-    #                         out_line.append(f'{str(row.start)[8:10]}.{str(row.start)[5:7]}.{str(row.start)[2:4]}')
-    #                         out_line.append(str(row.end)[11:19]+':000')
-    #                         out_line.append(f'{str(row.end)[8:10]}.{str(row.end)[5:7]}.{str(row.end)[2:4]}')
-    #                         out_line.append('ApiosUser')
-    #                         out_line.append('zs')
-    #                         out_line.append('1,2')
-    #                         out_line.append('W')
-    #                         out = ';'.join(out_line)
-    #                         mk3_file.write(out+'\n')
-
-
-
-    # main_dir = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/data/awake_sleep_analysis'
-    # for i in range(95):
-
-    #     mk3_file = f'{main_dir}/{i}/{i}.mk3'
-    #     edf_file = f'{main_dir}/{i}/{i}.edf'
-    #     if os.path.exists(mk3_file) and os.path.exists(edf_file):
-    #         data_mk3 = open(mk3_file)
-    #         lines = data_mk3.readlines()
-    #         # start_record_time = lines[5].split(';')[0]
-    #         # start_record_date = lines[5].split(';')[1]
-    #         lines = lines[5:]
-    #         col_names = ['start', 'end', 'label']
-    #         df_mk3 = pd.DataFrame(columns = col_names)
-    #         for line in lines:
-    #             temp = pd.Series(extract_data_from_line(line), index = df_mk3.columns)
-    #             df_mk3 = df_mk3.append(temp, ignore_index=True)
-
-    #         # edf file
-    #         block_print()
-    #         raw_data = mne.io.read_raw_edf(edf_file)
-    #         enable_print()
-    #         data, times = raw_data[:]
-    #         sec_interval = 1
-    #         # times = string_datetime_conversion(times, start_record_time, start_record_date)
-    #         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])
-    #         df_jawac = pd.DataFrame()
-    #         df_jawac.insert(0, 'times', times)
-    #         df_jawac.insert(1, 'data', data[0])
-    #         df_jawac = df_jawac.set_index('times')
-    #         df_jawac = df_jawac.resample(str(sec_interval)+'S').median()['data'].to_frame(name='data')
-
-    #         # graph
-    #         fig, ax = plt.subplots()
-    #         fig.set_size_inches(18.5, 10.5)
-
-    #         ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-    #         ax.axhline(y=0, color='r', linewidth=1)
-    #         ax.set(xlabel='time (s)', ylabel='opening (mm)', title=f'Jawac Signal - {edf_file}')
-    #         ax.grid()
-
-    #         plt.axvspan(times[0], times[-1], facecolor='g', alpha=0.30)
-    #         for index, row in df_mk3.iterrows():
-    #             if row['label'] == 'W':
-    #                 plt.axvspan(row['start'], row['end'], facecolor='b', alpha=0.30)
-
-    #         legend_elements = [Patch(facecolor='b', edgecolor='w', label='Awake', alpha=0.30),
-    #                             Patch(facecolor='g', edgecolor='w', label='Sleep', alpha=0.30)]
-    #         ax.legend(handles=legend_elements, loc='upper left')
-
-    #         plt.show()
-    #         # plt.savefig(f'/home/ckemdetry/Documents/Nomics/thesis_nomics/training/data/graphs/out_{filename}.png', bbox_inches='tight')
-    #         # plt.close(fig=fig)
-    #     else:
-    #         print(edf_file)
-    #         print(mk3_file)
-    #         print('---')
-
-
-    
-    # import shutil
-    # main_dir = '/Users/clemdetry/Documents/Nomics/Enregistrements_Fuites'
-    # filenames = sorted(os.listdir(main_dir))
-    # for f in filenames:
-    #     filepath = f'{main_dir}/{f}/Hypnogram.txt'
-    #     if os.path.exists(filepath):
-    #         hypno = open(filepath)
-    #         lines = hypno.readlines()
-    #         if len(lines) > 1:
-    #             print(filepath)
-    #             if not os.path.exists(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{f}'):
-    #                 os.mkdir(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{f}')
-    #             mk3_file = open(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{f}/{f}.mk3','w+')
-    #             mk3_file.writelines(['MK_FILE_REV_0\n', 'ANJAW_REV=\n', 'IsReportUpToDate=No\n', 'Comment=\n', '-\n'])
-    #             temp_time = lines[0].split(' ')[2][:-1] + ':000'
-    #             edf_file = f'/Users/clemdetry/Documents/Nomics/edf_clean/{f}_jawac.edf'
-    #             if os.path.exists(edf_file):
-    #                 if not os.path.exists(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{f}/{f}.edf'):
-    #                     shutil.copy(edf_file, f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{f}/{f}.edf')
-    #                 block_print()
-    #                 raw_data = mne.io.read_raw_edf(edf_file)
-    #                 enable_print()
-    #                 data, times = raw_data[:]
-    #                 times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])
-    #                 start = str(times[0])
-    #                 stop = str(times[-1])
-    #                 out_line = []
-    #                 out_line.append(start[11:19]+':000')
-    #                 out_line.append(f'{start[8:10]}.{start[5:7]}.{start[2:4]}')
-    #                 out_line.append(start[11:19]+':000')
-    #                 out_line.append(f'{start[8:10]}.{start[5:7]}.{start[2:4]}')
-    #                 out_line.append('START')
-    #                 out = ';'.join(out_line)
-    #                 mk3_file.write(out+'\n')
-    #                 out_line = []
-    #                 out_line.append(stop[11:19]+':000')
-    #                 out_line.append(f'{stop[8:10]}.{stop[5:7]}.{stop[2:4]}')
-    #                 out_line.append(stop[11:19]+':000')
-    #                 out_line.append(f'{stop[8:10]}.{stop[5:7]}.{stop[2:4]}')
-    #                 out_line.append('STOP')
-    #                 out = ';'.join(out_line)
-    #                 mk3_file.write(out+'\n')
-    #                 date = str(raw_data.__dict__['info']['meas_date'])
-    #                 temp_date = f'{date[8:10]}.{date[5:7]}.{date[2:4]}'
-    #                 temp_label = lines[0].split(' ')[1]
-    #                 for line in lines:
-    #                     l = line.split(' ')
-    #                     label = l[1]
-    #                     t = l[2]
-    #                     if label == temp_label:
-    #                         continue
-    #                     else:
-    #                         if temp_label != 'W':
-    #                             temp_label = label
-    #                             if int((t[:-1]+':000')[:2]) < int(temp_time[:2]):
-    #                                 num = int(temp_date[0:2])+1
-    #                                 if num < 10:
-    #                                     temp_date = f'0{num}{temp_date[2:]}'
-    #                                 else:
-    #                                     temp_date = f'{num}{temp_date[2:]}'
-    #                             temp_time = t[:-1]+':000'
-    #                             continue
-    #                         out_line = []
-    #                         out_line.append(temp_time)
-    #                         out_line.append(temp_date)
-    #                         if int((t[:-1]+':000')[:2]) < int(temp_time[:2]):
-    #                             num = int(temp_date[0:2])+1
-    #                             if num < 10:
-    #                                 temp_date = f'0{num}{temp_date[2:]}'
-    #                             else:
-    #                                 temp_date = f'{num}{temp_date[2:]}'
-    #                         temp_time = t[:-1]+':000'
-    #                         out_line.append(temp_time)
-    #                         out_line.append(temp_date)
-    #                         out_line.append(temp_label)
-    #                         temp_label = label
-    #                         out = ';'.join(out_line)
-    #                         mk3_file.write(out+'\n')
-    #                 mk3_file.close()
-    #                 print('-> done')
-
-
-    # import shutil
-    # for i in range(95):
-    #     edf_file = f'/Users/clemdetry/Documents/Nomics/EDF_Simplifiés_Calibrés_Corrigés/{i}_jawac.edf'
-    #     mk3_file = f'/Users/clemdetry/Documents/Nomics/EDF_Simplifiés_Calibrés_Corrigés/{i}_jawac.mk3'
-    #     if os.path.exists(edf_file) and os.path.exists(mk3_file):
-    #         if not os.path.exists(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}'):
-    #             os.mkdir(f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}')
-    #         shutil.copy(edf_file, f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}/{i}.edf')
-    #         shutil.copy(mk3_file, f'/Users/clemdetry/Documents/Nomics/thesis_nomics/data/awake_sleep_analysis/{i}/{i}.mk3')
