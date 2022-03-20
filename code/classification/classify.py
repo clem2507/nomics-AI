@@ -448,8 +448,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     if plt_save_path != '':
         plt.savefig(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png', bbox_inches='tight')
 
-    pickle.dump(fig, open('/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task2/lstm/13-03-2022 18-56-57/figures/fig3.fig.pickle', 'wb'))
-
     dictionary['plot'] = plt
     if view_graph:
         plt.show()
