@@ -98,5 +98,3 @@ if __name__ == '__main__':
     # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'lstm' --batch 32 --task 1
     # LSTM - awake/sleep
     # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 1 --epochs 200 --model 'lstm' --batch 32 --stateful --task 2
-
-    # KNN - not working anymore

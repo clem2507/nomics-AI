@@ -183,7 +183,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                 if not full_sequence:
                     for j in range(0, len(X_train[i]), batch_size*n_timesteps):
                         if j+(batch_size*n_timesteps) < len(X_train[i]):
-                            dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_features)), return_dict=True)
+                            dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
                             mean_tr_loss.append(dic['loss'])
                             mean_tr_acc.append(dic['acc'])
                             mean_tr_f1.append(dic['f1_m'])
@@ -209,7 +209,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                 if not full_sequence:
                     for j in range(0, len(X_val[i]), batch_size*n_timesteps):
                         if j+(batch_size*n_timesteps) < len(X_val[i]):
-                            dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_val[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_features)), return_dict=True)
+                            dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_val[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
                             mean_val_loss.append(dic['loss'])
                             mean_val_acc.append(dic['acc'])
                             mean_val_f1.append(dic['f1_m'])
@@ -241,7 +241,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                     if j+(batch_size*n_timesteps) < len(X_test[i]):
                         y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)))
                         for label in y_pred:
-                            pred_label = round(label[0])
+                            idx = np.argmax(label)
+                            pred_label = idx
                             classes.append(pred_label)
                             total_classes.append(pred_label)
                 total_y_test.append(y_test[i][:len(classes)])
@@ -250,7 +251,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             else:
                 y_pred, *r = model.predict_on_batch(np.reshape(X_test[i], (batch_size, -1, n_features)))
                 for label in y_pred:
-                    pred_label = round(label[0])
+                    idx = np.argmax(label)
+                    pred_label = idx
                     classes.append(pred_label)
                     total_classes.append(pred_label)
                 total_y_test.append(y_test[i])

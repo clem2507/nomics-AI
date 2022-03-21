@@ -171,11 +171,11 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 idx = np.argmax(label)
                 if idx == 0:
                     if label[idx] > threshold:
-                        classes.append((pred_label, 1-label[0]))
+                        classes.append((idx, 1-label[idx]))
                     else:
                         classes.append((1, 0.5))
                 else:
-                    classes.append((label, label[0]))
+                    classes.append((idx, label[idx]))
 
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
     df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
@@ -317,11 +317,11 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 idx = np.argmax(label)
                 if idx == 0:
                     if label[idx] > threshold:
-                        classes.append((pred_label, 1-label[0]))
+                        classes.append((idx, 1-label[idx]))
                     else:
                         classes.append((1, 0.5))
                 else:
-                    classes.append((label, label[0]))
+                    classes.append((idx, label[idx]))
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):

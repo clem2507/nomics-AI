@@ -177,7 +177,7 @@ class Preprocessing:
         if not self.full_sequence:
             print(f'{self.segmentation_value} signal segmentation value (window size): {self.segmentation_value} min, {self.segmentation_value*60} sec')
         if self.sliding_window:
-            print(f'{self.sliding_window} center of interest value (in sec): {self.sliding_window/60} min')
+            print(f'center of interest value (in sec): {self.center_of_interest/60} min')
         print(f'data balancing: {self.data_balancing}')
         print(f'stateful: {self.stateful}')
         print(f'standardization: {self.standard_scale}')
