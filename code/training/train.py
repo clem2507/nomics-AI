@@ -13,7 +13,7 @@ from ann import train_model as ann_train_model
 from knn import train_model as knn_train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, sliding_window, stateful, center_of_interest, task):
+def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, neighbors, batch, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence):
     """
     Primary function for training the CNN, LSTM or KNN model
 
@@ -31,7 +31,8 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     -stateful (--stateful): true to use stateful LSTM instead of stateless
     -sliding_window (--sliding_window): true to use sliding window with a small center portion of interest
     -center_of_interest (--center_of_interest): center of interest size in seconds for the sliding window
-    -task: (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -task (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -full_sequence (--full_sequence): true to feed the entire sequence without dividing it into multiple windows
     """
 
     segmentation_value = float(segmentation_value)
@@ -46,7 +47,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
         raise Exception('input directory does not exist')
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
-        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful, sliding_window=sliding_window, center_of_interest=center_of_interest, task=task)
+        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful, sliding_window=sliding_window, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence)
     elif model.lower() == 'knn':
         knn_train_model(analysis_directory=analysis_directory, neighbors=neighbors, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, center_of_interest=center_of_interest, standard_scale=standard_scale)
     else:
@@ -59,7 +60,7 @@ def parse_opt():
     parser.add_argument('--segmentation_value', type=float, default=1, help='time series time split window in minutes')
     parser.add_argument('--downsampling_value', type=float, default=1, help='signal resampling in Hz')
     parser.add_argument('--epochs', type=int, default=5, help='total number of epochs for training')
-    parser.add_argument('--no_balance', dest='data_balancing', action='store_false', help='invoke to not balance the dataset instances')
+    parser.add_argument('--balance', dest='data_balancing', action='store_true', help='invoke to not balance the dataset instances')
     parser.add_argument('--neighbors', type=int, default=3, help='neighbors: number of k-nearest neighbors to train the model for the KNN')
     parser.add_argument('--batch', type=int, default=30, help='batch size for training')
     parser.add_argument('--standard_scale', dest='standard_scale', action='store_true', help='invoke to perform a standardizatin by centering and scaling the data')
@@ -67,10 +68,12 @@ def parse_opt():
     parser.add_argument('--sliding_window', dest='sliding_window', action='store_true', help='invoke to use sliding window with a small center portion of interest')
     parser.add_argument('--center_of_interest', type=int, default=10, help='center of interest size in seconds for the sliding window')
     parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
-    parser.set_defaults(data_balancing=True)
+    parser.add_argument('--full_sequence', dest='full_sequence', action='store_true', help='invoke to feed the entire sequence without dividing it into multiple windows')
+    parser.set_defaults(data_balancing=False)
     parser.set_defaults(standard_scale=False)
     parser.set_defaults(stateful=False)
     parser.set_defaults(sliding_window=False)
+    parser.set_defaults(full_sequence=False)
     return parser.parse_args()
 
 
@@ -87,13 +90,13 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN - valid/invalid
-    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --no_balance --batch 32 --task 1
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --batch 32 --task 1
     # CNN - awake/sleep
-    # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --no_balance --batch 32 --task 2
+    # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'cnn' --batch 32 --task 2
 
     # LSTM - valid/invalid
-    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'lstm' --no_balance --batch 32 --task 1
+    # python3 code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 1 --downsampling_value 1 --epochs 200 --model 'lstm' --batch 32 --task 1
     # LSTM - awake/sleep
-    # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 1 --epochs 200 --model 'lstm' --no_balance --batch 32 --stateful --task 2
+    # python3 code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 1 --epochs 200 --model 'lstm' --batch 32 --stateful --task 2
 
     # KNN - not working anymore

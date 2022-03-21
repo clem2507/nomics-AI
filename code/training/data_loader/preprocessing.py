@@ -36,9 +36,10 @@ class Preprocessing:
     -sliding_window: true to use sliding window with a small center portion of interest
     -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -full_sequence: true to feed the entire sequence without dividing it into multiple windows
     """
 
-    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1):
+    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1, full_sequence=False):
         self.directory = analysis_directory
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
@@ -50,6 +51,7 @@ class Preprocessing:
         self.stateful = stateful
         self.center_of_interest = center_of_interest
         self.task = task
+        self.full_sequence = full_sequence
         self.jawac_df_list = []
         self.mk3_df_list = []
         self.dataset = []
@@ -170,15 +172,17 @@ class Preprocessing:
         start_time = time.time()    # start timer variable used for the calculation of the total execution time 
 
         print('-----')
+        print(f'Task {self.task}')
         print(f'{self.downsampling_value} sec data resampling --> signal resolution: {1/self.downsampling_value} Hz')
-        if not self.stateful:
-            print(f'{self.segmentation_value} signal segmentation value (window size): {self.segmentation_value} min')
+        if not self.full_sequence:
+            print(f'{self.segmentation_value} signal segmentation value (window size): {self.segmentation_value} min, {self.segmentation_value*60} sec')
         if self.sliding_window:
             print(f'{self.sliding_window} center of interest value (in sec): {self.sliding_window/60} min')
         print(f'data balancing: {self.data_balancing}')
         print(f'stateful: {self.stateful}')
         print(f'standardization: {self.standard_scale}')
         print(f'sliding window: {self.sliding_window}')
+        print(f'full sequence: {self.full_sequence}')
         print('-----')
 
         self.split_dataframe()
@@ -189,11 +193,11 @@ class Preprocessing:
         y = []
         max_length = int(self.segmentation_value * (60 / self.downsampling_value))
         for arr in self.dataset:
-            if self.stateful:
+            if self.stateful or self.full_sequence:
                 zero_count+=arr[1][:].count(0)
                 one_count+=arr[1][:].count(1)
                 X.append(arr[0][:])
-                y.append(arr[1][:])
+                y.append(to_categorical(arr[1][:]))
             else:
                 if self.sliding_window:
                     temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), self.center_of_interest)][:-max_length//self.center_of_interest]
@@ -233,13 +237,13 @@ class Preprocessing:
                 else:
                     one_count += 1
 
-        if not self.stateful and not self.data_balancing:
+        if not self.stateful and not self.data_balancing and not self.full_sequence:
             X = np.reshape(X, (len(X), len(X[0]), 1))
             y = to_categorical(np.array(y))
             X, y = shuffle(X, y)
 
         # splitting the data into testing and training sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 

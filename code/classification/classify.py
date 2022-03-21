@@ -72,11 +72,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/best'
+    # model_path = str(most_recent_folder_path[0]) + '/best'
+    model_path = str(most_recent_folder_path[0]) + '/last'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    # model_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/best'
+    # info_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:11]
+    lines = lines[3:12]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
@@ -85,6 +88,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
+    full_sequence = bool(get_value_in_line(lines[8]))    # boolean value to feed the entire sequence without dividing it into multiple windows
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -130,8 +134,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     classes = []    # classes list holds the predicted labels
     threshold = 0.5    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
+    step_size = int((60 / downsampling_value) * segmentation_value)
     if not stateful:
-        minutes_per_class = segmentation_value
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
@@ -146,24 +150,33 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                     classes.append((idx, item[idx]))
             else:
                 classes.append((idx, 1))
+        classes.append((0, 0.5))
     else:
-        step_size = 60
-        minutes_per_class = 1
-        for i in range(0, len(data), batch_size*step_size):
-            if i+(batch_size*step_size) < len(data):
-                y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size*step_size], (batch_size, step_size, 1)))
-                for label in y_pred:
-                    pred_label = round(label[0])
-                    if pred_label == 0:
-                        if 1-y_pred[0][0] > threshold:
-                            classes.append((pred_label, 1-label[0]))
+        if not full_sequence:
+            for i in range(0, len(data), batch_size*step_size):
+                if i+(batch_size*step_size) < len(data):
+                    y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size*step_size], (batch_size, step_size, 1)))
+                    for label in y_pred:
+                        pred_label = round(label[0])
+                        if pred_label == 0:
+                            if 1-y_pred[0][0] > threshold:
+                                classes.append((pred_label, 1-label[0]))
+                            else:
+                                classes.append((1, 0.5))
                         else:
-                            classes.append((1, 0.5))
+                            classes.append((label, label[0]))
+        else:
+            y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
+            for label in y_pred:
+                idx = np.argmax(label)
+                if idx == 0:
+                    if label[idx] > threshold:
+                        classes.append((pred_label, 1-label[0]))
                     else:
-                        classes.append((label, label[0]))
-    classes.append((0, 0.5))
+                        classes.append((1, 0.5))
+                else:
+                    classes.append((label, label[0]))
 
-    step_size = int((60 / downsampling_value) * segmentation_value)
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
     df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
     for i in range(len(classes)):
@@ -188,8 +201,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 idx.append(i)
         previous_label = df_jawac.label[i]
 
-    valid_total = df_jawac['label'].value_counts()[1]    # counter for the total number of valid regions found
-    invalid_total = df_jawac['label'].value_counts()[0]    # counter for the total number of invalid regions found
+    if 1 in df_jawac['label'].value_counts().keys():
+        valid_total = df_jawac['label'].value_counts()[1]    # counter for the total number of valid regions found
+    else:
+        valid_total = 0
+    if 0 in df_jawac['label'].value_counts().keys():
+        invalid_total = df_jawac['label'].value_counts()[0]    # counter for the total number of invalid regions found
+    else:
+        invalid_total = 0
 
     total_valid_rate = valid_total / len(df_jawac)
     total_invalid_rate = invalid_total / len(df_jawac)
@@ -211,8 +230,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     print('--------')
 
-    if not is_valid(times[-1] - times[0], (valid_total * minutes_per_class) / 60):
-        raise Exception('---> Analysis invalid')
+    # if not is_valid(times[-1] - times[0], valid_hours):
+    #     raise Exception('---> Analysis invalid')
 
     print('---> Task 1 done!')
     print('Task 2...')
@@ -223,11 +242,12 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/best'
+    # model_path = str(most_recent_folder_path[0]) + '/best'
+    model_path = str(most_recent_folder_path[0]) + '/last'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:11]
+    lines = lines[3:12]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
@@ -236,6 +256,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
+    full_sequence = bool(get_value_in_line(lines[8]))    # boolean value to feed the entire sequence without dividing it into multiple windows
 
     # model loader
     if os.path.exists(model_path):
@@ -261,47 +282,46 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.9
-    minutes_per_class = (batch_size * downsampling_value)/60
+    threshold = 0.5
     classes = []
     step_size = int((60 / downsampling_value) * segmentation_value)
     if not stateful:
-        minutes_per_class = segmentation_value
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
             idx = np.argmax(item)
-            if model_name in ['cnn', 'lstm']:
+            if idx == 0:
+                if item[idx] > threshold:
+                    classes.append((idx, item[idx]))
+                else:
+                    classes.append((1, 0.5))
+            else:
+                classes.append((idx, item[idx]))
+    else:
+        if not full_sequence:
+            for i in range(0, len(X), batch_size*step_size):
+                if i+(batch_size*step_size) < len(X):
+                    y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size*step_size], (batch_size, step_size, 1)))
+                    for label in y_pred:
+                        pred_label = round(label[0])
+                        if pred_label == 0:
+                            if 1-label[0] > threshold:
+                                classes.append((pred_label, 1-label[0]))
+                            else:
+                                classes.append((1, 0.5))
+                        else:
+                            classes.append((pred_label, label[0]))
+        else:
+            y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
+            for label in y_pred:
+                idx = np.argmax(label)
                 if idx == 0:
-                    if item[idx] > threshold:
-                        classes.append((idx, item[idx]))
+                    if label[idx] > threshold:
+                        classes.append((pred_label, 1-label[0]))
                     else:
                         classes.append((1, 0.5))
                 else:
-                    classes.append((idx, item[idx]))
-            else:
-                classes.append((idx, 1))
-    else:
-        step_size = 60
-        for i in range(0, len(X), batch_size*step_size):
-            if i+(batch_size*step_size) < len(X):
-                y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size*step_size], (batch_size, step_size, 1)))
-                for label in y_pred:
-                    pred_label = round(label[0])
-                    # if pred_label == 1:
-                    #     if y_pred[0][0] > threshold:
-                    #         classes.append((pred_label, label[0]))
-                    #     else:
-                    #         classes.append((0, 0.5))
-                    # else:
-                    #     classes.append((pred_label, 1-label[0]))
-                    if pred_label == 0:
-                        if 1-y_pred[0][0] > threshold:
-                            classes.append((pred_label, 1-label[0]))
-                        else:
-                            classes.append((1, 0.5))
-                    else:
-                        classes.append((label, label[0]))
+                    classes.append((label, label[0]))
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):
