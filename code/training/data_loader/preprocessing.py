@@ -196,8 +196,11 @@ class Preprocessing:
             if self.stateful or self.full_sequence:
                 zero_count+=arr[1][:].count(0)
                 one_count+=arr[1][:].count(1)
-                X.append(arr[0][:])
-                y.append(to_categorical(arr[1][:]))
+                if len(arr[0]) >= 1 and len(arr[1]) >= 1:
+                    X.append(arr[0][:])
+                    y.append(to_categorical(arr[1][:]))
+                else:
+                    continue
             else:
                 if self.sliding_window:
                     temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), self.center_of_interest)][:-max_length//self.center_of_interest]

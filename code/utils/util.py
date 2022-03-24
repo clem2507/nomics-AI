@@ -507,6 +507,14 @@ def get_value_in_line(line):
     return out
 
 
+def multilabel_to_onelabel(classes):
+    out = []
+    for c in classes:
+        label = np.argmax(c)
+        out.append(label)
+    return out
+
+
 class TimingCallback(Callback):
     """
     Class used to save the training computation time after each epoch

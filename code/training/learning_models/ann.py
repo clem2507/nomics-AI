@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/da
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from preprocessing import Preprocessing
-from util import reduction, plot_confusion_matrix, TimingCallback, f1_m
+from util import reduction, plot_confusion_matrix, TimingCallback, f1_m, multilabel_to_onelabel
 
 
 def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence):
@@ -52,15 +52,16 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # directory creation
     save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
     os.mkdir(save_dir)
-    os.mkdir(f'{save_dir}/best')
+    if not stateful:
+        os.mkdir(f'{save_dir}/best')
 
-    checkpoint_filepath = f'{save_dir}/best'
-    model_checkpoint_callback = ModelCheckpoint(
-        filepath=checkpoint_filepath,
-        monitor='val_accuracy',
-        mode='max',
-        save_best_only=True
-    )
+        checkpoint_filepath = f'{save_dir}/best'
+        model_checkpoint_callback = ModelCheckpoint(
+            filepath=checkpoint_filepath,
+            monitor='val_accuracy',
+            mode='max',
+            save_best_only=True
+        )
 
     X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence).create_dataset()
 
@@ -255,9 +256,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                     pred_label = idx
                     classes.append(pred_label)
                     total_classes.append(pred_label)
-                total_y_test.append(y_test[i])
-                mean_te_acc.append(accuracy_score(y_test[i], classes))
-                mean_te_f1.append(f1_score(y_test[i], classes))
+                total_y_test.append(multilabel_to_onelabel(y_test[i]))
+                mean_te_acc.append(accuracy_score(multilabel_to_onelabel(y_test[i]), classes))
+                mean_te_f1.append(f1_score(multilabel_to_onelabel(y_test[i]), classes))
             model.reset_states()
 
         te_accuracy = np.mean(mean_te_acc)

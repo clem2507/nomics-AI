@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 
 from pathlib import Path
 from datetime import timedelta
@@ -72,8 +72,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    # model_path = str(most_recent_folder_path[0]) + '/best'
-    model_path = str(most_recent_folder_path[0]) + '/last'
+    model_path = str(most_recent_folder_path[0]) + '/best'
+    # model_path = str(most_recent_folder_path[0]) + '/last'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     # model_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/best'
     # info_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/info.txt'
@@ -125,10 +125,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
+    print('MODEL PATH:', model_path)
+
     # model loader
     if os.path.exists(model_path):
         if model_name in ['cnn', 'lstm']:
             model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
+            print('MODEL:', list(model.__dict__.keys()))
+            print('SIGNATURE:', model.signatures)
     else:
         raise Exception('model path does not exist')
 
@@ -502,8 +506,8 @@ if __name__ == '__main__':
 
 
     # Test cmd lines - patient data from 1 to 13
-    # python3 code/classification/classify.py --view_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
-    # python3 code/classification/classify.py --view_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
+    # python code/classification/classify.py --view_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
+    # python code/classification/classify.py --view_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
 
 
     opt = parse_opt()
