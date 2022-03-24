@@ -52,16 +52,14 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # directory creation
     save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
     os.mkdir(save_dir)
-    if not stateful:
-        os.mkdir(f'{save_dir}/best')
-
-        checkpoint_filepath = f'{save_dir}/best'
-        model_checkpoint_callback = ModelCheckpoint(
-            filepath=checkpoint_filepath,
-            monitor='val_accuracy',
-            mode='max',
-            save_best_only=True
-        )
+    os.mkdir(f'{save_dir}/best')
+    checkpoint_filepath = f'{save_dir}/best/model.h5'
+    model_checkpoint_callback = ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        monitor='f1_m',
+        mode='max',
+        save_best_only=True
+    )
 
     X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence).create_dataset()
 
@@ -133,7 +131,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # Stateful model
     else:
         max_length = int(segmentation_value * (60 / downsampling_value))
-        n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 2, 0.1, True
+        n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 1, 0.1, True
         # model.add(LSTM(500, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
         # model.add(Dropout(0.2))   # dropout -- 2
         # model.add(Dense(500, activation='relu'))   # fully connected layer -- 3
@@ -170,6 +168,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         print(f'# train samples = {len(X_train)}')
         print(f'# val samples = {len(X_val)}')
         print(f'# test samples = {len(X_test)}')
+
+        best_val_f1_score = 0
 
         # Stateful implementation with train_on_batch
         print('Model train...')
@@ -221,6 +221,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                     mean_val_f1.append(dic['f1_m'])
                 model.reset_states()
 
+            if np.mean(mean_val_f1) > best_val_f1_score:
+                best_val_f1_score = np.mean(mean_val_f1)
+                model.save(f'{save_dir}/best/model.h5')
+
             validation_loss_history.append(np.mean(mean_val_loss))
             validation_accuracy_history.append(np.mean(mean_val_acc))
             validation_f1_history.append(np.mean(mean_val_f1))
@@ -242,8 +246,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                     if j+(batch_size*n_timesteps) < len(X_test[i]):
                         y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)))
                         for label in y_pred:
-                            idx = np.argmax(label)
-                            pred_label = idx
+                            pred_label = round(label[0])
                             classes.append(pred_label)
                             total_classes.append(pred_label)
                 total_y_test.append(y_test[i][:len(classes)])
@@ -252,13 +255,12 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             else:
                 y_pred, *r = model.predict_on_batch(np.reshape(X_test[i], (batch_size, -1, n_features)))
                 for label in y_pred:
-                    idx = np.argmax(label)
-                    pred_label = idx
+                    pred_label = round(label[0])
                     classes.append(pred_label)
                     total_classes.append(pred_label)
-                total_y_test.append(multilabel_to_onelabel(y_test[i]))
-                mean_te_acc.append(accuracy_score(multilabel_to_onelabel(y_test[i]), classes))
-                mean_te_f1.append(f1_score(multilabel_to_onelabel(y_test[i]), classes))
+                total_y_test.append(y_test[i])
+                mean_te_acc.append(accuracy_score(y_test[i], classes))
+                mean_te_f1.append(f1_score(y_test[i], classes))
             model.reset_states()
 
         te_accuracy = np.mean(mean_te_acc)
@@ -361,7 +363,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
     # save of the model weights
     os.mkdir(f'{save_dir}/last')
-    save_model(model, f'{save_dir}/last')
+    model.save(f'{save_dir}/last/model.h5')
 
     return te_accuracy, te_f1
 

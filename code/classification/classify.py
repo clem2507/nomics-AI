@@ -72,8 +72,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/best'
-    # model_path = str(most_recent_folder_path[0]) + '/last'
+    model_path = str(most_recent_folder_path[0]) + '/best/model.h5'
+    # model_path = str(most_recent_folder_path[0]) + '/last/model.h5'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     # model_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/best'
     # info_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/info.txt'
@@ -125,14 +125,10 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    print('MODEL PATH:', model_path)
-
     # model loader
     if os.path.exists(model_path):
         if model_name in ['cnn', 'lstm']:
             model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
-            print('MODEL:', list(model.__dict__.keys()))
-            print('SIGNATURE:', model.signatures)
     else:
         raise Exception('model path does not exist')
 
@@ -172,14 +168,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         else:
             y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
             for label in y_pred:
-                idx = np.argmax(label)
-                if idx == 0:
-                    if label[idx] > threshold:
-                        classes.append((idx, 1-label[idx]))
+                pred_label = round(label[0])
+                if pred_label == 0:
+                    if 1-y_pred[0][0] > threshold:
+                        classes.append((pred_label, 1-label[0]))
                     else:
                         classes.append((1, 0.5))
                 else:
-                    classes.append((idx, label[idx]))
+                    classes.append((label, label[0]))
 
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
     df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
@@ -246,8 +242,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    # model_path = str(most_recent_folder_path[0]) + '/best'
-    model_path = str(most_recent_folder_path[0]) + '/last'
+    model_path = str(most_recent_folder_path[0]) + '/best/model.h5'
+    # model_path = str(most_recent_folder_path[0]) + '/last/model.h5'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
@@ -318,14 +314,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         else:
             y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
             for label in y_pred:
-                idx = np.argmax(label)
-                if idx == 0:
-                    if label[idx] > threshold:
-                        classes.append((idx, 1-label[idx]))
+                pred_label = round(label[0])
+                if pred_label == 0:
+                    if 1-label[0] > threshold:
+                        classes.append((pred_label, 1-label[0]))
                     else:
                         classes.append((1, 0.5))
                 else:
-                    classes.append((idx, label[idx]))
+                    classes.append((pred_label, label[0]))
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):

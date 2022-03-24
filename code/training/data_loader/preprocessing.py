@@ -198,7 +198,7 @@ class Preprocessing:
                 one_count+=arr[1][:].count(1)
                 if len(arr[0]) >= 1 and len(arr[1]) >= 1:
                     X.append(arr[0][:])
-                    y.append(to_categorical(arr[1][:]))
+                    y.append(arr[1][:])
                 else:
                     continue
             else:
