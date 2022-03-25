@@ -278,11 +278,11 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
             break
 
         if (0 in df.label.values and 1 in df.label.values) or (1 in df.label.values and 2 in df.label.values):
-            if (df.label.value_counts()[1] / len(df)) > threshold:
+            if (sum(df[df['label']==1].data_num.tolist()) / sum(df.data_num.tolist())) > threshold:
                 flag = True
             else:
-                first_half = df.iloc[:int(len(df) / 2), :]
-                second_half = df.iloc[int(len(df) / 2):, :]
+                first_half = df.iloc[:int(sum(df.data_num.tolist()) / 2), :]
+                second_half = df.iloc[int(sum(df.data_num.tolist()) / 2):, :]
                 if (0 in first_half.label.values and 0 in second_half.label.values):
                     if first_half.label.value_counts()[0] > second_half.label.value_counts()[0]:
                         df = df[1:]
@@ -305,6 +305,7 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
             new_start_time = analysis_start
             new_end_time = analysis_end
 
+    
     sleep_count = sum(df[df['label']==1].data_num.tolist())
     sleep_hours = (sleep_count * downsampling_value) / 3600
     sleep_rate = 0
@@ -464,7 +465,7 @@ def signal_quality(df):
     return score
 
 
-def reduction(y_test, batch_size):
+def reduction(y_test, batch_size, n_timesteps):
     """
     Method used to reduce the y test label according to the batch size
 
@@ -477,9 +478,9 @@ def reduction(y_test, batch_size):
     -out: the processed list
     """
     out = []
-    for i in range(0, len(y_test), batch_size):
-        if i + batch_size < len(y_test):
-            out.append(round(max(y_test[i:i+batch_size], key = y_test[i:i+batch_size].count)))
+    for i in range(0, len(y_test), batch_size*n_timesteps):
+        if i + (batch_size*n_timesteps) < len(y_test):
+            out.append(round(max(y_test[i:i+(batch_size*n_timesteps)], key = y_test[i:i+(batch_size*n_timesteps)].count)))
     return out
 
 

@@ -37,7 +37,7 @@ def define_model(len_ts=None, hidden_neurons=10, nfeature=1, batch_size=None, st
     return(model,(inp,rnn,dens))
 
 
-def train_model(analysis_directory, model_name='lstm', segmentation_value=1, downsampling_value=1, epochs=10, data_balancing=False, batch_size=1, standard_scale=False, stateful=True, task=2):
+def train_model(analysis_directory, model_name='lstm', segmentation_value=60, downsampling_value=1, epochs=10, data_balancing=False, batch_size=1, standard_scale=False, stateful=True, task=2):
     h_units = 64
     len_ts = 30
     model_stateful, _ = define_model(

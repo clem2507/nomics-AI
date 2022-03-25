@@ -14,7 +14,7 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
@@ -31,7 +31,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
     -analysis_directory: directory path containing the analyses to create the dataframes
     -model_name: name of the model to train, either CNN or LSTM
-    -segmentation_value: window segmentation value in minute
+    -segmentation_value: window segmentation value in second
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
     -data_balancing: true if balanced data is needed, false otherwise
@@ -60,6 +60,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         mode='max',
         save_best_only=True
     )
+
+    early_stop = EarlyStopping(monitor='val_f1', mode='max', patience=10)
 
     X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence).create_dataset()
 
@@ -103,7 +105,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
         time_callback = TimingCallback()
 
-        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback, model_checkpoint_callback])
+        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback, model_checkpoint_callback, early_stop])
 
         computation_time_history = time_callback.logs
 
@@ -113,7 +115,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         training_f1_history = history.history['f1_m']
         validation_loss_history = history.history['val_loss']
         validation_accuracy_history = history.history['val_accuracy']
-        validation_f1_history = history.history['f1_m']
+        validation_f1_history = history.history['val_f1_m']
 
         # evaluate model
         dic = model.evaluate(X_test, y_test, batch_size=batch_size, verbose=verbose, return_dict=True)
@@ -130,7 +132,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         y_test = total_y_test
     # Stateful model
     else:
-        max_length = int(segmentation_value * (60 / downsampling_value))
+        max_length = int(segmentation_value * (1 / downsampling_value))
         n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 1, 0.1, True
         # model.add(LSTM(500, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
         # model.add(Dropout(0.2))   # dropout -- 2
@@ -249,9 +251,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                             pred_label = round(label[0])
                             classes.append(pred_label)
                             total_classes.append(pred_label)
-                total_y_test.append(y_test[i][:len(classes)])
-                mean_te_acc.append(accuracy_score(y_test[i][:len(classes)], classes))
-                mean_te_f1.append(f1_score(y_test[i][:len(classes)], classes))
+                reducted_y_test = reduction(y_test[i], batch_size, n_timesteps)
+                total_y_test.append(reducted_y_test)
+                mean_te_acc.append(accuracy_score(reducted_y_test, classes))
+                mean_te_f1.append(f1_score(reducted_y_test, classes))
             else:
                 y_pred, *r = model.predict_on_batch(np.reshape(X_test[i], (batch_size, -1, n_features)))
                 for label in y_pred:
@@ -293,7 +296,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.write('--- \n')
     model_info_file.write(f'Log time = {log_time} \n')
     model_info_file.write('--- \n')
-    model_info_file.write(f'Num of epochs = {epochs} \n')
+    model_info_file.write(f'Num of epochs = {epochs}, early stop after {len(training_loss_history)} epochs \n')
     model_info_file.write(f'Epochs training computation time history (in sec) = {computation_time_history} \n')
     model_info_file.write(f'Epochs training computation time mean (in sec) = {statistics.mean(computation_time_history)} \n')
     model_info_file.write('--- \n')
@@ -376,7 +379,7 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
 
     -analysis_directory: directory path containing the analyses to create the dataframes
     -model: name of the model to train, either CNN or LSTM
-    -segmentation_value: window segmentation value in minute
+    -segmentation_value: window segmentation value in second
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
     -data_balancing: true if balanced data is needed, false otherwise

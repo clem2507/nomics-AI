@@ -36,7 +36,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     Parameters:
 
     -edf (--edf): edf file path containing time series data
-    -model (--model): learning model architecture, either CNN, LSTM or KNN
+    -model (--model): learning model architecture, either CNN or LSTM
     -view_graph (--view_graph): true to show the output graph, false to skip it and only use the output dictionary
     -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
     -task (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
@@ -81,14 +81,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     lines = info_file.readlines()
     lines = lines[3:12]
     
-    segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
+    segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
     batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
     standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
     stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
-    full_sequence = bool(get_value_in_line(lines[8]))    # boolean value to feed the entire sequence without dividing it into multiple windows
+    full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -110,13 +110,13 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     print('Task 1...')
 
-    # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
+    # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in second
     if not stateful:
-        size = int((60 / downsampling_value) * segmentation_value)
+        size = int((1 / downsampling_value) * segmentation_value)
         if not sliding_window:
             X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
         else:
-            size = int(segmentation_value * 60)   # in sec
+            size = int(segmentation_value)   # in sec
             X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
@@ -130,11 +130,11 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         if model_name in ['cnn', 'lstm']:
             model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
     else:
-        raise Exception('model path does not exist')
+        raise Exception(model_path, '-> model path does not exist')
 
     classes = []    # classes list holds the predicted labels
     threshold = 0.5    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
-    step_size = int((60 / downsampling_value) * segmentation_value)
+    step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
@@ -152,6 +152,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                 classes.append((idx, 1))
         classes.append((0, 0.5))
     else:
+        step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
         if not full_sequence:
             for i in range(0, len(data), batch_size*step_size):
                 if i+(batch_size*step_size) < len(data):
@@ -249,27 +250,27 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     lines = info_file.readlines()
     lines = lines[3:12]
     
-    segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in minute
+    segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
     batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
     standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
     stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
-    full_sequence = bool(get_value_in_line(lines[8]))    # boolean value to feed the entire sequence without dividing it into multiple windows
+    full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
 
     # model loader
     if os.path.exists(model_path):
         if model_name in ['cnn', 'lstm']:
             model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
     else:
-        raise Exception('model path does not exist')
+        raise Exception(model_path, '-> model path does not exist')
 
     X = df_jawac[df_jawac['label']==1].data.tolist()
 
-    # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in minute
+    # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in second
     if not stateful:
-        size = int((60 / downsampling_value) * segmentation_value)
+        size = int((1 / downsampling_value) * segmentation_value)
         if not sliding_window:
             X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), size)], dtype=object)
         else:
@@ -284,7 +285,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
 
     threshold = 0.5
     classes = []
-    step_size = int((60 / downsampling_value) * segmentation_value)
+    step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values

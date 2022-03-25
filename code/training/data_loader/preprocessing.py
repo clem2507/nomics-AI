@@ -27,7 +27,7 @@ class Preprocessing:
     Attributes:
 
     -analysis_directory: directory path containing the analyses to create the dataframes
-    -segmentation_value: window segmentation value in minute
+    -segmentation_value: window segmentation value in second
     -downsampling_value: signal downsampling value in second
     -data_balancing: true is balanced data is needed, false otherwise
     -log_time: save the time when the computation starts for the directory name
@@ -39,7 +39,7 @@ class Preprocessing:
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
     """
 
-    def __init__(self, analysis_directory='', segmentation_value=1, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1, full_sequence=False):
+    def __init__(self, analysis_directory='', segmentation_value=60, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1, full_sequence=False):
         self.directory = analysis_directory
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
@@ -175,7 +175,7 @@ class Preprocessing:
         print(f'Task {self.task}')
         print(f'{self.downsampling_value} sec data resampling --> signal resolution: {1/self.downsampling_value} Hz')
         if not self.full_sequence:
-            print(f'{self.segmentation_value} signal segmentation value (window size): {self.segmentation_value} min, {self.segmentation_value*60} sec')
+            print(f'{self.segmentation_value} signal segmentation value (window size): {round(self.segmentation_value/60, 4)} min, {self.segmentation_value} sec')
         if self.sliding_window:
             print(f'center of interest value (in sec): {self.center_of_interest/60} min')
         print(f'data balancing: {self.data_balancing}')
@@ -191,7 +191,7 @@ class Preprocessing:
         zero_count = 0
         X = []
         y = []
-        max_length = int(self.segmentation_value * (60 / self.downsampling_value))
+        max_length = int(self.segmentation_value * (1 / self.downsampling_value))
         for arr in self.dataset:
             if self.stateful or self.full_sequence:
                 zero_count+=arr[1][:].count(0)
