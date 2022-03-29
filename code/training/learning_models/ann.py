@@ -13,7 +13,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense
+from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Activation
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
@@ -61,7 +61,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         save_best_only=True
     )
 
-    early_stop = EarlyStopping(monitor='val_f1', mode='max', patience=10)
+    early_stop = EarlyStopping(monitor='val_f1_m', mode='max', patience=20)
 
     X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence).create_dataset()
 
@@ -82,24 +82,19 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Dense(64, activation='relu'))   # fully connected layer -- 6 -- Output size 1 x 64
             model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
             model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
-            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
         elif model_name == 'lstm':
-            # model.add(LSTM(500, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
-            # model.add(Dropout(0.2))   # dropout -- 2
-            # model.add(Dense(500, activation='relu'))   # fully connected layer -- 3
-            # model.add(Dropout(0.2))   # dropout -- 4
-            # model.add(Dense(200, activation='relu'))   # fully connected layer -- 5
-            # model.add(Dropout(0.2))   # dropout -- 6
-            # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 7
-            
-            model.add(LSTM(20, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
-            model.add(Dense(20, activation='relu'))   # fully connected layer -- 2
-            model.add(Dropout(0.2))   # dropout -- 3
-            model.add(Dense(10, activation='relu'))   # fully connected layer -- 4
-            model.add(Dropout(0.2))   # dropout -- 5
-            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 6
+            lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
+            model.add(LSTM(units=lstm_units, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            model.add(Dropout(0.2))   # dropout -- 2
+            model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
+            model.add(Dropout(0.2))   # dropout -- 4
+            model.add(Dense(lstm_units//4, activation='relu'))   # fully connected layer -- 5
+            model.add(Dropout(0.2))   # dropout -- 6
+            model.add(Dense(units=n_outputs))   # fully connected layer -- 7
+            model.add(Activation('softmax'))   # activation -- 8
 
-            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
 
         print(model.summary())
 
@@ -133,25 +128,23 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # Stateful model
     else:
         max_length = int(segmentation_value * (1 / downsampling_value))
-        n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 1, 0.1, True
-        # model.add(LSTM(500, batch_input_shape=(batch_size, max_length, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
-        # model.add(Dropout(0.2))   # dropout -- 2
-        # model.add(Dense(500, activation='relu'))   # fully connected layer -- 3
-        # model.add(Dropout(0.2))   # dropout -- 4
-        # model.add(Dense(200, activation='relu'))   # fully connected layer -- 5
-        # model.add(Dropout(0.2))   # dropout -- 6
-        # model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 7
-
+        n_features, n_outputs, validation_split, return_sequences = 1, 1, 0.1, True
         if full_sequence:
             n_timesteps = None
+            lstm_units = 200
+        else:
+            n_timesteps = max_length
+            lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
+        model.add(LSTM(units=lstm_units, batch_input_shape=(batch_size, n_timesteps, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
+        model.add(Dropout(0.2))   # dropout -- 2
+        model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
+        model.add(Dropout(0.2))   # dropout -- 4
+        model.add(Dense(lstm_units//4, activation='relu'))   # fully connected layer -- 5
+        model.add(Dropout(0.2))   # dropout -- 6
+        model.add(Dense(units=n_outputs))   # fully connected layer -- 7
+        model.add(Activation('sigmoid'))   # activation -- 8
 
-        model.add(LSTM(20, batch_input_shape=(batch_size, n_timesteps, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
-        model.add(Dense(20, activation='relu'))   # fully connected layer -- 2
-        model.add(Dropout(0.2))   # dropout -- 3
-        model.add(Dense(10, activation='relu'))   # fully connected layer -- 4
-        model.add(Dropout(0.2))   # dropout -- 5
-        model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 6
-
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1_m])
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1_m])
 
         print(model.summary())
@@ -186,6 +179,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                 if not full_sequence:
                     for j in range(0, len(X_train[i]), batch_size*n_timesteps):
                         if j+(batch_size*n_timesteps) < len(X_train[i]):
+                            # print(X_train[i])
+                            # print(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)).shape)
+                            # print(np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)).shape)
                             dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
                             mean_tr_loss.append(dic['loss'])
                             mean_tr_acc.append(dic['acc'])
@@ -312,7 +308,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.write(f'True classification of the model is likely between {te_accuracy - interval} and {te_accuracy + interval} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Test accuracy = {te_accuracy} \n')
-    model_info_file.write(f'Confusion matrix (invalid | valid) = \n {cm} \n')
+    model_info_file.write(f'Confusion matrix (0 | 1) = \n {cm} \n')
     model_info_file.write('--- \n')
     model_info_file.close()
 
@@ -330,7 +326,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # chart with the learning curves creation
     figure, axes = plt.subplots(nrows=3, ncols=1)
 
-    x = list(range(1, epochs + 1))
+    x = list(range(1, len(training_loss_history) + 1))
 
     axes[0].plot(x, training_loss_history, label='train loss')
     axes[0].plot(x, validation_loss_history, label='val loss')

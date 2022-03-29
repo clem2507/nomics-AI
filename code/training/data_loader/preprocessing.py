@@ -175,9 +175,9 @@ class Preprocessing:
         print(f'Task {self.task}')
         print(f'{self.downsampling_value} sec data resampling --> signal resolution: {1/self.downsampling_value} Hz')
         if not self.full_sequence:
-            print(f'{self.segmentation_value} signal segmentation value (window size): {round(self.segmentation_value/60, 4)} min, {self.segmentation_value} sec')
+            print(f'signal segmentation value (window size): {round(self.segmentation_value/60, 4)} min, {self.segmentation_value} sec')
         if self.sliding_window:
-            print(f'center of interest value (in sec): {self.center_of_interest/60} min')
+            print(f'center of interest value: {self.center_of_interest/60} min, {self.center_of_interest} sec')
         print(f'data balancing: {self.data_balancing}')
         print(f'stateful: {self.stateful}')
         print(f'standardization: {self.standard_scale}')

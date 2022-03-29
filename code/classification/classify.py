@@ -274,7 +274,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
         if not sliding_window:
             X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), size)], dtype=object)
         else:
-            size = int(segmentation_value * 60)   # in sec
+            size = int(segmentation_value)   # in sec
             X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
