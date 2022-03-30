@@ -6,7 +6,6 @@ import statistics
 import numpy as np
 
 from math import sqrt
-from tensorflow.keras.models import save_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
 
@@ -134,7 +133,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             lstm_units = 200
         else:
             n_timesteps = max_length
-            lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
+            lstm_units = max(8, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
         model.add(LSTM(units=lstm_units, batch_input_shape=(batch_size, n_timesteps, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
         model.add(Dropout(0.2))   # dropout -- 2
         model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
@@ -144,7 +143,6 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         model.add(Dense(units=n_outputs))   # fully connected layer -- 7
         model.add(Activation('sigmoid'))   # activation -- 8
 
-        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1_m])
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1_m])
 
         print(model.summary())
@@ -179,10 +177,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                 if not full_sequence:
                     for j in range(0, len(X_train[i]), batch_size*n_timesteps):
                         if j+(batch_size*n_timesteps) < len(X_train[i]):
-                            # print(X_train[i])
-                            # print(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)).shape)
-                            # print(np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)).shape)
-                            dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
+                            if return_sequences:
+                                dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
+                            else:
+                                dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_train[i][j:j+step], key=y_train[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
                             mean_tr_loss.append(dic['loss'])
                             mean_tr_acc.append(dic['acc'])
                             mean_tr_f1.append(dic['f1_m'])
@@ -208,7 +206,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                 if not full_sequence:
                     for j in range(0, len(X_val[i]), batch_size*n_timesteps):
                         if j+(batch_size*n_timesteps) < len(X_val[i]):
-                            dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_val[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
+                            if return_sequences:
+                                dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_val[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
+                            else:
+                                dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_val[i][j:j+step], key=y_val[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
                             mean_val_loss.append(dic['loss'])
                             mean_val_acc.append(dic['acc'])
                             mean_val_f1.append(dic['f1_m'])
@@ -244,7 +245,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                     if j+(batch_size*n_timesteps) < len(X_test[i]):
                         y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)))
                         for label in y_pred:
-                            pred_label = round(label[0])
+                            if return_sequences:
+                                pred_label = round(label[0])
+                            else:
+                                pred_label = round(label)
                             classes.append(pred_label)
                             total_classes.append(pred_label)
                 reducted_y_test = reduction(y_test[i], batch_size, n_timesteps)

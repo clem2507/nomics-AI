@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, get_value_in_line, extract_data_from_line, string_datetime_conversion
 
 
-def analysis_classification(edf, model, view_graph, plt_save_path):
+def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     """
     Primary function for classifying an edf patient file
 
@@ -39,7 +39,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
     -model (--model): learning model architecture, either CNN or LSTM
     -view_graph (--view_graph): true to show the output graph, false to skip it and only use the output dictionary
     -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
-    -task (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -block_print (--block_print): true to block dictionary output print in terminal
 
     Returns:
 
@@ -62,7 +62,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path):
                             -'plot'
     """
 
-    # block_print()
+    if block_print:
+        block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
@@ -485,7 +486,9 @@ def parse_opt():
     parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
     parser.add_argument('--view_graph', dest='view_graph', action='store_true', help='invoke to view the output graph')
     parser.add_argument('--plt_save_path', type=str, default='', help='path to save a .png copy file of the output plot if desired')
+    parser.add_argument('--block_print', dest='block_print', action='store_true', help='invoke to block dictionary output print in terminal')
     parser.set_defaults(view_graph=False)
+    parser.set_defaults(block_print=False)
     return parser.parse_args()
 
 
@@ -494,6 +497,14 @@ def main(p):
     print('-------- OUTPUT DICTIONARY --------')
     print(out_dic)
     print('-----------------------------------')
+
+    # from random import shuffle
+    # dir = '/Users/clemdetry/My Drive/nomics/data/all_valid_analysis'
+    # dir_list = os.listdir(dir)
+    # shuffle(dir_list)
+    # for path in dir_list:
+    #     if os.path.exists(f'{dir}/{path}/{path}.edf'):
+    #         analysis_classification(f'{dir}/{path}/{path}.edf', 'lstm', True, '')
 
 
 if __name__ == '__main__':

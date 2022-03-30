@@ -5,7 +5,6 @@ import time
 import shutil
 import numpy as np
 import pandas as pd
-from scipy.misc import central_diff_weights
 
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
