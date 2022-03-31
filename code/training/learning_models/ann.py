@@ -1,3 +1,6 @@
+import wandb
+from wandb.keras import WandbCallback
+
 import os
 import sys
 import time
@@ -48,6 +51,13 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -accuracy: model accuracy on the testing set
     """
 
+    wandb.init(project="nomics-AI", entity="nomics")
+
+    wandb.config = {
+        "epochs": epochs,
+        "batch_size": batch_size
+    }
+
     # directory creation
     save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
     os.mkdir(save_dir)
@@ -55,12 +65,18 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     checkpoint_filepath = f'{save_dir}/best/model.h5'
     model_checkpoint_callback = ModelCheckpoint(
         filepath=checkpoint_filepath,
-        monitor='f1_m',
+        monitor='val_loss',
         mode='max',
         save_best_only=True
     )
 
-    early_stop = EarlyStopping(monitor='val_f1_m', mode='max', patience=20)
+    early_stop = EarlyStopping(
+        monitor='val_loss', 
+        mode='min', 
+        patience=10, 
+        restore_best_weights=True, 
+        min_delta=1e-3
+    )
 
     X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence).create_dataset()
 
@@ -80,7 +96,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Flatten())   # flatten layer -- 5 -- Output size 1 x 448
             model.add(Dense(64, activation='relu'))   # fully connected layer -- 6 -- Output size 1 x 64
             model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
-            model.add(Dense(n_outputs, activation='sigmoid'))   # fully connected layer -- 8 -- Output size 1 x 2
+            model.add(Dense(32, activation='relu'))   # fully connected layer -- 8 -- Output size 1 x 32
+            model.add(Dropout(0.2))   # dropout -- 9 -- Output size 1 x 32
+            model.add(Dense(n_outputs))   # fully connected layer -- 10 -- Output size 1 x 2
+            model.add(Activation(activation='softmax'))   # activation layer -- 11 -- Output size 1 x 2
         elif model_name == 'lstm':
             lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
             model.add(LSTM(units=lstm_units, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
@@ -99,7 +118,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
         time_callback = TimingCallback()
 
-        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback, model_checkpoint_callback, early_stop])
+        history = model.fit(X_train, y_train, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=[time_callback, model_checkpoint_callback, early_stop, WandbCallback()])
 
         computation_time_history = time_callback.logs
 
@@ -223,6 +242,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             if np.mean(mean_val_f1) > best_val_f1_score:
                 best_val_f1_score = np.mean(mean_val_f1)
                 model.save(f'{save_dir}/best/model.h5')
+                wandb.save(f'{save_dir}/best/model.h5')
 
             validation_loss_history.append(np.mean(mean_val_loss))
             validation_accuracy_history.append(np.mean(mean_val_acc))
@@ -365,8 +385,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     plt.close(fig=figure)
 
     # save of the model weights
-    os.mkdir(f'{save_dir}/last')
-    model.save(f'{save_dir}/last/model.h5')
+    # os.mkdir(f'{save_dir}/last')
+    # model.save(f'{save_dir}/last/model.h5')
+    # wandb.save(f'{save_dir}/last/model.h5')
 
     return te_accuracy, te_f1
 

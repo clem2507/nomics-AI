@@ -73,11 +73,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/best/model.h5'
-    # model_path = str(most_recent_folder_path[0]) + '/last/model.h5'
+    model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
-    # model_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/best'
-    # info_path = '/Users/clemdetry/Documents/Nomics/jawac_processing_nomics/models/task1/lstm/30-12-2021 12-00-00' + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
     lines = lines[3:12]
@@ -244,8 +241,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
     most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
 
-    model_path = str(most_recent_folder_path[0]) + '/best/model.h5'
-    # model_path = str(most_recent_folder_path[0]) + '/last/model.h5'
+    model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
