@@ -12,7 +12,7 @@ from preprocessing import Preprocessing
 from ann import train_model as ann_train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, batch, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence):
+def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, batch, patience, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence, return_sequences):
     """
     Primary function for training the CNN or LSTM model
 
@@ -25,12 +25,14 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     -epochs (--epochs): number of epochs to train the model
     -data_balancing (--data_balancing): true if balanced data is needed, false otherwise
     -batch (--batch): batch size for training
+    -patience (--patience): number of epochs without learning before early stop the training
     -standard_scaled (--standard_scale): true to perform a standardizatin by centering and scaling the data
     -stateful (--stateful): true to use stateful LSTM instead of stateless
     -sliding_window (--sliding_window): true to use sliding window with a small center portion of interest
     -center_of_interest (--center_of_interest): center of interest size in seconds for the sliding window
     -task (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -full_sequence (--full_sequence): true to feed the entire sequence without dividing it into multiple windows
+    -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
     """
 
     segmentation_value = float(segmentation_value)
@@ -45,7 +47,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
         raise Exception('input directory does not exist')
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
-        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, standard_scale=standard_scale, stateful=stateful, sliding_window=sliding_window, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence)
+        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, patience=patience, standard_scale=standard_scale, stateful=stateful, sliding_window=sliding_window, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence, return_sequences=return_sequences)
     else:
         raise Exception('model type does not exist, please choose between LSTM and CNN')
 
@@ -58,17 +60,20 @@ def parse_opt():
     parser.add_argument('--epochs', type=int, default=5, help='total number of epochs for training')
     parser.add_argument('--balance', dest='data_balancing', action='store_true', help='invoke to not balance the dataset instances')
     parser.add_argument('--batch', type=int, default=30, help='batch size for training')
+    parser.add_argument('--patience', type=int, default=10, help='number of epochs without learning before early stop the training')
     parser.add_argument('--standard_scale', dest='standard_scale', action='store_true', help='invoke to perform a standardizatin by centering and scaling the data')
     parser.add_argument('--stateful', dest='stateful', action='store_true', help='invoke to use stateful LSTM instead of stateless')
     parser.add_argument('--sliding_window', dest='sliding_window', action='store_true', help='invoke to use sliding window with a small center portion of interest')
     parser.add_argument('--center_of_interest', type=int, default=10, help='center of interest size in seconds for the sliding window')
     parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
     parser.add_argument('--full_sequence', dest='full_sequence', action='store_true', help='invoke to feed the entire sequence without dividing it into multiple windows')
+    parser.add_argument('--return_sequences', dest='return_sequences', action='store_true', help='invoke to return the state of each data point in the full sequence for the LSTM model')
     parser.set_defaults(data_balancing=False)
     parser.set_defaults(standard_scale=False)
     parser.set_defaults(stateful=False)
     parser.set_defaults(sliding_window=False)
     parser.set_defaults(full_sequence=False)
+    parser.set_defaults(return_sequences=False)
     return parser.parse_args()
 
 
@@ -85,11 +90,11 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN - valid/invalid
-    # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 200 --model 'cnn' --batch 32 --task 1
+    # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 1
     # CNN - awake/sleep
-    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 200 --model 'cnn' --batch 32 --task 2
+    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 2
 
     # LSTM - valid/invalid
-    # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 200 --model 'lstm' --batch 32 --task 1
+    # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'lstm' --batch 32 --task 1
     # LSTM - awake/sleep
-    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 60 --epochs 200 --model 'lstm' --batch 32 --stateful --task 2
+    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 1 --segmentation_value 180 --center_of_interest 60 --sliding_window --return_sequences --epochs 100 --model 'lstm' --batch 32 --task 2

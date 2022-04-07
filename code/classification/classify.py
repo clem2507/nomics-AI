@@ -26,7 +26,7 @@ from matplotlib.lines import Line2D
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
-from util import datetime_conversion, f1_m, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, get_value_in_line, extract_data_from_line, string_datetime_conversion
+from util import datetime_conversion, f1, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, get_value_in_line, extract_data_from_line, string_datetime_conversion
 
 
 def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
@@ -77,7 +77,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:12]
+    lines = lines[3:13]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
@@ -87,6 +87,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
     full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
+    return_sequences = bool(int(get_value_in_line(lines[9])))    # boolean value to return the state of each data point in the full sequence for the LSTM model
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
@@ -126,7 +127,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     # model loader
     if os.path.exists(model_path):
         if model_name in ['cnn', 'lstm']:
-            model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
+            model = load_model(model_path, compile=True, custom_objects={'f1': f1})
     else:
         raise Exception(model_path, '-> model path does not exist')
 
@@ -137,8 +138,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
-            idx = np.argmax(item)
-            if model_name in ['cnn', 'lstm']:
+            if not return_sequences:
+                idx = np.argmax(item)
                 if idx == 0:
                     if item[idx] > threshold:
                         classes.append((idx, item[idx]))
@@ -147,7 +148,15 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
                 else:
                     classes.append((idx, item[idx]))
             else:
-                classes.append((idx, 1))
+                labels = np.argmax(item, axis=1)
+                for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
+                    if labels[i] == 0:
+                        if item[i][labels[i]] > threshold:
+                            classes.append((labels[i], item[i][labels[i]]))
+                        else:
+                            classes.append((1, 0.5))
+                    else:
+                        classes.append((labels[i], item[i][labels[i]]))
         classes.append((0, 0.5))
     else:
         step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
@@ -245,7 +254,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     info_path = str(most_recent_folder_path[0]) + '/info.txt'
     info_file = open(info_path)
     lines = info_file.readlines()
-    lines = lines[3:12]
+    lines = lines[3:13]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
@@ -255,11 +264,12 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
     full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
+    return_sequences = bool(int(get_value_in_line(lines[9])))    # boolean value to return the state of each data point in the full sequence for the LSTM model
 
     # model loader
     if os.path.exists(model_path):
         if model_name in ['cnn', 'lstm']:
-            model = load_model(model_path, compile=True, custom_objects={'f1_m': f1_m})
+            model = load_model(model_path, compile=True, custom_objects={'f1': f1})
     else:
         raise Exception(model_path, '-> model path does not exist')
 
@@ -287,14 +297,25 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
         for item in predictions[:-1]:
-            idx = np.argmax(item)
-            if idx == 0:
-                if item[idx] > threshold:
-                    classes.append((idx, item[idx]))
+            if not return_sequences:
+                idx = np.argmax(item)
+                if idx == 0:
+                    if item[idx] > threshold:
+                        classes.append((idx, item[idx]))
+                    else:
+                        classes.append((1, 0.5))
                 else:
-                    classes.append((1, 0.5))
+                    classes.append((idx, item[idx]))
             else:
-                classes.append((idx, item[idx]))
+                labels = np.argmax(item, axis=1)
+                for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
+                    if labels[i] == 0:
+                        if item[i][labels[i]] > threshold:
+                            classes.append((labels[i], item[i][labels[i]]))
+                        else:
+                            classes.append((1, 0.5))
+                    else:
+                        classes.append((labels[i], item[i][labels[i]]))
     else:
         if not full_sequence:
             for i in range(0, len(X), batch_size*step_size):
@@ -324,7 +345,10 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
     for i in range(len(classes)):
         if sliding_window:
-            mask = df_jawac_only_valid.index[(step_size//2)+(i*center_of_interest)-(center_of_interest//2):(step_size//2)+(i*center_of_interest)+(center_of_interest//2)]
+            if not return_sequences:
+                mask = df_jawac_only_valid.index[(step_size//2)+(i*center_of_interest)-(center_of_interest//2):(step_size//2)+(i*center_of_interest)+(center_of_interest//2)]
+            else:
+                mask = df_jawac_only_valid.index[i]
         else:
             mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
         if classes[i][0] == 0:

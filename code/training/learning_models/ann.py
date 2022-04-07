@@ -22,10 +22,10 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/da
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
 from preprocessing import Preprocessing
-from util import reduction, plot_confusion_matrix, TimingCallback, f1_m, multilabel_to_onelabel
+from util import reduction, plot_confusion_matrix, TimingCallback, f1
 
 
-def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence):
+def evaluate_model(analysis_directory, model_name, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, patience, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence, return_sequences):
     """
     Method used to create and evaluate a deep learning model on data, either CNN or LSTM
 
@@ -39,12 +39,14 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     -data_balancing: true if balanced data is needed, false otherwise
     -log_time: save the time when the computation starts for the directory name
     -batch_size: batch size for training
+    -patience: number of epochs without learning before early stop the training
     -standard_scale: true to perform a standardizatin by centering and scaling the data
     -stateful: true to use stateful LSTM instead of stateless
     -sliding_window: true to use sliding window with a small center portion of interest
     -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
+    -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
 
     Returns:
 
@@ -62,7 +64,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
     os.mkdir(save_dir)
     os.mkdir(f'{save_dir}/best')
-    checkpoint_filepath = f'{save_dir}/best/model.h5'
+    checkpoint_filepath = f'{save_dir}/best/model-best.h5'
     model_checkpoint_callback = ModelCheckpoint(
         filepath=checkpoint_filepath,
         monitor='val_loss',
@@ -71,22 +73,22 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     )
 
     early_stop = EarlyStopping(
-        monitor='val_loss', 
-        mode='min', 
-        patience=10, 
-        restore_best_weights=True, 
+        monitor='val_loss',
+        mode='min',
+        patience=patience,
+        restore_best_weights=True,
         min_delta=1e-3
     )
 
-    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence).create_dataset()
+    X_train, y_train, X_test, y_test = Preprocessing(analysis_directory=analysis_directory, segmentation_value=segmentation_value, downsampling_value=downsampling_value, data_balancing=data_balancing, log_time=log_time, standard_scale=standard_scale, sliding_window=sliding_window, stateful=stateful, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence, return_sequences=return_sequences).create_dataset()
 
     model = Sequential()
     # Stateless model
     if not stateful:
         if not full_sequence:
-            n_timesteps, n_features, n_outputs, validation_split, verbose = X_train.shape[1], X_train.shape[2], y_train.shape[1], 0.1, 1
+            n_timesteps, n_features, n_outputs, validation_split, verbose = X_train.shape[1], 1, 2, 0.1, 1
         else:
-            n_timesteps, n_features, n_outputs, validation_split, verbose = None, len(X_train[0]), len(y_train[0]), 0.1, 1
+            n_timesteps, n_features, n_outputs, validation_split, verbose = None, 1, 2, 0.1, 1
         if model_name == 'cnn':
             # using 1Hz resolution and 1 minute window -- 60 sample size
             model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
@@ -102,7 +104,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Activation(activation='softmax'))   # activation layer -- 11 -- Output size 1 x 2
         elif model_name == 'lstm':
             lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
-            model.add(LSTM(units=lstm_units, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, batch_input_shape=(batch_size, n_timesteps, n_features)))   # lstm layer -- 1
+            if return_sequences:
+                model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf))   # lstm layer -- 1'
             model.add(Dropout(0.2))   # dropout -- 2
             model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
             model.add(Dropout(0.2))   # dropout -- 4
@@ -111,8 +115,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Dense(units=n_outputs))   # fully connected layer -- 7
             model.add(Activation('softmax'))   # activation -- 8
 
-        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1_m])
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', f1])
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1])
 
         print(model.summary())
 
@@ -125,34 +129,46 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         # metrics history epochs after epochs
         training_loss_history = history.history['loss']
         training_accuracy_history = history.history['accuracy']
-        training_f1_history = history.history['f1_m']
+        training_f1_history = history.history['f1']
         validation_loss_history = history.history['val_loss']
         validation_accuracy_history = history.history['val_accuracy']
-        validation_f1_history = history.history['val_f1_m']
+        validation_f1_history = history.history['val_f1']
 
         # evaluate model
         dic = model.evaluate(X_test, y_test, batch_size=batch_size, verbose=verbose, return_dict=True)
 
         te_accuracy = dic['accuracy']
-        te_f1 = dic['f1_m']
+        te_f1 = dic['f1']
 
         predictions = model.predict(X_test)
-        classes = np.argmax(predictions, axis=1)
+        if not return_sequences:
+            classes = np.argmax(predictions, axis=1)
+        else:
+            classes = np.argmax(predictions, axis=2)
 
         total_y_test = []
         for item in y_test:
-            total_y_test.append(np.argmax(item))
-        y_test = total_y_test
+            if not return_sequences:
+                total_y_test.append(np.argmax(item))
+            else:
+                total_y_test.append(np.argmax(item, axis=1))
+        if not return_sequences:
+            y_test = total_y_test
+        else:
+            y_test = list(itertools.chain.from_iterable(total_y_test))
+
     # Stateful model
     else:
         max_length = int(segmentation_value * (1 / downsampling_value))
-        n_features, n_outputs, validation_split, return_sequences = 1, 1, 0.1, True
+        n_features, n_outputs, validation_split, return_sequences = 1, 1, 0.1, False
         if full_sequence:
             n_timesteps = None
-            lstm_units = 200
+            return_sequences = True
+            lstm_units = 500
         else:
             n_timesteps = max_length
             lstm_units = max(8, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
+            
         model.add(LSTM(units=lstm_units, batch_input_shape=(batch_size, n_timesteps, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
         model.add(Dropout(0.2))   # dropout -- 2
         model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
@@ -162,7 +178,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         model.add(Dense(units=n_outputs))   # fully connected layer -- 7
         model.add(Activation('sigmoid'))   # activation -- 8
 
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1_m])
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1])
 
         print(model.summary())
 
@@ -181,7 +197,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         print(f'# val samples = {len(X_val)}')
         print(f'# test samples = {len(X_test)}')
 
-        best_val_f1_score = 0
+        best_val_loss = 1
+        patience_count = 0
 
         # Stateful implementation with train_on_batch
         print('Model train...')
@@ -202,20 +219,23 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                                 dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_train[i][j:j+step], key=y_train[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
                             mean_tr_loss.append(dic['loss'])
                             mean_tr_acc.append(dic['acc'])
-                            mean_tr_f1.append(dic['f1_m'])
+                            mean_tr_f1.append(dic['f1'])
                 else:
                     dic = model.train_on_batch(np.reshape(X_train[i], (batch_size, -1, n_features)), np.reshape(y_train[i], (batch_size, -1, n_outputs)), return_dict=True)
                     mean_tr_loss.append(dic['loss'])
                     mean_tr_acc.append(dic['acc'])
-                    mean_tr_f1.append(dic['f1_m'])
+                    mean_tr_f1.append(dic['f1'])
                 model.reset_states()
 
-            training_loss_history.append(np.mean(mean_tr_loss))
-            training_accuracy_history.append(np.mean(mean_tr_acc))
-            training_f1_history.append(np.mean(mean_tr_f1))
-            print('train loss = {}'.format(np.mean(mean_tr_loss)))
-            print('train accuracy = {}'.format(np.mean(mean_tr_acc)))
-            print('train f1 = {}'.format(np.mean(mean_tr_f1)))
+            tr_loss = np.mean(mean_tr_loss)
+            tr_acc = np.mean(mean_tr_acc)
+            tr_f1 = np.mean(mean_tr_f1)
+            training_loss_history.append(tr_loss)
+            training_accuracy_history.append(tr_acc)
+            training_f1_history.append(tr_f1)
+            print('train loss = {}'.format(tr_loss))
+            print('train accuracy = {}'.format(tr_acc))
+            print('train f1 = {}'.format(tr_f1))
 
             print('---> Validation')
             mean_val_loss = []
@@ -231,25 +251,36 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
                                 dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_val[i][j:j+step], key=y_val[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
                             mean_val_loss.append(dic['loss'])
                             mean_val_acc.append(dic['acc'])
-                            mean_val_f1.append(dic['f1_m'])
+                            mean_val_f1.append(dic['f1'])
                 else:
                     dic = model.train_on_batch(np.reshape(X_val[i], (batch_size, -1, n_features)), np.reshape(y_val[i], (batch_size, -1, n_outputs)), return_dict=True)
                     mean_val_loss.append(dic['loss'])
                     mean_val_acc.append(dic['acc'])
-                    mean_val_f1.append(dic['f1_m'])
+                    mean_val_f1.append(dic['f1'])
                 model.reset_states()
 
-            if np.mean(mean_val_f1) > best_val_f1_score:
-                best_val_f1_score = np.mean(mean_val_f1)
-                model.save(f'{save_dir}/best/model.h5')
-                wandb.save(f'{save_dir}/best/model.h5')
+            val_loss = np.mean(mean_val_loss)
+            val_acc = np.mean(mean_val_acc)
+            val_f1 = np.mean(mean_val_f1)
+            validation_loss_history.append(val_loss)
+            validation_accuracy_history.append(val_acc)
+            validation_f1_history.append(val_f1)
+            print('val loss = {}'.format(val_loss))
+            print('val accuracy = {}'.format(val_acc))
+            print('val f1 = {}'.format(val_f1))
 
-            validation_loss_history.append(np.mean(mean_val_loss))
-            validation_accuracy_history.append(np.mean(mean_val_acc))
-            validation_f1_history.append(np.mean(mean_val_f1))
-            print('val loss = {}'.format(np.mean(mean_val_loss)))
-            print('val accuracy = {}'.format(np.mean(mean_val_acc)))
-            print('val f1 = {}'.format(np.mean(mean_val_f1)))
+            wandb.log({'loss': tr_loss, 'accuracy': tr_acc, 'f1': tr_f1, 'val_loss': val_loss, 'val_accuracy': val_acc, 'val_f1': val_f1})
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                model.save(f'{save_dir}/best/model-best.h5')
+                model.save(os.path.join(wandb.run.dir, "model-best.h5"))
+                patience_count = 0
+            else:
+                patience_count += 1
+
+            if patience_count >= patience:
+                break
 
             computation_time_history.append(time.time()-start)
 
@@ -295,8 +326,11 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # 95 % confidence interval computation
     interval = 1.96 * sqrt((te_accuracy * (1 - te_accuracy)) / len(X_test))
 
-    # confustion matrix np array creation based on the prediction made by the model on the test data
-    cm = confusion_matrix(y_true=y_test, y_pred=classes)
+    # confusion matrix np array creation based on the prediction made by the model on the test data
+    if not return_sequences:
+        cm = confusion_matrix(y_true=y_test, y_pred=classes)
+    else:
+        cm = confusion_matrix(y_true=y_test, y_pred=list(itertools.chain.from_iterable(classes)))
 
     # summary txt file
     model_info_file = open(f'{save_dir}/info.txt', 'w')
@@ -312,6 +346,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     model_info_file.write(f'Sliding window = {int(sliding_window)} \n')
     model_info_file.write(f'Center of interest = {center_of_interest} \n')
     model_info_file.write(f'Full sequence = {int(full_sequence)} \n')
+    model_info_file.write(f'Return sequences = {int(return_sequences)} \n')
     model_info_file.write(f'Data balancing = {int(data_balancing)} \n')
     model_info_file.write('--- \n')
     model_info_file.write(f'Log time = {log_time} \n')
@@ -345,6 +380,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     cm_plt = plot_confusion_matrix(cm=cm, classes=labels, title='Confusion Matrix', normalize=True)
 
     cm_plt.savefig(f'{save_dir}/cm_plt.png', bbox_inches='tight')
+    wandb.log({'confusion_matrix': cm_plt})
     cm_plt.close()
 
     # chart with the learning curves creation
@@ -385,14 +421,14 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     plt.close(fig=figure)
 
     # save of the model weights
-    # os.mkdir(f'{save_dir}/last')
-    # model.save(f'{save_dir}/last/model.h5')
-    # wandb.save(f'{save_dir}/last/model.h5')
+    os.mkdir(f'{save_dir}/last')
+    model.save(f'{save_dir}/last/model-last.h5')
+    model.save(os.path.join(wandb.run.dir, "model-last.h5"))
 
     return te_accuracy, te_f1
 
 
-def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence):
+def train_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, patience, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence, return_sequences):
     """
     Callable method to start the training of the model
 
@@ -412,11 +448,12 @@ def train_model(analysis_directory, model, segmentation_value, downsampling_valu
     -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
+    -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
     """
 
     segmentation_value = float(segmentation_value)
     downsampling_value = float(downsampling_value)
-    te_accuracy, te_f1 = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence)
+    te_accuracy, te_f1 = evaluate_model(analysis_directory, model, segmentation_value, downsampling_value, epochs, data_balancing, log_time, batch_size, patience, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence, return_sequences)
     print('test accuracy:', te_accuracy*100, '%')
     print('test f1:', te_f1*100, '%')
     print('-----')

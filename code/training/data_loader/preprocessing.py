@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
-from util import extract_data_from_line, datetime_conversion, block_print, enable_print
+from util import extract_data_from_line, datetime_conversion, block_print, enable_print, downsample
 
 
 class Preprocessing:
@@ -36,9 +36,10 @@ class Preprocessing:
     -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
+    -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
     """
 
-    def __init__(self, analysis_directory='', segmentation_value=60, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1, full_sequence=False):
+    def __init__(self, analysis_directory='', segmentation_value=60, downsampling_value=1, data_balancing=True, log_time='', standard_scale=False, stateful=False, sliding_window=False, center_of_interest=10, task=1, full_sequence=False, return_sequences=False):
         self.directory = analysis_directory
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
@@ -51,6 +52,7 @@ class Preprocessing:
         self.center_of_interest = center_of_interest
         self.task = task
         self.full_sequence = full_sequence
+        self.return_sequences = return_sequences
         self.jawac_df_list = []
         self.mk3_df_list = []
         self.dataset = []
@@ -208,15 +210,21 @@ class Preprocessing:
                     temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), max_length)][:-1]
                     temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), max_length)][:-1]
                 for i in range(len(temp_X)):
-                    if self.task == 1:
+                    if self.task == 1 and not self.return_sequences:
                         temp_X[i].append(np.var(temp_X[i])*1000)
-                    label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
-                    if label == 0:
-                        zero_count += 1
-                    elif label == 1:
-                        one_count += 1
-                    X.append(temp_X[i])
-                    y.append(label)
+                    if not self.return_sequences:
+                        label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
+                        if label == 0:
+                            zero_count += 1
+                        elif label == 1:
+                            one_count += 1
+                        X.append(temp_X[i])
+                        y.append(label)
+                    else:
+                        X.append(temp_X[i])
+                        y.append(temp_y[i])
+                        zero_count += temp_y[i].count(0)
+                        one_count += temp_y[i].count(1)
 
         if self.standard_scale:
             scaler = StandardScaler()
@@ -225,19 +233,29 @@ class Preprocessing:
                 X[i] = np.reshape(temp, (len(temp))).tolist()
 
         if self.data_balancing:
-            oversample = SMOTE()
-            X = np.array(X)
-            y = np.array(y)
-            X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
-            X = np.reshape(X, (len(X), len(X[0]), 1))
-            y = to_categorical(y)
-            zero_count = 0
-            one_count = 0
-            for label in y:
-                if label[0] == 1:
-                    zero_count += 1
-                else:
-                    one_count += 1
+            if not self.return_sequences:
+                oversample = SMOTE()
+                X = np.array(X)
+                y = np.array(y)
+                X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
+                X = np.reshape(X, (len(X), len(X[0]), 1))
+                y = to_categorical(y)
+                zero_count = 0
+                one_count = 0
+                for label in y:
+                    if label[0] == 1:
+                        zero_count += 1
+                    else:
+                        one_count += 1
+            else:
+                df = pd.DataFrame(data={'data': X, 'label': y, 'most_likely_label': [max(y[i], key=y[i].count) for i in range(len(y))]})
+                df = downsample(df, 'most_likely_label')
+                zero_count = sum([df['label'].to_list()[i].count(0) for i in range(len(df['label'].to_list()))])
+                one_count = sum([df['label'].to_list()[i].count(1) for i in range(len(df['label'].to_list()))])
+                X = df.data.to_list()
+                y = df.label.to_list()
+                X = np.array(X)
+                y = to_categorical(np.array(y))
 
         if not self.stateful and not self.data_balancing and not self.full_sequence:
             X = np.reshape(X, (len(X), len(X[0]), 1))

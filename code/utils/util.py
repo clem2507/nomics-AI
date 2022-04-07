@@ -371,7 +371,7 @@ def precision_m(y_true, y_pred):
     return precision
 
 
-def f1_m(y_true, y_pred):
+def f1(y_true, y_pred):
     """
     Method that computes the f1 score based on predicted and true labels
 
@@ -514,6 +514,19 @@ def multilabel_to_onelabel(classes):
         label = np.argmax(c)
         out.append(label)
     return out
+
+
+def downsample(df:pd.DataFrame, label_col_name:str) -> pd.DataFrame:
+    # find the number of observations in the smallest group
+    nmin = df[label_col_name].value_counts().min()
+    return (df
+            # split the dataframe per group
+            .groupby(label_col_name)
+            # sample nmin observations from each group
+            .apply(lambda x: x.sample(nmin))
+            # recombine the dataframes
+            .reset_index(drop=True)
+            )
 
 
 class TimingCallback(Callback):
