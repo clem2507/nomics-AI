@@ -308,6 +308,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
                     classes.append((idx, item[idx]))
             else:
                 labels = np.argmax(item, axis=1)
+                if len(classes) == 0:
+                    classes.append(labels[:int((segmentation_value//2)-(center_of_interest//2))])
                 for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
                     if labels[i] == 0:
                         if item[i][labels[i]] > threshold:
@@ -316,6 +318,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
                             classes.append((1, 0.5))
                     else:
                         classes.append((labels[i], item[i][labels[i]]))
+        if return_sequences:
+            classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
     else:
         if not full_sequence:
             for i in range(0, len(X), batch_size*step_size):
@@ -343,6 +347,10 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
                     classes.append((pred_label, label[0]))
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
+
+    print(len(classes))
+    print(len(df_jawac_only_valid.data))
+    
     for i in range(len(classes)):
         if sliding_window:
             if not return_sequences:

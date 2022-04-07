@@ -103,8 +103,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             model.add(Dense(n_outputs))   # fully connected layer -- 10 -- Output size 1 x 2
             model.add(Activation(activation='softmax'))   # activation layer -- 11 -- Output size 1 x 2
         elif model_name == 'lstm':
+            stf = False
             lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
-            model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, batch_input_shape=(batch_size, n_timesteps, n_features)))   # lstm layer -- 1
+            model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
             if return_sequences:
                 model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf))   # lstm layer -- 1'
             model.add(Dropout(0.2))   # dropout -- 2
