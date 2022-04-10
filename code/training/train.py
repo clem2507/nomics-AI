@@ -92,9 +92,9 @@ if __name__ == '__main__':
     # CNN - valid/invalid
     # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 1
     # CNN - awake/sleep
-    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 2
+    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis_update' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 2
 
     # LSTM - valid/invalid
     # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'lstm' --batch 32 --task 1
     # LSTM - awake/sleep
-    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis' --downsampling_value 1 --segmentation_value 180 --center_of_interest 60 --sliding_window --return_sequences --epochs 100 --model 'lstm' --batch 32 --task 2
+    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis_update' --downsampling_value 1 --segmentation_value 600 --center_of_interest 180 --sliding_window --return_sequences --balance --epochs 100 --model 'lstm' --batch 32 --task 2

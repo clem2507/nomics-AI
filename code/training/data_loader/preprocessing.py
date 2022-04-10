@@ -88,8 +88,8 @@ class Preprocessing:
                     df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
                     for line in lines:
                         if len(line) > 0:
-                            temp = pd.Series(extract_data_from_line(line), index=df_mk3.columns)
-                            df_mk3 = df_mk3.append(temp, ignore_index=True)
+                            temp = pd.DataFrame(extract_data_from_line(line), columns=df_mk3.columns)
+                            df_mk3 = pd.concat([df_mk3, temp], ignore_index=True)
 
                     # dataframe saving
                     df_mk3.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_mk3.pkl')

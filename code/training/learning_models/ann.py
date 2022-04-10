@@ -15,7 +15,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Activation
+from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Activation, Bidirectional
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
@@ -105,9 +105,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         elif model_name == 'lstm':
             stf = False
             lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
-            model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf), input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
             if return_sequences:
-                model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf))   # lstm layer -- 1'
+                model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf)))   # lstm layer -- 1'
             model.add(Dropout(0.2))   # dropout -- 2
             model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
             model.add(Dropout(0.2))   # dropout -- 4

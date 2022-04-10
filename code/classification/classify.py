@@ -107,7 +107,11 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
 
     start_class = time.time()    # start variable used for the calculation of the final classification time 
 
+    print()
     print('Task 1...')
+    print()
+
+    timer_task1 = time.time()
 
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in second
     if not stateful:
@@ -119,7 +123,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
             X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
-            arr = np.append(arr, pd.Series([np.var(arr)*1000]))
+            if not return_sequences:
+                arr = np.append(arr, pd.Series([np.var(arr)*1000]))
             X_test_seq_temp.append(arr)
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
@@ -187,12 +192,23 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
 
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
     df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
-    for i in range(len(classes)):
-        if classes[i][0] == 0:
-            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'label'] = 0
-            df_jawac.loc[(i*step_size):(i*step_size)+step_size, 'proba'] = classes[i][1]
 
-    min_gap_time = int((60 / downsampling_value) * 2)   # in minutes
+    for i in range(len(classes)):
+        if sliding_window:
+            if not return_sequences:
+                mask = df_jawac.index[(step_size//2)+(i*center_of_interest)-(center_of_interest//2):(step_size//2)+(i*center_of_interest)+(center_of_interest//2)]
+            else:
+                mask = df_jawac.index[i]
+        else:
+            if not return_sequences:
+                mask = df_jawac.index[i*step_size:i*step_size+step_size]
+            else:
+                mask = df_jawac.index[i]
+        if classes[i][0] == 0:
+            df_jawac.loc[mask, ['label']] = 0
+        df_jawac.loc[mask, ['proba']] = classes[i][1]
+
+    min_gap_time = int((60 / downsampling_value) * 1)   # in minutes
     previous_label = df_jawac.label[0]
     idx = []
     for i in range(len(df_jawac.label)):
@@ -241,9 +257,13 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     # if not is_valid(times[-1] - times[0], valid_hours):
     #     raise Exception('---> Analysis invalid')
 
-    print('---> Task 1 done!')
+    print()
+    print(f'---> Task 1 done in {round((time.time() - timer_task1), 2)} sec!')
+    print()
     print('Task 2...')
     print()
+
+    timer_task2 = time.time()
 
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name}'
 
@@ -348,9 +368,6 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
 
-    print(len(classes))
-    print(len(df_jawac_only_valid.data))
-    
     for i in range(len(classes)):
         if sliding_window:
             if not return_sequences:
@@ -358,10 +375,16 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
             else:
                 mask = df_jawac_only_valid.index[i]
         else:
-            mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
+            if not return_sequences:
+                mask = df_jawac_only_valid.index[i*step_size:i*step_size+step_size]
+            else:
+                mask = df_jawac_only_valid.index[i]
         if classes[i][0] == 0:
             df_jawac.loc[mask, ['label']] = 2
         df_jawac.loc[mask, ['proba']] = classes[i][1]
+
+    print(f'---> Task 2 done in {round((time.time() - timer_task2), 2)} sec!')
+    print()
 
     min_gap_time = int((60 / downsampling_value) * 2)   # in minutes
     previous_label = df_jawac.label[0]
@@ -437,6 +460,8 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
     print(f'invalid count: {invalid_count} --> {round((invalid_count/(invalid_count+valid_count+awake_count)*100), 2)} %')
     print(f'valid count: {valid_count} --> {round((valid_count/(invalid_count+valid_count+awake_count)*100), 2)} %')
     print(f'awake count: {awake_count} --> {round((awake_count/(invalid_count+valid_count+awake_count)*100), 2)} %')
+
+    print('--------')
 
     total_invalid_rate = invalid_count/len(df_jawac)
     total_valid_rate = valid_count/len(df_jawac)

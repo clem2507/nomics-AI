@@ -57,8 +57,8 @@ def extract_data_from_line(line):
     # end date and time
     out.append(convert_string_to_time(temp[2], temp[3]))
     # zone type
-    out.append(temp[len(temp) - 1][:len(temp[len(temp) - 1]) - 1])
-    return out
+    out.append((temp[len(temp) - 1]).strip())
+    return [out]
 
 
 def string_datetime_conversion(times, start_time, start_date):
