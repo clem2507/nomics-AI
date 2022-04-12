@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 from util import datetime_conversion, f1, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, get_value_in_line, extract_data_from_line, string_datetime_conversion
 
 
-def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
+def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     """
     Primary function for classifying an edf patient file
 
@@ -37,7 +37,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
 
     -edf (--edf): edf file path containing time series data
     -model (--model): learning model architecture, either CNN or LSTM
-    -view_graph (--view_graph): true to show the output graph, false to skip it and only use the output dictionary
+    -show_graph (--show_graph): true to show the output graph, false to skip it and only use the output dictionary
     -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
     -block_print (--block_print): true to block dictionary output print in terminal
 
@@ -550,7 +550,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
         plt.savefig(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png', bbox_inches='tight')
 
     dictionary['plot'] = plt
-    if view_graph:
+    if show_graph:
         plt.show()
     plt.close(fig=fig)
 
@@ -563,10 +563,10 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--edf', type=str, default='', help='edf file path containing time series data')
     parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
-    parser.add_argument('--view_graph', dest='view_graph', action='store_true', help='invoke to view the output graph')
+    parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')
     parser.add_argument('--plt_save_path', type=str, default='', help='path to save a .png copy file of the output plot if desired')
     parser.add_argument('--block_print', dest='block_print', action='store_true', help='invoke to block dictionary output print in terminal')
-    parser.set_defaults(view_graph=False)
+    parser.set_defaults(show_graph=False)
     parser.set_defaults(block_print=False)
     return parser.parse_args()
 
@@ -594,8 +594,8 @@ if __name__ == '__main__':
 
 
     # Test cmd lines - patient data from 1 to 13
-    # python code/classification/classify.py --view_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
-    # python code/classification/classify.py --view_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
+    # python code/classification/classify.py --show_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
+    # python code/classification/classify.py --show_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
 
 
     opt = parse_opt()
