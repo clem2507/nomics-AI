@@ -89,6 +89,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             n_timesteps, n_features, n_outputs, validation_split, verbose = X_train.shape[1], 1, 2, 0.1, 1
         else:
             n_timesteps, n_features, n_outputs, validation_split, verbose = None, 1, 2, 0.1, 1
+        
         if model_name == 'cnn':
             # using 1Hz resolution and 1 minute window -- 60 sample size
             model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
@@ -105,9 +106,15 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         elif model_name == 'lstm':
             stf = False
             lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
-            model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf), input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            if task == 1:
+                model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+            else:
+                model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf), input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
             if return_sequences:
-                model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf)))   # lstm layer -- 1'
+                if task == 1:
+                    model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf))   # lstm layer -- 1'
+                else:
+                    model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf)))   # lstm layer -- 1'
             model.add(Dropout(0.2))   # dropout -- 2
             model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
             model.add(Dropout(0.2))   # dropout -- 4

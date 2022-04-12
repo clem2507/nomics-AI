@@ -178,11 +178,12 @@ class Preprocessing:
         if not self.full_sequence:
             print(f'signal segmentation value (window size): {round(self.segmentation_value/60, 4)} min, {self.segmentation_value} sec')
         if self.sliding_window:
-            print(f'center of interest value: {self.center_of_interest/60} min, {self.center_of_interest} sec')
+            print(f'center of interest value: {round(self.center_of_interest/60, 2)} min, {self.center_of_interest} sec')
         print(f'data balancing: {self.data_balancing}')
         print(f'stateful: {self.stateful}')
         print(f'standardization: {self.standard_scale}')
         print(f'sliding window: {self.sliding_window}')
+        print(f'return sequences: {self.return_sequences}')
         print(f'full sequence: {self.full_sequence}')
         print('-----')
 

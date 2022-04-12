@@ -154,15 +154,30 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
                     classes.append((idx, item[idx]))
             else:
                 labels = np.argmax(item, axis=1)
-                for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
-                    if labels[i] == 0:
-                        if item[i][labels[i]] > threshold:
-                            classes.append((labels[i], item[i][labels[i]]))
+                if len(classes) == 0 and sliding_window:
+                    classes.append(labels[:int((segmentation_value//2)-(center_of_interest//2))])
+                if sliding_window:
+                    for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
+                        if labels[i] == 0:
+                            if item[i][labels[i]] > threshold:
+                                classes.append((labels[i], item[i][labels[i]]))
+                            else:
+                                classes.append((1, 0.5))
                         else:
-                            classes.append((1, 0.5))
-                    else:
-                        classes.append((labels[i], item[i][labels[i]]))
-        classes.append((0, 0.5))
+                            classes.append((labels[i], item[i][labels[i]]))
+                else:
+                    for i in range(len(labels)):
+                        if labels[i] == 0:
+                            if item[i][labels[i]] > threshold:
+                                classes.append((labels[i], item[i][labels[i]]))
+                            else:
+                                classes.append((1, 0.5))
+                        else:
+                            classes.append((labels[i], item[i][labels[i]]))
+        if return_sequences and sliding_window:
+            classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
+        else:
+            classes.append((0, 0.5))
     else:
         step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
         if not full_sequence:
@@ -310,7 +325,7 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.5
+    threshold = 0.7
     classes = []
     step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
@@ -328,17 +343,27 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
                     classes.append((idx, item[idx]))
             else:
                 labels = np.argmax(item, axis=1)
-                if len(classes) == 0:
+                if len(classes) == 0 and sliding_window:
                     classes.append(labels[:int((segmentation_value//2)-(center_of_interest//2))])
-                for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
-                    if labels[i] == 0:
-                        if item[i][labels[i]] > threshold:
-                            classes.append((labels[i], item[i][labels[i]]))
+                if sliding_window:
+                    for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
+                        if labels[i] == 0:
+                            if item[i][labels[i]] > threshold:
+                                classes.append((labels[i], item[i][labels[i]]))
+                            else:
+                                classes.append((1, 0.5))
                         else:
-                            classes.append((1, 0.5))
-                    else:
-                        classes.append((labels[i], item[i][labels[i]]))
-        if return_sequences:
+                            classes.append((labels[i], item[i][labels[i]]))
+                else:
+                    for i in range(len(classes)):
+                        if labels[i] == 0:
+                            if item[i][labels[i]] > threshold:
+                                classes.append((labels[i], item[i][labels[i]]))
+                            else:
+                                classes.append((1, 0.5))
+                        else:
+                            classes.append((labels[i], item[i][labels[i]]))
+        if return_sequences and sliding_window:
             classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
     else:
         if not full_sequence:
@@ -412,13 +437,14 @@ def analysis_classification(edf, model, view_graph, plt_save_path, block_print):
         if len(row) > 0:
             proba.append(row.proba)
             if row.label != saved_label:
-                a_row = {'start': saved_start, 'end': row.times, 'label': saved_label, 'proba': np.mean(proba), 'data_num': len(proba)}
-                df_label = df_label.append(a_row, ignore_index=True)
+                temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                df_label = pd.concat([df_label, temp], ignore_index=True)
                 saved_label = row.label
                 saved_start = row.times
                 proba = []
-    a_row = {'start': saved_start, 'end': df_jawac.times.tolist()[-1], 'label': saved_label, 'proba': np.mean(proba), 'data_num': len(proba)}
-    df_label = df_label.append(a_row, ignore_index=True)
+    if len(proba) > 0:
+        temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+        df_label = pd.concat([df_label, temp], ignore_index=True)
 
     # call of the function that proposes new bounds for the breakdown of the analysis for the diagnosis
     df_label, sleep_hours, sleep_rate, new_start, new_end = analysis_cutting(df=df_label, analysis_start=df_jawac.index[0], analysis_end=df_jawac.index[-1], downsampling_value=downsampling_value, threshold=0.98)
@@ -550,6 +576,7 @@ def main(p):
     print('-------- OUTPUT DICTIONARY --------')
     print(out_dic)
     print('-----------------------------------')
+
 
     # from random import shuffle
     # dir = '/Users/clemdetry/My Drive/nomics/data/all_valid_analysis'
