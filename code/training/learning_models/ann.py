@@ -9,6 +9,7 @@ import statistics
 import numpy as np
 
 from math import sqrt
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
 
@@ -17,6 +18,7 @@ from matplotlib import pyplot as plt
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Activation, Bidirectional
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.utils import to_categorical
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
@@ -109,12 +111,14 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             if task == 1:
                 model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
             else:
-                model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf), input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+                # model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf), input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
+                model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf, input_shape=(n_timesteps, n_features)))   # lstm layer -- 1
             if return_sequences:
                 if task == 1:
                     model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf))   # lstm layer -- 1'
                 else:
-                    model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf)))   # lstm layer -- 1'
+                    model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf))   # lstm layer -- 1'
+                    # model.add(Bidirectional(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=stf)))   # lstm layer -- 1'
             model.add(Dropout(0.2))   # dropout -- 2
             model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
             model.add(Dropout(0.2))   # dropout -- 4
@@ -168,7 +172,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # Stateful model
     else:
         max_length = int(segmentation_value * (1 / downsampling_value))
-        n_features, n_outputs, validation_split, return_sequences = 1, 1, 0.1, False
+        n_features, n_outputs, validation_split, return_sequences = 1, 2, 0.1, True
         if full_sequence:
             n_timesteps = None
             return_sequences = True
@@ -177,19 +181,54 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             n_timesteps = max_length
             lstm_units = max(8, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
             
-        model.add(LSTM(units=lstm_units, batch_input_shape=(batch_size, n_timesteps, n_features), return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
+        # batch_size = max_length
+        
+        model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=True, batch_input_shape=(batch_size, n_timesteps, n_features)))   # lstm layer -- 1
+        model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=True))   # lstm layer -- 1
         model.add(Dropout(0.2))   # dropout -- 2
         model.add(Dense(lstm_units//2, activation='relu'))   # fully connected layer -- 3
         model.add(Dropout(0.2))   # dropout -- 4
         model.add(Dense(lstm_units//4, activation='relu'))   # fully connected layer -- 5
         model.add(Dropout(0.2))   # dropout -- 6
         model.add(Dense(units=n_outputs))   # fully connected layer -- 7
-        model.add(Activation('sigmoid'))   # activation -- 8
+        # model.add(Activation('sigmoid'))   # activation -- 8
+        model.add(Activation('softmax'))   # activation -- 8
 
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1])
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc', f1])
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', f1])
 
         print(model.summary())
 
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
+
+        X_tr = []
+        y_tr = []
+        for idx in range(len(X_train)):
+            temp_X_tr = [np.reshape(X_train[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_train[idx])-int(((len(X_train[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_tr = [np.array(y_train[idx][i:i + max_length]) for i in range(0, len(y_train[idx])-int(((len(y_train[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_tr[-1][-1] = 1
+            X_tr.append(np.array(temp_X_tr))
+            y_tr.append(np.array(to_categorical(temp_y_tr)))
+
+        X_v = []
+        y_v = []
+        for idx in range(len(X_val)):
+            temp_X_v = [np.reshape(X_val[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_val[idx])-int(((len(X_val[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_v = [np.array(y_val[idx][i:i + max_length]) for i in range(0, len(y_val[idx])-int(((len(y_val[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_v[-1][-1] = 1
+            X_v.append(np.array(temp_X_v))
+            y_v.append(np.array(to_categorical(temp_y_v)))
+                
+        X_te = []
+        y_te = []
+        for idx in range(len(X_test)):
+            temp_X_te = [np.reshape(X_test[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_test[idx])-int(((len(X_test[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_te = [np.array(y_test[idx][i:i + max_length]) for i in range(0, len(y_test[idx])-int(((len(y_test[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_te[-1][-1] = 1
+            X_te.append(np.array(temp_X_te))
+            y_te.append(np.array(to_categorical(temp_y_te)))
+        
+        computation_time_history = []
         training_loss_history = []
         training_accuracy_history = []
         training_f1_history = []
@@ -197,90 +236,62 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         validation_accuracy_history = []
         validation_f1_history = []
 
-        computation_time_history = []
-        
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
-
-        print(f'# train samples = {len(X_train)}')
-        print(f'# val samples = {len(X_val)}')
-        print(f'# test samples = {len(X_test)}')
-
-        best_val_loss = 1
+        best_loss = 1
         patience_count = 0
 
-        # Stateful implementation with train_on_batch
-        print('Model train...')
-        for epoch in range(epochs):
-            print('----- EPOCH #{} -----'.format(epoch+1))
-            print('---> Training')
+        # train model
+        for i in range(epochs):
+            print('----- EPOCH #{} -----'.format(i+1))
+            temp_training_loss = []
+            temp_training_accuracy = []
+            temp_training_f1 = []
+            print('--> TRAIN...')
             start = time.time()
-            mean_tr_loss = []
-            mean_tr_acc = []
-            mean_tr_f1 = []
-            for i in tqdm(range(len(X_train))):
-                if not full_sequence:
-                    for j in range(0, len(X_train[i]), batch_size*n_timesteps):
-                        if j+(batch_size*n_timesteps) < len(X_train[i]):
-                            if return_sequences:
-                                dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
-                            else:
-                                dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_train[i][j:j+step], key=y_train[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
-                            mean_tr_loss.append(dic['loss'])
-                            mean_tr_acc.append(dic['acc'])
-                            mean_tr_f1.append(dic['f1'])
-                else:
-                    dic = model.train_on_batch(np.reshape(X_train[i], (batch_size, -1, n_features)), np.reshape(y_train[i], (batch_size, -1, n_outputs)), return_dict=True)
-                    mean_tr_loss.append(dic['loss'])
-                    mean_tr_acc.append(dic['acc'])
-                    mean_tr_f1.append(dic['f1'])
+            for j in tqdm(range(len(X_tr[0:10]))):
+                history = model.fit(X_tr[j], y_tr[j], epochs=1, batch_size=batch_size, verbose=0, shuffle=False)
                 model.reset_states()
+                temp_training_loss.append(history.history['loss'])
+                temp_training_accuracy.append(history.history['accuracy'])
+                temp_training_f1.append(history.history['f1'])
 
-            tr_loss = np.mean(mean_tr_loss)
-            tr_acc = np.mean(mean_tr_acc)
-            tr_f1 = np.mean(mean_tr_f1)
+            temp_validation_loss = []
+            temp_validation_accuracy = []
+            temp_validation_f1 = []
+            print('--> VAL...')
+            for j in tqdm(range(len(X_v))):
+                dic = model.evaluate(X_v[i], y_v[i], batch_size=batch_size, verbose=0, return_dict=True)
+                model.reset_states()
+                temp_validation_loss.append(dic['loss'])
+                temp_validation_accuracy.append(dic['accuracy'])
+                temp_validation_f1.append(dic['f1'])
+            
+            end = time.time()    
+            computation_time_history.append(end-start)
+
+            tr_loss = np.mean(temp_training_loss)
+            tr_acc = np.mean(temp_training_accuracy)
+            tr_f1 = np.mean(temp_training_f1)
+            val_loss = np.mean(temp_validation_loss)
+            val_acc = np.mean(temp_validation_accuracy)
+            val_f1 = np.mean(temp_validation_f1)
+
             training_loss_history.append(tr_loss)
             training_accuracy_history.append(tr_acc)
             training_f1_history.append(tr_f1)
-            print('train loss = {}'.format(tr_loss))
-            print('train accuracy = {}'.format(tr_acc))
-            print('train f1 = {}'.format(tr_f1))
-
-            print('---> Validation')
-            mean_val_loss = []
-            mean_val_acc = []
-            mean_val_f1 = []
-            for i in tqdm(range(len(X_val))):
-                if not full_sequence:
-                    for j in range(0, len(X_val[i]), batch_size*n_timesteps):
-                        if j+(batch_size*n_timesteps) < len(X_val[i]):
-                            if return_sequences:
-                                dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_val[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
-                            else:
-                                dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_val[i][j:j+step], key=y_val[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
-                            mean_val_loss.append(dic['loss'])
-                            mean_val_acc.append(dic['acc'])
-                            mean_val_f1.append(dic['f1'])
-                else:
-                    dic = model.train_on_batch(np.reshape(X_val[i], (batch_size, -1, n_features)), np.reshape(y_val[i], (batch_size, -1, n_outputs)), return_dict=True)
-                    mean_val_loss.append(dic['loss'])
-                    mean_val_acc.append(dic['acc'])
-                    mean_val_f1.append(dic['f1'])
-                model.reset_states()
-
-            val_loss = np.mean(mean_val_loss)
-            val_acc = np.mean(mean_val_acc)
-            val_f1 = np.mean(mean_val_f1)
             validation_loss_history.append(val_loss)
             validation_accuracy_history.append(val_acc)
             validation_f1_history.append(val_f1)
-            print('val loss = {}'.format(val_loss))
-            print('val accuracy = {}'.format(val_acc))
-            print('val f1 = {}'.format(val_f1))
 
-            wandb.log({'loss': tr_loss, 'accuracy': tr_acc, 'f1': tr_f1, 'val_loss': val_loss, 'val_accuracy': val_acc, 'val_f1': val_f1})
+            print(f'train loss = {tr_loss}')
+            print(f'train acc = {tr_acc}')
+            print(f'train f1 = {tr_f1}')
+            print(f'val loss = {val_loss}')
+            print(f'val acc = {val_acc}')
+            print(f'val f1 = {val_f1}')
+            print(f'--> timer = {round(end-start, 2)}sec')
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
+            if tr_loss < best_loss:
+                best_loss = tr_loss
                 model.save(f'{save_dir}/best/model-best.h5')
                 model.save(os.path.join(wandb.run.dir, "model-best.h5"))
                 patience_count = 0
@@ -290,45 +301,198 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             if patience_count >= patience:
                 break
 
-            computation_time_history.append(time.time()-start)
+            wandb.log({'loss': tr_loss, 'accuracy': tr_acc, 'f1': tr_f1, 'val_loss': val_loss, 'val_accuracy': val_acc, 'val_f1': val_f1})
 
-        print('---> Testing')
-        total_classes = []
-        total_y_test = []
-        mean_te_acc = []
-        mean_te_f1 = []
-        for i in tqdm(range(len(X_test))):
-            classes = []
-            if not full_sequence:
-                for j in range(0, len(X_test[i]), batch_size*n_timesteps):
-                    if j+(batch_size*n_timesteps) < len(X_test[i]):
-                        y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)))
-                        for label in y_pred:
-                            if return_sequences:
-                                pred_label = round(label[0])
-                            else:
-                                pred_label = round(label)
-                            classes.append(pred_label)
-                            total_classes.append(pred_label)
-                reducted_y_test = reduction(y_test[i], batch_size, n_timesteps)
-                total_y_test.append(reducted_y_test)
-                mean_te_acc.append(accuracy_score(reducted_y_test, classes))
-                mean_te_f1.append(f1_score(reducted_y_test, classes))
-            else:
-                y_pred, *r = model.predict_on_batch(np.reshape(X_test[i], (batch_size, -1, n_features)))
-                for label in y_pred:
-                    pred_label = round(label[0])
-                    classes.append(pred_label)
-                    total_classes.append(pred_label)
-                total_y_test.append(y_test[i])
-                mean_te_acc.append(accuracy_score(y_test[i], classes))
-                mean_te_f1.append(f1_score(y_test[i], classes))
+        print('----- TRAIN DONE -----')
+
+        # evaluate model
+        temp_test_loss = []
+        temp_test_accuracy = []
+        temp_test_f1 = []
+        print('--> TEST...')
+        for i in tqdm(range(len(X_te))):
+            dic = model.evaluate(X_te[i], y_te[i], batch_size=batch_size, verbose=0, return_dict=True)
             model.reset_states()
 
-        te_accuracy = np.mean(mean_te_acc)
-        te_f1 = np.mean(mean_te_f1)
-        classes = total_classes
-        y_test = list(itertools.chain.from_iterable(total_y_test))
+            temp_test_loss.append(dic['loss'])
+            temp_test_accuracy.append(dic['accuracy'])
+            temp_test_f1.append(dic['f1'])
+
+        te_loss = np.mean(temp_test_loss)
+        te_accuracy = np.mean(temp_test_accuracy)
+        te_f1 = np.mean(temp_test_f1)
+
+        print(f'test loss = {te_loss}')
+        print(f'test acc = {te_accuracy}')
+        print(f'test f1 = {te_f1}')
+
+        classes = []
+        y_test = []
+        print('--> PREDICT...')
+        for i in tqdm(range(len(X_te))):
+            predictions = (model.predict(X_te[i], batch_size=batch_size))
+            temp_classes = []
+            for c in np.argmax(predictions, axis=2):
+                temp_classes.extend(c)
+            classes.append(temp_classes)
+            y_test.append(list(itertools.chain.from_iterable(np.argmax(y_te[i], axis=2))))
+        
+
+        # if not return_sequences:
+        #     classes = np.argmax(predictions, axis=1)
+        # else:
+        #     classes = np.argmax(predictions, axis=2)
+
+        # total_y_test = []
+        # for item in y_test:
+        #     if not return_sequences:
+        #         total_y_test.append(np.argmax(item))
+        #     else:
+        #         total_y_test.append(np.argmax(item, axis=1))
+        # if not return_sequences:
+        #     y_test = total_y_test
+        # else:
+        #     y_test = list(itertools.chain.from_iterable(total_y_test))
+
+        # training_loss_history = []
+        # training_accuracy_history = []
+        # training_f1_history = []
+        # validation_loss_history = []
+        # validation_accuracy_history = []
+        # validation_f1_history = []
+
+        # computation_time_history = []
+        
+        # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
+
+        # print(f'# train samples = {len(X_train)}')
+        # print(f'# val samples = {len(X_val)}')
+        # print(f'# test samples = {len(X_test)}')
+
+        # best_val_loss = 1
+        # patience_count = 0
+
+        # # Stateful implementation with train_on_batch
+        # print('Model train...')
+        # for epoch in range(epochs):
+        #     print('----- EPOCH #{} -----'.format(epoch+1))
+        #     print('---> Training')
+        #     start = time.time()
+        #     mean_tr_loss = []
+        #     mean_tr_acc = []
+        #     mean_tr_f1 = []
+        #     for i in tqdm(range(len(X_train))):
+        #         if not full_sequence:
+        #             for j in range(0, len(X_train[i]), batch_size*n_timesteps):
+        #                 if j+(batch_size*n_timesteps) < len(X_train[i]):
+        #                     if return_sequences:
+        #                         dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_train[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
+        #                     else:
+        #                         dic = model.train_on_batch(np.reshape(X_train[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_train[i][j:j+step], key=y_train[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
+        #                     mean_tr_loss.append(dic['loss'])
+        #                     mean_tr_acc.append(dic['acc'])
+        #                     mean_tr_f1.append(dic['f1'])
+        #         else:
+        #             dic = model.train_on_batch(np.reshape(X_train[i], (batch_size, -1, n_features)), np.reshape(y_train[i], (batch_size, -1, n_outputs)), return_dict=True)
+        #             mean_tr_loss.append(dic['loss'])
+        #             mean_tr_acc.append(dic['acc'])
+        #             mean_tr_f1.append(dic['f1'])
+        #         model.reset_states()
+
+        #     tr_loss = np.mean(mean_tr_loss)
+        #     tr_acc = np.mean(mean_tr_acc)
+        #     tr_f1 = np.mean(mean_tr_f1)
+        #     training_loss_history.append(tr_loss)
+        #     training_accuracy_history.append(tr_acc)
+        #     training_f1_history.append(tr_f1)
+        #     print('train loss = {}'.format(tr_loss))
+        #     print('train accuracy = {}'.format(tr_acc))
+        #     print('train f1 = {}'.format(tr_f1))
+
+        #     print('---> Validation')
+        #     mean_val_loss = []
+        #     mean_val_acc = []
+        #     mean_val_f1 = []
+        #     for i in tqdm(range(len(X_val))):
+        #         if not full_sequence:
+        #             for j in range(0, len(X_val[i]), batch_size*n_timesteps):
+        #                 if j+(batch_size*n_timesteps) < len(X_val[i]):
+        #                     if return_sequences:
+        #                         dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([y_val[i][j:j+(batch_size*n_timesteps)]], (batch_size, n_timesteps, n_outputs)), return_dict=True)
+        #                     else:
+        #                         dic = model.test_on_batch(np.reshape(X_val[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)), np.reshape([max(y_val[i][j:j+step], key=y_val[i][j:j+step].count) for step in range(n_timesteps, (batch_size*n_timesteps)+1, n_timesteps)], (batch_size, 1, n_outputs)), return_dict=True)
+        #                     mean_val_loss.append(dic['loss'])
+        #                     mean_val_acc.append(dic['acc'])
+        #                     mean_val_f1.append(dic['f1'])
+        #         else:
+        #             dic = model.train_on_batch(np.reshape(X_val[i], (batch_size, -1, n_features)), np.reshape(y_val[i], (batch_size, -1, n_outputs)), return_dict=True)
+        #             mean_val_loss.append(dic['loss'])
+        #             mean_val_acc.append(dic['acc'])
+        #             mean_val_f1.append(dic['f1'])
+        #         model.reset_states()
+
+        #     val_loss = np.mean(mean_val_loss)
+        #     val_acc = np.mean(mean_val_acc)
+        #     val_f1 = np.mean(mean_val_f1)
+        #     validation_loss_history.append(val_loss)
+        #     validation_accuracy_history.append(val_acc)
+        #     validation_f1_history.append(val_f1)
+        #     print('val loss = {}'.format(val_loss))
+        #     print('val accuracy = {}'.format(val_acc))
+        #     print('val f1 = {}'.format(val_f1))
+
+        #     wandb.log({'loss': tr_loss, 'accuracy': tr_acc, 'f1': tr_f1, 'val_loss': val_loss, 'val_accuracy': val_acc, 'val_f1': val_f1})
+
+        #     if val_loss < best_val_loss:
+        #         best_val_loss = val_loss
+        #         model.save(f'{save_dir}/best/model-best.h5')
+        #         model.save(os.path.join(wandb.run.dir, "model-best.h5"))
+        #         patience_count = 0
+        #     else:
+        #         patience_count += 1
+
+        #     if patience_count >= patience:
+        #         break
+
+        #     computation_time_history.append(time.time()-start)
+
+        # print('---> Testing')
+        # total_classes = []
+        # total_y_test = []
+        # mean_te_acc = []
+        # mean_te_f1 = []
+        # for i in tqdm(range(len(X_test))):
+        #     classes = []
+        #     if not full_sequence:
+        #         for j in range(0, len(X_test[i]), batch_size*n_timesteps):
+        #             if j+(batch_size*n_timesteps) < len(X_test[i]):
+        #                 y_pred, *r = model.predict_on_batch(np.reshape(X_test[i][j:j+(batch_size*n_timesteps)], (batch_size, n_timesteps, n_features)))
+        #                 for label in y_pred:
+        #                     if return_sequences:
+        #                         pred_label = round(label[0])
+        #                     else:
+        #                         pred_label = round(label)
+        #                     classes.append(pred_label)
+        #                     total_classes.append(pred_label)
+        #         reducted_y_test = reduction(y_test[i], batch_size, n_timesteps)
+        #         total_y_test.append(reducted_y_test)
+        #         mean_te_acc.append(accuracy_score(reducted_y_test, classes))
+        #         mean_te_f1.append(f1_score(reducted_y_test, classes))
+        #     else:
+        #         y_pred, *r = model.predict_on_batch(np.reshape(X_test[i], (batch_size, -1, n_features)))
+        #         for label in y_pred:
+        #             pred_label = round(label[0])
+        #             classes.append(pred_label)
+        #             total_classes.append(pred_label)
+        #         total_y_test.append(y_test[i])
+        #         mean_te_acc.append(accuracy_score(y_test[i], classes))
+        #         mean_te_f1.append(f1_score(y_test[i], classes))
+        #     model.reset_states()
+
+        # te_accuracy = np.mean(mean_te_acc)
+        # te_f1 = np.mean(mean_te_f1)
+        # classes = total_classes
+        # y_test = list(itertools.chain.from_iterable(total_y_test))
 
 
     # 95 % confidence interval computation
@@ -337,6 +501,8 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # confusion matrix np array creation based on the prediction made by the model on the test data
     if not return_sequences:
         cm = confusion_matrix(y_true=y_test, y_pred=classes)
+    elif stateful:
+        cm = confusion_matrix(y_true=list(itertools.chain.from_iterable(y_test)), y_pred=list(itertools.chain.from_iterable(classes)))
     else:
         cm = confusion_matrix(y_true=y_test, y_pred=list(itertools.chain.from_iterable(classes)))
 
