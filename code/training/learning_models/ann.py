@@ -172,7 +172,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # Stateful model
     else:
         max_length = int(segmentation_value * (1 / downsampling_value))
-        n_features, n_outputs, validation_split, return_sequences = 1, 2, 0.1, True
+        n_features, n_outputs, validation_split, return_sequences = 1, 2, 0.15, True
         if full_sequence:
             n_timesteps = None
             return_sequences = True
@@ -247,7 +247,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             temp_training_f1 = []
             print('--> TRAIN...')
             start = time.time()
-            for j in tqdm(range(len(X_tr[0:10]))):
+            for j in tqdm(range(len(X_tr))):
                 history = model.fit(X_tr[j], y_tr[j], epochs=1, batch_size=batch_size, verbose=0, shuffle=False)
                 model.reset_states()
                 temp_training_loss.append(history.history['loss'])
@@ -282,13 +282,14 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             validation_accuracy_history.append(val_acc)
             validation_f1_history.append(val_f1)
 
-            print(f'train loss = {tr_loss}')
-            print(f'train acc = {tr_acc}')
-            print(f'train f1 = {tr_f1}')
-            print(f'val loss = {val_loss}')
-            print(f'val acc = {val_acc}')
-            print(f'val f1 = {val_f1}')
-            print(f'--> timer = {round(end-start, 2)}sec')
+            print(f'train loss = {round(tr_loss, 3)}')
+            print(f'train acc = {round(tr_acc, 3)}')
+            print(f'train f1 = {round(tr_f1, 3)}')
+            print()
+            print(f'val loss = {round(val_loss, 3)}')
+            print(f'val acc = {round(val_acc, 3)}')
+            print(f'val f1 = {round(val_f1, 3)}')
+            print(f'--> timer = {round(end-start, 2)} sec')
 
             if tr_loss < best_loss:
                 best_loss = tr_loss
@@ -322,9 +323,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         te_accuracy = np.mean(temp_test_accuracy)
         te_f1 = np.mean(temp_test_f1)
 
-        print(f'test loss = {te_loss}')
-        print(f'test acc = {te_accuracy}')
-        print(f'test f1 = {te_f1}')
+        print(f'test loss = {round(te_loss, 3)}')
+        print(f'test acc = {round(te_accuracy, 3)}')
+        print(f'test f1 = {round(te_f1, 3)}')
 
         classes = []
         y_test = []
