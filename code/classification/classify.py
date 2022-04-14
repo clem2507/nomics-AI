@@ -7,6 +7,7 @@ import mne
 import time
 import math
 import pickle
+import itertools
 import argparse
 import datetime
 import mplcursors
@@ -179,31 +180,49 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
         else:
             classes.append((0, 0.5))
     else:
-        step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
-        if not full_sequence:
-            for i in range(0, len(data), batch_size*step_size):
-                if i+(batch_size*step_size) < len(data):
-                    y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size*step_size], (batch_size, step_size, 1)))
-                    for label in y_pred:
-                        pred_label = round(label[0])
-                        if pred_label == 0:
-                            if 1-y_pred[0][0] > threshold:
-                                classes.append((pred_label, 1-label[0]))
-                            else:
-                                classes.append((1, 0.5))
-                        else:
-                            classes.append((label, label[0]))
-        else:
-            y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
-            for label in y_pred:
-                pred_label = round(label[0])
-                if pred_label == 0:
-                    if 1-y_pred[0][0] > threshold:
-                        classes.append((pred_label, 1-label[0]))
-                    else:
-                        classes.append((1, 0.5))
-                else:
-                    classes.append((label, label[0]))
+        X = [np.reshape(data[i:i + step_size], (step_size, 1)) for i in range(0, len(data)-int(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))-1, step_size)]
+        # print(list(itertools.chain.from_iterable(X)))
+        # print(X[0:100])
+        # predictions = model.predict(list(itertools.chain.from_iterable(X)), batch_size=batch_size)
+        predictions = model.predict(X, batch_size=batch_size)
+        # print(predictions)
+        # print(len(predictions))
+        # print(len(predictions[0]))
+        # print(len(predictions[0][0]))
+        # sys.exit()
+        classes = []
+        # for pred in list(itertools.chain.from_iterable(predictions)):
+            
+        # for i in range(len(predictions)):
+
+        # for c in np.argmax(predictions, axis=2):
+        #     temp_classes.extend(c)
+        # classes.append(temp_classes)
+        # y_test.append(list(itertools.chain.from_iterable(np.argmax(y_te[i], axis=2))))
+        # step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
+        # for i in range(0, len(data), batch_size*step_size):
+        #     if i+(batch_size*step_size) < len(data):
+        #         y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size*step_size], (batch_size, step_size, 1)))
+        #         for label in y_pred:
+        #             pred_label = round(label[0])
+        #             if pred_label == 0:
+        #                 if 1-y_pred[0][0] > threshold:
+        #                     classes.append((pred_label, 1-label[0]))
+        #                 else:
+        #                     classes.append((1, 0.5))
+        #             else:
+        #                 classes.append((label, label[0]))
+        # else:
+        #     y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
+        #     for label in y_pred:
+        #         pred_label = round(label[0])
+        #         if pred_label == 0:
+        #             if 1-y_pred[0][0] > threshold:
+        #                 classes.append((pred_label, 1-label[0]))
+        #             else:
+        #                 classes.append((1, 0.5))
+        #         else:
+        #             classes.append((label, label[0]))
 
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
     df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
