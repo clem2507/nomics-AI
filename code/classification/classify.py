@@ -70,12 +70,22 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
 
     model_name = model.lower()
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+    best_dir = f'{saved_dir}/best'
+    model_list = os.listdir(best_dir)
 
-    most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
-    most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
-
-    model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
-    info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    print('----- MODEL CHOICE -----')
+    for i in range(len(model_list)):
+        print(f'({i+1}) {model_list[i]}')
+    model_num = int(input('model number: '))
+    if model_num > 0 and model_num <= len(model_list):
+        model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+        info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+    else:
+        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+        most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
+        model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
+        info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    print('------------------------')
     info_file = open(info_path)
     lines = info_file.readlines()
     lines = lines[3:13]
@@ -180,49 +190,21 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
         else:
             classes.append((0, 0.5))
     else:
-        X = [np.reshape(data[i:i + step_size], (step_size, 1)) for i in range(0, len(data)-int(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))-1, step_size)]
-        # print(list(itertools.chain.from_iterable(X)))
-        # print(X[0:100])
-        # predictions = model.predict(list(itertools.chain.from_iterable(X)), batch_size=batch_size)
+        X = np.reshape(data[0:len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))], ((len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size)))//step_size, step_size, 1))
         predictions = model.predict(X, batch_size=batch_size)
-        # print(predictions)
-        # print(len(predictions))
-        # print(len(predictions[0]))
-        # print(len(predictions[0][0]))
-        # sys.exit()
         classes = []
-        # for pred in list(itertools.chain.from_iterable(predictions)):
-            
-        # for i in range(len(predictions)):
-
-        # for c in np.argmax(predictions, axis=2):
-        #     temp_classes.extend(c)
-        # classes.append(temp_classes)
-        # y_test.append(list(itertools.chain.from_iterable(np.argmax(y_te[i], axis=2))))
-        # step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
-        # for i in range(0, len(data), batch_size*step_size):
-        #     if i+(batch_size*step_size) < len(data):
-        #         y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size*step_size], (batch_size, step_size, 1)))
-        #         for label in y_pred:
-        #             pred_label = round(label[0])
-        #             if pred_label == 0:
-        #                 if 1-y_pred[0][0] > threshold:
-        #                     classes.append((pred_label, 1-label[0]))
-        #                 else:
-        #                     classes.append((1, 0.5))
-        #             else:
-        #                 classes.append((label, label[0]))
-        # else:
-        #     y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
-        #     for label in y_pred:
-        #         pred_label = round(label[0])
-        #         if pred_label == 0:
-        #             if 1-y_pred[0][0] > threshold:
-        #                 classes.append((pred_label, 1-label[0]))
-        #             else:
-        #                 classes.append((1, 0.5))
-        #         else:
-        #             classes.append((label, label[0]))
+        for i in range(len(predictions)):
+            for j in range(len(predictions[i])):
+                idx = np.argmax(predictions[i][j])
+                pred_label = idx
+                proba = predictions[i][j][idx]
+                if pred_label == 0:
+                    if proba > threshold:
+                        classes.append((pred_label, proba))
+                    else:
+                        classes.append((1, 0.5))
+                else:
+                    classes.append((pred_label, proba))
 
     df_jawac['label'] = [1 for n in range(len(df_jawac))]
     df_jawac['proba'] = [0.5 for n in range(len(df_jawac))]
@@ -297,15 +279,23 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     print('Task 2...')
     print()
 
-    timer_task2 = time.time()
-
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name}'
+    best_dir = f'{saved_dir}/best'
+    model_list = os.listdir(best_dir)
 
-    most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
-    most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
-
-    model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
-    info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    print('----- MODEL CHOICE -----')
+    for i in range(len(model_list)):
+        print(f'({i+1}) {model_list[i]}')
+    model_num = int(input('model number: '))
+    if model_num > 0 and model_num <= len(model_list):
+        model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+        info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+    else:
+        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+        most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
+        model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
+        info_path = str(most_recent_folder_path[0]) + '/info.txt'
+    print('------------------------')
     info_file = open(info_path)
     lines = info_file.readlines()
     lines = lines[3:13]
@@ -327,16 +317,16 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     else:
         raise Exception(model_path, '-> model path does not exist')
 
-    X = df_jawac[df_jawac['label']==1].data.tolist()
+    data = df_jawac[df_jawac['label']==1].data.tolist()
 
     # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in second
     if not stateful:
         size = int((1 / downsampling_value) * segmentation_value)
         if not sliding_window:
-            X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), size)], dtype=object)
+            X_test_seq = np.array([(data[i:i + size]) for i in range(0, len(data), size)], dtype=object)
         else:
             size = int(segmentation_value)   # in sec
-            X_test_seq = np.array([(X[i:i + size]) for i in range(0, len(X), center_of_interest)], dtype=object)
+            X_test_seq = np.array([(data[i:i + size]) for i in range(0, len(data), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
             # arr = np.append(arr, pd.Series([np.var(arr)*1000]))
@@ -344,7 +334,7 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.7
+    threshold = 0.5
     classes = []
     step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
@@ -385,30 +375,21 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
         if return_sequences and sliding_window:
             classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
     else:
-        if not full_sequence:
-            for i in range(0, len(X), batch_size*step_size):
-                if i+(batch_size*step_size) < len(X):
-                    y_pred, *r = model.predict_on_batch(np.reshape(X[i:i+batch_size*step_size], (batch_size, step_size, 1)))
-                    for label in y_pred:
-                        pred_label = round(label[0])
-                        if pred_label == 0:
-                            if 1-label[0] > threshold:
-                                classes.append((pred_label, 1-label[0]))
-                            else:
-                                classes.append((1, 0.5))
-                        else:
-                            classes.append((pred_label, label[0]))
-        else:
-            y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
-            for label in y_pred:
-                pred_label = round(label[0])
+        X = np.reshape(data[0:len(data)-int(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))], ((len(data)-int(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size)))//step_size, step_size, 1))
+        predictions = model.predict(X, batch_size=batch_size)
+        classes = []
+        for i in range(len(predictions)):
+            for j in range(len(predictions[i])):
+                idx = np.argmax(predictions[i][j])
+                pred_label = idx
+                proba = predictions[i][j][idx]
                 if pred_label == 0:
-                    if 1-label[0] > threshold:
-                        classes.append((pred_label, 1-label[0]))
+                    if proba > threshold:
+                        classes.append((pred_label, proba))
                     else:
                         classes.append((1, 0.5))
                 else:
-                    classes.append((pred_label, label[0]))
+                    classes.append((pred_label, proba))
 
     df_jawac_only_valid = df_jawac[df_jawac['label']==1]
 
@@ -595,15 +576,6 @@ def main(p):
     print('-------- OUTPUT DICTIONARY --------')
     print(out_dic)
     print('-----------------------------------')
-
-
-    # from random import shuffle
-    # dir = '/Users/clemdetry/My Drive/nomics/data/all_valid_analysis'
-    # dir_list = os.listdir(dir)
-    # shuffle(dir_list)
-    # for path in dir_list:
-    #     if os.path.exists(f'{dir}/{path}/{path}.edf'):
-    #         analysis_classification(f'{dir}/{path}/{path}.edf', 'lstm', True, '')
 
 
 if __name__ == '__main__':

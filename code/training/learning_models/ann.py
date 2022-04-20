@@ -11,7 +11,8 @@ import numpy as np
 from math import sqrt
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
+from sklearn.metrics import confusion_matrix
+from sklearn.utils.class_weight import compute_sample_weight
 
 from tqdm import tqdm
 from matplotlib import pyplot as plt
@@ -172,9 +173,9 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
     # Stateful model
     else:
         max_length = int(segmentation_value * (1 / downsampling_value))
-        n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 2, 0.15, True
-        lstm_units = max(8, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
-                    
+        n_timesteps, n_features, n_outputs, validation_split, return_sequences = max_length, 1, 2, 0.30, True
+        lstm_units = max(8, int(2/3 * (n_timesteps * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046
+    
         model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=True, batch_input_shape=(batch_size, n_timesteps, n_features)))   # lstm layer -- 1
         model.add(LSTM(units=lstm_units, return_sequences=return_sequences, stateful=True))   # lstm layer -- 1'
         model.add(Dropout(0.2))   # dropout -- 2
@@ -189,35 +190,32 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
         print(model.summary())
 
-        # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split)
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split, random_state=42)
+        # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split)
 
         X_tr = []
         y_tr = []
         for idx in range(len(X_train)):
-            temp_X_tr = [np.reshape(X_train[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_train[idx])-int(((len(X_train[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
-            temp_y_tr = [np.array(y_train[idx][i:i + max_length]) for i in range(0, len(y_train[idx])-int(((len(y_train[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
-            temp_y_tr[-1][-1] = 1
+            temp_X_tr = [np.reshape(X_train[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_train[idx])-round(((len(X_train[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_tr = [np.array(y_train[idx][i:i + max_length]) for i in range(0, len(y_train[idx])-round(((len(y_train[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
             X_tr.append(np.array(temp_X_tr))
-            y_tr.append(np.array(to_categorical(temp_y_tr)))
+            y_tr.append(np.array(to_categorical(temp_y_tr, num_classes=2)))
 
         X_v = []
         y_v = []
         for idx in range(len(X_val)):
-            temp_X_v = [np.reshape(X_val[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_val[idx])-int(((len(X_val[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
-            temp_y_v = [np.array(y_val[idx][i:i + max_length]) for i in range(0, len(y_val[idx])-int(((len(y_val[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
-            temp_y_v[-1][-1] = 1
+            temp_X_v = [np.reshape(X_val[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_val[idx])-round(((len(X_val[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_v = [np.array(y_val[idx][i:i + max_length]) for i in range(0, len(y_val[idx])-round(((len(y_val[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
             X_v.append(np.array(temp_X_v))
-            y_v.append(np.array(to_categorical(temp_y_v)))
+            y_v.append(np.array(to_categorical(temp_y_v, num_classes=2)))
                 
         X_te = []
         y_te = []
         for idx in range(len(X_test)):
-            temp_X_te = [np.reshape(X_test[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_test[idx])-int(((len(X_test[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
-            temp_y_te = [np.array(y_test[idx][i:i + max_length]) for i in range(0, len(y_test[idx])-int(((len(y_test[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
-            temp_y_te[-1][-1] = 1
+            temp_X_te = [np.reshape(X_test[idx][i:i + max_length], (n_timesteps, n_features)) for i in range(0, len(X_test[idx])-round(((len(X_test[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
+            temp_y_te = [np.array(y_test[idx][i:i + max_length]) for i in range(0, len(y_test[idx])-round(((len(y_test[idx])/(max_length*batch_size))%1)*(max_length*batch_size))-1, max_length)]
             X_te.append(np.array(temp_X_te))
-            y_te.append(np.array(to_categorical(temp_y_te)))
+            y_te.append(np.array(to_categorical(temp_y_te, num_classes=2)))
         
         computation_time_history = []
         training_loss_history = []
@@ -227,7 +225,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
         validation_accuracy_history = []
         validation_f1_history = []
 
-        best_loss = 1
+        best_val_loss = sys.maxsize
         patience_count = 0
 
         # train model
@@ -238,24 +236,37 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             temp_training_f1 = []
             print('--> TRAIN...')
             start = time.time()
-            for j in tqdm(range(len(X_tr))[0:10]):
-                history = model.fit(X_tr[j], y_tr[j], epochs=1, batch_size=batch_size, verbose=0, shuffle=False)
-                model.reset_states()
-                temp_training_loss.append(history.history['loss'])
-                temp_training_accuracy.append(history.history['accuracy'])
-                temp_training_f1.append(history.history['f1'])
+            for j in tqdm(range(len(X_tr))):
+                if len(y_tr[j].shape) > 2:
+                    y_integers = list(itertools.chain.from_iterable(np.argmax(y_tr[j], axis=2)))
+                    sample_weights = compute_sample_weight('balanced', y_integers)
+                    sample_weights = np.reshape(sample_weights, (len(X_tr[j]), max_length))
+                    history = model.fit(X_tr[j], y_tr[j], epochs=1, batch_size=batch_size, verbose=0, shuffle=False, sample_weight=sample_weights)
+                    model.reset_states()
+                    temp_training_loss.append(history.history['loss'][-1])
+                    temp_training_accuracy.append(history.history['accuracy'][-1])
+                    temp_training_f1.append(history.history['f1'][-1])
+                else:
+                    print(f'num {j} with shape {y_tr[j].shape} not accepted')
+                    continue
+
+            print('-----')
 
             temp_validation_loss = []
             temp_validation_accuracy = []
             temp_validation_f1 = []
             print('--> VAL...')
             for j in tqdm(range(len(X_v))):
-                dic = model.evaluate(X_v[i], y_v[i], batch_size=batch_size, verbose=0, return_dict=True)
-                model.reset_states()
-                temp_validation_loss.append(dic['loss'])
-                temp_validation_accuracy.append(dic['accuracy'])
-                temp_validation_f1.append(dic['f1'])
-            end = time.time()    
+                if len(y_v[j].shape) > 2:
+                    dic = model.evaluate(X_v[j], y_v[j], batch_size=batch_size, verbose=0, return_dict=True)
+                    model.reset_states()
+                    temp_validation_loss.append(dic['loss'])
+                    temp_validation_accuracy.append(dic['accuracy'])
+                    temp_validation_f1.append(dic['f1'])
+                else:
+                    print(f'num {j} with shape {y_v[j].shape} not accepted')
+                    continue
+            end = time.time()
 
             computation_time_history.append(end-start)
 
@@ -273,6 +284,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             validation_accuracy_history.append(val_acc)
             validation_f1_history.append(val_f1)
 
+            print()
             print(f'train loss = {round(tr_loss, 3)}')
             print(f'train acc = {round(tr_acc, 3)}')
             print(f'train f1 = {round(tr_f1, 3)}')
@@ -280,10 +292,12 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
             print(f'val loss = {round(val_loss, 3)}')
             print(f'val acc = {round(val_acc, 3)}')
             print(f'val f1 = {round(val_f1, 3)}')
-            print(f'--> timer = {round(end-start, 2)} sec')
+            print()
+            print(f'--> timer = {round(end-start, 2)} sec, {round((end-start)/60, 2)} min')
+            print()
 
-            if tr_loss < best_loss:
-                best_loss = tr_loss
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
                 model.save(f'{save_dir}/best/model-best.h5')
                 model.save(os.path.join(wandb.run.dir, "model-best.h5"))
                 patience_count = 0
@@ -297,10 +311,10 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
         print('----- TRAIN DONE -----')
 
-        # evaluate model
         temp_test_loss = []
         temp_test_accuracy = []
         temp_test_f1 = []
+        # evaluate model
         print('--> TEST...')
         for i in tqdm(range(len(X_te))):
             dic = model.evaluate(X_te[i], y_te[i], batch_size=batch_size, verbose=0, return_dict=True)
@@ -320,6 +334,7 @@ def evaluate_model(analysis_directory, model_name, segmentation_value, downsampl
 
         classes = []
         y_test = []
+        # predict model
         print('--> PREDICT...')
         for i in tqdm(range(len(X_te))):
             predictions = model.predict(X_te[i], batch_size=batch_size)

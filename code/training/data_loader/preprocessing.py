@@ -264,8 +264,8 @@ class Preprocessing:
             X, y = shuffle(X, y)
 
         # splitting the data into testing and training sets
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20)
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
