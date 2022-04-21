@@ -15,10 +15,12 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 from keras.models import load_model
+from plotly.subplots import make_subplots
 
 from pathlib import Path
 from datetime import timedelta
@@ -422,10 +424,9 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
             if len(idx) <= min_gap_time:
                 if previous_label == 1:
                     df_jawac.loc[idx, 'label'] = 2
-                    df_jawac.loc[idx, 'proba'] = 0.5
                 elif previous_label == 2:
                     df_jawac.loc[idx, 'label'] = 1
-                    df_jawac.loc[idx, 'proba'] = 0.5
+                df_jawac.loc[idx, 'proba'] = 0.5
             else:
                 idx = []
                 idx.append(i)
@@ -503,18 +504,50 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     print('classification execution time =', round((end - start_class), 2), 'sec')
     print('total execution time =', round((end - start), 2), 'sec')
 
-    # graph
-    fig, ax = plt.subplots()
-    fig.set_size_inches(18.5, 10.5)
+    fig = go.Figure()
 
     df_jawac.set_index('times', inplace=True)
+    df_jawac.proba = df_jawac.proba.round(3)
 
-    # plot of the time series values
-    ax.plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-    ax.axhline(y=0, color='r', linewidth=1)
-    if new_start is not None and new_end is not None:
-        ax.axvline(x=new_start, color='k', linewidth=2, linestyle='--')
-        ax.axvline(x=new_end, color='k', linewidth=2, linestyle='--')
+    fig.add_trace(
+        go.Scatter(x=df_jawac.index.tolist(), 
+                   y=df_jawac.data.tolist(), 
+                   showlegend=False,
+                   customdata = df_jawac.proba.tolist(),
+                   hovertemplate='<extra><br>proba: %{customdata}</extra>',
+                   hoverinfo='skip',
+                   line=dict(
+                       color='rgb(57, 119, 175)',
+                       width=2)),
+    )
+
+    for idx, row in df_label.iterrows():
+        if row.label == 0:
+            fig.add_vrect(x0=row.start, x1=row.end,
+                          fillcolor='red', 
+                          opacity=0.2*row.proba,
+                          line_width=0)
+        elif row.label == 1:
+            fig.add_vrect(x0=row.start, x1=row.end,
+                          fillcolor='green', 
+                          opacity=0.2*row.proba,
+                          line_width=0)
+        elif row.label == 2:
+            fig.add_vrect(x0=row.start, x1=row.end,
+                          fillcolor='blue', 
+                          opacity=0.2*row.proba,
+                          line_width=0)
+
+    fig.add_hline(y=0, line_color='red', line_width=1)
+
+    fig.add_vline(x=new_start, line_dash="dash", line_color='black', line_width=2)
+    fig.add_vline(x=new_end, line_dash="dash", line_color='black', line_width=2)
+
+    fig.update_xaxes(title_text="time")
+    fig.update_yaxes(title_text="opening (mm)")
+
+    legend = 'red(invalid), green(valid/sleep), blue(awake)'
+
     title = ''    # value of the chart title, containing the name of the analysis
     for c in reversed(edf[:-4]):
         if c != '/':
@@ -522,39 +555,25 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
         else:
             break
     title = title[::-1]
-    ax.set(xlabel='time', ylabel='opening (mm)', title=f'Jawac Signal - {title}')
-    ax.grid()
 
-    curr_time = raw_data.__dict__['info']['meas_date']    # starting time of the analysis -- Not needed anymore
-    # graph background color based on signal classified label
-    for idx, row in df_label.iterrows():
-        if row.label == 0:
-            plt.axvspan(row.start, row.end, facecolor='r', alpha=0.3*row.proba)
-        elif row.label == 1:
-            plt.axvspan(row.start, row.end, facecolor='g', alpha=0.3*row.proba)
-        elif row.label == 2:
-            plt.axvspan(row.start, row.end, facecolor='b', alpha=0.3*row.proba)
+    fig.add_annotation(text=f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - valid: {dictionary["is_valid"]}',
+                       xref='paper', yref='paper',
+                       x=0.3, y=1.045, showarrow=False)
 
-    # legend
-    legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid', alpha=0.25),
-                    Patch(facecolor='g', edgecolor='w', label='sleep', alpha=0.25),
-                    Patch(facecolor='b', edgecolor='w', label='awake', alpha=0.25),
-                    Line2D([0], [0], linewidth=1.5, linestyle='--', color='k', label='new bounds')]
+    fig.update_layout(title=go.layout.Title(
+                            text=f'{title} <br><sup>Legend: {legend}</sup>',
+                            xref='paper',
+                            x=0))
 
-    ax.legend(handles=legend_elements, loc='best')
-
-    cursor = mplcursors.cursor(hover=True)
-    cursor.connect("add", lambda sel: sel.annotation.set_text(round(df_jawac.proba[int(sel.index)], 4)))
-
-    plt.text(0.14, 0.04, f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - valid: {dictionary["is_valid"]}', fontsize=11, transform=plt.gcf().transFigure)
+    fig.layout.width = None
+    fig.layout.height = None
 
     if plt_save_path != '':
-        plt.savefig(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png', bbox_inches='tight')
+        fig.write_image(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png')
 
-    dictionary['plot'] = plt
+    dictionary['plot'] = fig
     if show_graph:
-        plt.show()
-    plt.close(fig=fig)
+        fig.show()
 
     enable_print()
 
@@ -575,9 +594,9 @@ def parse_opt():
 
 def main(p):
     out_dic = analysis_classification(**vars(p))
-    print('-------- OUTPUT DICTIONARY --------')
-    print(out_dic)
-    print('-----------------------------------')
+    # print('-------- OUTPUT DICTIONARY --------')
+    # print(out_dic)
+    # print('-----------------------------------')
 
 
 if __name__ == '__main__':

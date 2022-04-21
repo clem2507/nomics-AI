@@ -3,10 +3,7 @@ import wandb
 import os
 import sys
 import mne
-import random
-import pickle
 import argparse
-import mplcursors
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -15,27 +12,24 @@ import plotly.graph_objects as go
 from tqdm import tqdm
 from pathlib import Path
 from keras.models import load_model
-from matplotlib import pyplot as plt
-from matplotlib.patches import Patch
-from matplotlib.lines import Line2D
 from plotly.subplots import make_subplots
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
 
-from util import f1, get_value_in_line, hours_conversion, move_figure, extract_data_from_line, block_print, enable_print, datetime_conversion
+from util import f1, get_value_in_line, extract_data_from_line, block_print, enable_print, datetime_conversion
 from preprocessing import Preprocessing
 
 
-def find_residuals(analysis_directory, model_directory, model_name, task, show_graph, save_graph):
+def find_residuals(analysis_directory, model_name, model_num, task, show_graph, save_graph):
     """
     Method used to find the residuals between the model predictions and the actual labels
 
     Parameters:
 
     -analysis_directory: directory path with analysis to use for testing neural network and finding residuals
-    -model_directory: directory path with model to use
     -model_name: learning model architecture - either CNN or LSTM
+    -model_num: number of the model to use in the best folder
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -show_graph: true to show the output graph
     -save_graph: true to save the output residual plots
@@ -45,14 +39,18 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
         wandb.init(project="nomics-AI", entity="nomics")
 
     model_name = model_name.lower()
-    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}'
     best_dir = f'{saved_dir}/best'
     model_list = os.listdir(best_dir)
 
     print('----- MODEL CHOICE -----')
     for i in range(len(model_list)):
         print(f'({i+1}) {model_list[i]}')
-    model_num = int(input('model number: '))
+    if model_num is None:
+        model_num = int(input('model number: '))
+    else:
+        print('model number:', model_num)
+    print('--> model name:', model_list[model_num-1])
     if model_num > 0 and model_num <= len(model_list):
         model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
         info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
@@ -97,7 +95,8 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
                 raise Exception(analysis_directory, '-> analysis directory path does not exist')
     # filenames = sorted(os.listdir(analysis_directory))
     filenames = os.listdir(analysis_directory)
-    random.shuffle(filenames)
+    # random.shuffle(filenames)
+    res_data_total = 0
     for file_i in tqdm(range(len(filenames))):
         mk3_file = f'{analysis_directory}/{filenames[file_i]}/{filenames[file_i]}_mk3.pkl'
         edf_file = f'{analysis_directory}/{filenames[file_i]}/{filenames[file_i]}_jawac.pkl'
@@ -170,7 +169,8 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             X_test_seq_temp = []
             for arr in X_test_seq:
                 if not return_sequences:
-                    arr = np.append(arr, pd.Series([np.var(arr)*1000]))
+                    if task == 1:
+                        arr = np.append(arr, pd.Series([np.var(arr)*1000]))
                 X_test_seq_temp.append(arr)
             X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
             X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
@@ -216,32 +216,22 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             if return_sequences and sliding_window:
                 classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
         else:
-            step_size = int(((1 / downsampling_value) * segmentation_value) * batch_size)
             data = df_jawac.data.tolist()
-            if not full_sequence:
-                for i in range(0, len(data), batch_size*step_size):
-                    if i+(batch_size*step_size) < len(data):
-                        y_pred, *r = model.predict_on_batch(np.reshape(data[i:i+batch_size*step_size], (batch_size, step_size, 1)))
-                        for label in y_pred:
-                            pred_label = round(label[0])
-                            if pred_label == 0:
-                                if 1-y_pred[0][0] > threshold:
-                                    classes.append((pred_label, 1-label[0]))
-                                else:
-                                    classes.append((1, 0.5))
-                            else:
-                                classes.append((label, label[0]))
-            else:
-                y_pred, *r = model.predict_on_batch(np.reshape(data, (batch_size, -1, 1)))
-                for label in y_pred:
-                    pred_label = round(label[0])
+            X = np.reshape(data[0:len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))], ((len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size)))//step_size, step_size, 1))
+            predictions = model.predict(X, batch_size=batch_size)
+            classes = []
+            for i in range(len(predictions)):
+                for j in range(len(predictions[i])):
+                    idx = np.argmax(predictions[i][j])
+                    pred_label = idx
+                    proba = predictions[i][j][idx]
                     if pred_label == 0:
-                        if 1-y_pred[0][0] > threshold:
-                            classes.append((pred_label, 1-label[0]))
+                        if proba > threshold:
+                            classes.append((pred_label, proba))
                         else:
                             classes.append((1, 0.5))
                     else:
-                        classes.append((label, label[0]))
+                        classes.append((pred_label, proba))
 
         df_jawac['proba'] = [1 for n in range(len(df_jawac))]
         df_jawac['pred_proba'] = [0.5 for n in range(len(df_jawac))]
@@ -263,7 +253,32 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
                     df_jawac.loc[mask, ['pred_label']] = 0
                 else:
                     df_jawac.loc[mask, ['pred_label']] = 2
-            df_jawac.loc[mask, ['pred_proba']] = round(classes[i][1], 3)
+            df_jawac.loc[mask, ['pred_proba']] = classes[i][1]
+
+        df_jawac.pred_proba = df_jawac.pred_proba.round(3)
+
+        min_gap_time = int((60 / downsampling_value) * 1)   # in minutes
+        previous_label = df_jawac.pred_label[0]
+        idx = []
+        for i in range(len(df_jawac.pred_label)):
+            idx.append(i)
+            if df_jawac.pred_label[i] != previous_label:
+                if len(idx) <= min_gap_time:
+                    if task == 1:
+                        if previous_label == 0:
+                            df_jawac.loc[idx, 'pred_label'] = 1
+                        elif previous_label == 1:
+                            df_jawac.loc[idx, 'pred_label'] = 0
+                    elif task == 2:
+                        if previous_label == 1:
+                            df_jawac.loc[idx, 'pred_label'] = 2
+                        elif previous_label == 2:
+                            df_jawac.loc[idx, 'pred_label'] = 1
+                    df_jawac.loc[idx, 'pred_proba'] = 0.5
+                else:
+                    idx = []
+                    idx.append(i)
+            previous_label = df_jawac.pred_label[i]
 
         for idx, row in df_jawac.iterrows():
             if row.label != row.pred_label:
@@ -277,13 +292,13 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             if len(row) > 0:
                 proba.append(row.proba)
                 if row.label != saved_label:
-                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                     df_label = pd.concat([df_label, temp], ignore_index=True)
                     saved_label = row.label
                     saved_start = row.times
                     proba = []
         if len(proba) > 0:
-            temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+            temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
             df_label = pd.concat([df_label, temp], ignore_index=True)
 
         df_pred_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba', 'data_num'])
@@ -294,7 +309,7 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             if len(row) > 0:
                 proba.append(row.pred_proba)
                 if row.pred_label != saved_label:
-                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                     df_pred_label = pd.concat([df_pred_label, temp], ignore_index=True)
                     saved_label = row.pred_label
                     saved_start = row.times
@@ -312,15 +327,18 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
                 proba.append(row.res_proba)
                 if row.res_label != saved_label:
                     if saved_label == 3:
-                        temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                        temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                         df_residuals = pd.concat([df_residuals, temp], ignore_index=True)
                     saved_label = row.res_label
                     saved_start = row.times
                     proba = []
         if len(proba) > 0:
             if saved_label == 3:
-                temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                 df_residuals = pd.concat([df_residuals, temp], ignore_index=True)
+
+        if 3 in df_jawac.res_label.value_counts().keys():
+            res_data_total += df_jawac.res_label.value_counts()[3]
 
         df_jawac.set_index('times', inplace=True)
 
@@ -335,8 +353,6 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             go.Scatter(x=df_jawac.index.tolist(), 
                        y=df_jawac.data.tolist(), 
                        showlegend=False, 
-                       customdata = df_jawac.proba.tolist(),
-                       hovertemplate='<extra><br>proba: %{customdata}</extra>',
                        hoverinfo='skip',
                        line=dict(
                         color='rgb(57, 119, 175)',
@@ -409,11 +425,18 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
         fig.update_yaxes(title_text="opening (mm)", row=2, col=1)
         fig.update_yaxes(title_text="opening (mm)", row=3, col=1)
 
-        fig.update_layout(height=1000, width=1200, 
-                          title=go.layout.Title(
-                              text="Residual subplots <br><sup>Legend: red(invalid), green(valid), blue(awake), yellow(residuals)</sup>",
-                              xref="paper",
+        if task == 1:
+            legend = 'red(invalid), green(valid), yellow(residuals)'
+        elif task == 2:
+            legend = 'green(sleep), blue(awake), yellow(residuals)'
+
+        fig.update_layout(title=go.layout.Title(
+                              text=f'Residual subplots <br><sup>Legend: {legend}</sup>',
+                              xref='paper',
                               x=0))
+
+        fig.layout.width = None
+        fig.layout.height = None
         
         if save_graph:
             if not os.path.exists(f'{best_dir}/{model_list[model_num-1]}/residuals'):
@@ -421,22 +444,24 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             if not os.path.exists(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}'):
                 os.mkdir(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}')
             fig.write_image(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}/residuals_plt.png')
-            # pickle.dump(fig, open(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}/residuals_plt.pickle','wb'))
-            # --> cmd to open the plot
-            # fig = pickle.load(open('PATH', 'rb'))
-            # fig.show()
-            wandb.log({f'residuals_plt': fig})
+            wandb.log({'residuals_plt': fig})
         if show_graph:
-        #     move_figure(fig, 0, 0)
             fig.show()
-        # plt.close(fig=fig)
+
+    res_min_total = (res_data_total * (1/downsampling_value)) / 60
+    res_hours_total = (res_data_total * (1/downsampling_value)) / 3600
+    print('average residual min:', res_min_total/len(filenames))
+    print('average residual hours:', res_hours_total/len(filenames))
+    if save_graph:
+        wandb.log({'average residual min': res_min_total/len(filenames),
+                'average residual hours': res_hours_total/len(filenames)})
 
 
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--analysis_directory', type=str, default='', help='directory path with analysis to use for testing neural network and finding residuals')
-    parser.add_argument('--model_directory', type=str, default='', help='directory path with model to use')
     parser.add_argument('--model_name', type=str, default='LSTM', help='learning model architecture - either CNN or LSTM')
+    parser.add_argument('--model_num', type=int, default=None, help='number of the model to use in the best folder')
     parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
     parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')
     parser.add_argument('--save_graph', dest='save_graph', action='store_true', help='invoke to save the output residual plots')
