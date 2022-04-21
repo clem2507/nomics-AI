@@ -1,3 +1,5 @@
+import wandb
+
 import os
 import sys
 import mne
@@ -8,6 +10,7 @@ import mplcursors
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import plotly.graph_objects as go
 
 from tqdm import tqdm
 from pathlib import Path
@@ -15,6 +18,7 @@ from keras.models import load_model
 from matplotlib import pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+from plotly.subplots import make_subplots
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
@@ -37,16 +41,28 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
     -save_graph: true to save the output residual plots
     """
 
-    # model loader
-    if model_directory == '':
-        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name.lower()}'
-        most_recent_folder_path = sorted(Path(saved_dir).iterdir(), key=os.path.getmtime)[::-1]
+    if save_graph:
+        wandb.init(project="nomics-AI", entity="nomics")
+
+    model_name = model_name.lower()
+    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+    best_dir = f'{saved_dir}/best'
+    model_list = os.listdir(best_dir)
+
+    print('----- MODEL CHOICE -----')
+    for i in range(len(model_list)):
+        print(f'({i+1}) {model_list[i]}')
+    model_num = int(input('model number: '))
+    if model_num > 0 and model_num <= len(model_list):
+        model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+        info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+    else:
+        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
         most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
         model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
         info_path = str(most_recent_folder_path[0]) + '/info.txt'
-    else:
-        model_path = f'{model_directory}/best/model-best.h5'
-        info_path = f'{model_directory}/info.txt'
+    print('------------------------')
+
     if os.path.exists(model_path):
         model = load_model(model_path, compile=True, custom_objects={'f1': f1})
     else:
@@ -247,7 +263,7 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
                     df_jawac.loc[mask, ['pred_label']] = 0
                 else:
                     df_jawac.loc[mask, ['pred_label']] = 2
-            df_jawac.loc[mask, ['pred_proba']] = classes[i][1]
+            df_jawac.loc[mask, ['pred_proba']] = round(classes[i][1], 3)
 
         for idx, row in df_jawac.iterrows():
             if row.label != row.pred_label:
@@ -261,13 +277,13 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             if len(row) > 0:
                 proba.append(row.proba)
                 if row.label != saved_label:
-                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                     df_label = pd.concat([df_label, temp], ignore_index=True)
                     saved_label = row.label
                     saved_start = row.times
                     proba = []
         if len(proba) > 0:
-            temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+            temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
             df_label = pd.concat([df_label, temp], ignore_index=True)
 
         df_pred_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba', 'data_num'])
@@ -278,13 +294,13 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
             if len(row) > 0:
                 proba.append(row.pred_proba)
                 if row.pred_label != saved_label:
-                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                    temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                     df_pred_label = pd.concat([df_pred_label, temp], ignore_index=True)
                     saved_label = row.pred_label
                     saved_start = row.times
                     proba = []
         if len(proba) > 0:
-            temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+            temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
             df_pred_label = pd.concat([df_pred_label, temp], ignore_index=True)
 
         df_residuals = pd.DataFrame(columns=['start', 'end', 'label', 'proba', 'data_num'])
@@ -296,79 +312,124 @@ def find_residuals(analysis_directory, model_directory, model_name, task, show_g
                 proba.append(row.res_proba)
                 if row.res_label != saved_label:
                     if saved_label == 3:
-                        temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                        temp = pd.DataFrame(data = [[saved_start, row.times, saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                         df_residuals = pd.concat([df_residuals, temp], ignore_index=True)
                     saved_label = row.res_label
                     saved_start = row.times
                     proba = []
         if len(proba) > 0:
             if saved_label == 3:
-                temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, np.mean(proba), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
+                temp = pd.DataFrame(data = [[saved_start, df_jawac.times.tolist()[-1], saved_label, round(np.mean(proba), 3), len(proba)]], columns=['start', 'end', 'label', 'proba', 'data_num'])
                 df_residuals = pd.concat([df_residuals, temp], ignore_index=True)
 
         df_jawac.set_index('times', inplace=True)
-        fig, ax = plt.subplots(nrows=3, ncols=1)
-        fig.set_size_inches(18.5, 12.5)
-        count = 0
 
+        fig = make_subplots(rows=3, 
+                            cols=1,
+                            subplot_titles=(
+                                f'Jawac Signal - {filenames[file_i]} - actual', 
+                                f'Jawac Signal - {filenames[file_i]} - predicted', 
+                                f'Jawac Signal - {filenames[file_i]} - residuals'))
+
+        fig.add_trace(
+            go.Scatter(x=df_jawac.index.tolist(), 
+                       y=df_jawac.data.tolist(), 
+                       showlegend=False, 
+                       customdata = df_jawac.proba.tolist(),
+                       hovertemplate='<extra><br>proba: %{customdata}</extra>',
+                       hoverinfo='skip',
+                       line=dict(
+                        color='rgb(57, 119, 175)',
+                        width=2)),
+            row=1, col=1
+        )
+
+        fig.add_trace(
+            go.Scatter(x=df_jawac.index.tolist(), 
+                       y=df_jawac.data.tolist(), 
+                       showlegend=False,
+                       customdata = df_jawac.pred_proba.tolist(),
+                       hovertemplate='<extra><br>proba: %{customdata}</extra>',
+                       hoverinfo='skip',
+                       line=dict(
+                        color='rgb(57, 119, 175)',
+                        width=2)),
+            row=2, col=1
+        )
+
+        fig.add_trace(
+            go.Scatter(x=df_jawac.index.tolist(), 
+                       y=df_jawac.data.tolist(), 
+                       showlegend=False,
+                       hoverinfo='skip',
+                       line=dict(
+                        color='rgb(57, 119, 175)',
+                        width=2)),
+            row=3, col=1
+        )
+
+        count = 1
         for df in [df_label, df_pred_label, df_residuals]:
-
-            ax[count].plot(df_jawac.index.tolist(), df_jawac.data.tolist())
-            ax[count].axhline(y=0, color='r', linewidth=1)
-            if count == 0:
-                ax[count].set(xlabel='time (s)', ylabel='opening (mm)', title=f'Jawac Signal - {filenames[file_i]} - actual')
-            elif count == 1:
-                ax[count].set(xlabel='time (s)', ylabel='opening (mm)', title=f'Jawac Signal - {filenames[file_i]} - predicted')
-            elif count == 2:
-                ax[count].set(xlabel='time (s)', ylabel='opening (mm)', title=f'Jawac Signal - {filenames[file_i]} - residuals')
-            ax[count].grid()
-
-            # graph background color based on signal classified label
             for idx, row in df.iterrows():
                 if row.label == 0:
-                    ax[count].axvspan(row.start, row.end, facecolor='r', alpha=0.3*row.proba)
+                    fig.add_vrect(x0=row.start, x1=row.end,
+                                  fillcolor='red', 
+                                  opacity=0.2*row.proba,
+                                  line_width=0,
+                                  row=count, col=1)
                 elif row.label == 1:
-                    ax[count].axvspan(row.start, row.end, facecolor='g', alpha=0.3*row.proba)
+                    fig.add_vrect(x0=row.start, x1=row.end,
+                                  fillcolor='green', 
+                                  opacity=0.2*row.proba,
+                                  line_width=0,
+                                  row=count, col=1)
                 elif row.label == 2:
-                    ax[count].axvspan(row.start, row.end, facecolor='b', alpha=0.3*row.proba)
+                    fig.add_vrect(x0=row.start, x1=row.end,
+                                  fillcolor='blue', 
+                                  opacity=0.2*row.proba,
+                                  line_width=0,
+                                  row=count, col=1)
                 elif row.label == 3:
-                    ax[count].axvspan(row.start, row.end, facecolor='y', alpha=0.3*row.proba)
-
-            # legend
-            legend_elements = [Patch(facecolor='r', edgecolor='w', label='invalid', alpha=0.25),
-                            Patch(facecolor='g', edgecolor='w', label='sleep', alpha=0.25),
-                            Patch(facecolor='b', edgecolor='w', label='awake', alpha=0.25)]
-
-            if count != 2:
-                ax[count].legend(handles=legend_elements, loc='best')
-
-            if count == 0:
-                cursor = mplcursors.cursor(ax[count], hover=True)
-                cursor.connect("add", lambda sel: sel.annotation.set_text(round(df_jawac.proba[int(sel.index)], 4)))
-            elif count == 1:
-                cursor = mplcursors.cursor(ax[count], hover=True)
-                cursor.connect("add", lambda sel: sel.annotation.set_text(round(df_jawac.pred_proba[int(sel.index)], 4)))
-            elif count == 2:
-                if 3 in df_jawac.res_label.value_counts().keys():
-                    res_data = df_jawac.res_label.value_counts()[3]
-                else:
-                    res_data = 0
-                res_min = (res_data * (1/downsampling_value)) / 60
-                res_hours = (res_data * (1/downsampling_value)) / 3600
-                plt.text(0.07, 0.04, f'# residuals: {res_data} - residuals (min): {round(res_min, 2)}min - residuals (h): {hours_conversion(res_hours)}', fontsize=11, transform=plt.gcf().transFigure)
+                    fig.add_vrect(x0=row.start, x1=row.end,
+                                  fillcolor='yellow', 
+                                  opacity=0.3,
+                                  line_width=0,
+                                  row=count, col=1)
             count+=1
+
+        fig.add_hline(y=0, row=1, col=1, line_color='red', line_width=1)
+        fig.add_hline(y=0, row=2, col=1, line_color='red', line_width=1)
+        fig.add_hline(y=0, row=3, col=1, line_color='red', line_width=1)
+
+        fig.update_xaxes(title_text="time", row=1, col=1)
+        fig.update_xaxes(title_text="time", row=2, col=1)
+        fig.update_xaxes(title_text="time", row=3, col=1)
+
+        fig.update_yaxes(title_text="opening (mm)", row=1, col=1)
+        fig.update_yaxes(title_text="opening (mm)", row=2, col=1)
+        fig.update_yaxes(title_text="opening (mm)", row=3, col=1)
+
+        fig.update_layout(height=1000, width=1200, 
+                          title=go.layout.Title(
+                              text="Residual subplots <br><sup>Legend: red(invalid), green(valid), blue(awake), yellow(residuals)</sup>",
+                              xref="paper",
+                              x=0))
         
-        fig.tight_layout()
-        move_figure(fig, 0, 0)
         if save_graph:
-            fig.savefig(f'{analysis_directory}/{filenames[file_i]}/residuals_plt.png', format='png', bbox_inches='tight')
-            pickle.dump(fig, open(f'{analysis_directory}/{filenames[file_i]}/residuals_plt.pickle','wb'))
+            if not os.path.exists(f'{best_dir}/{model_list[model_num-1]}/residuals'):
+                os.mkdir(f'{best_dir}/{model_list[model_num-1]}/residuals')
+            if not os.path.exists(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}'):
+                os.mkdir(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}')
+            fig.write_image(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}/residuals_plt.png')
+            # pickle.dump(fig, open(f'{best_dir}/{model_list[model_num-1]}/residuals/{filenames[file_i]}/residuals_plt.pickle','wb'))
             # --> cmd to open the plot
             # fig = pickle.load(open('PATH', 'rb'))
             # fig.show()
+            wandb.log({f'residuals_plt': fig})
         if show_graph:
-            plt.show()
-        plt.close(fig=fig)
+        #     move_figure(fig, 0, 0)
+            fig.show()
+        # plt.close(fig=fig)
 
 
 def parse_opt():
@@ -397,6 +458,10 @@ if __name__ == '__main__':
     opt = parse_opt()
     main(p=opt)
 
-    # Test cmd lines
+    # Test cmd lines WINDOWS
     # python code/testing/residuals/find.py --analysis_directory '.\data\valid_invalid_analysis'  --model_name 'LSTM' --task 1 --show_graph
     # python code/testing/residuals/find.py --analysis_directory '.\data\awake_sleep_analysis_update'  --model_name 'LSTM' --task 2 --show_graph
+
+    # Test cmd lines MACOS
+    # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/valid_invalid_analysis'  --model_name 'LSTM' --task 1 --show_graph
+    # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/awake_sleep_analysis_update'  --model_name 'LSTM' --task 2 --show_graph

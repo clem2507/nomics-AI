@@ -11,23 +11,20 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 from util import move_figure
 
 
-def open_figures(analysis_directory):
+def open_figures(model_path):
     """
     Method used to open the residual plots already computed and saved
 
     Parameters:
 
-    -analysis_directory: directory path with the saved residual figures computed on a certain analysis directory
+    -model_path: model path with the saved residual figures computed on a certain analysis directory
     """
 
-    if not analysis_directory[:-8] == '_edf_dfs':
-        if not os.path.exists(f'{analysis_directory}_edf_dfs'):
-            raise Exception(f'{analysis_directory}_edf_dfs', '-> path does not exist')
-        else:
-            analysis_directory = f'{analysis_directory}_edf_dfs'
-    filenames = sorted(os.listdir(analysis_directory))
+    if not os.path.exists(f'{model_path}/residuals'):
+        raise Exception(f'{model_path}/residuals', '-> path does not exist')
+    filenames = sorted(os.listdir(f'{model_path}/residuals'))
     for i in tqdm(range(len(filenames))):
-        fig_path = f'{analysis_directory}/{filenames[i]}/residuals_plt.pickle'
+        fig_path = f'{model_path}/residuals/{filenames[i]}/residuals_plt.pickle'
         if os.path.exists(fig_path):
             fig = pickle.load(open(fig_path, 'rb'))
             move_figure(fig, 0, 0)
@@ -38,7 +35,7 @@ def open_figures(analysis_directory):
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--analysis_directory', type=str, default='', help='directory path with the saved residual figures computed on a certain analysis directory')
+    parser.add_argument('--model_path', type=str, default='', help='model path with the saved residual figures computed on a certain analysis directory')
     return parser.parse_args()
 
 
@@ -55,6 +52,10 @@ if __name__ == '__main__':
     opt = parse_opt()
     main(p=opt)
 
-    # Test cmd lines
+    # Test cmd lines - WINDOWS
     # python code/testing/residuals/open.py --analysis_directory '.\data\valid_invalid_analysis'
     # python code/testing/residuals/open.py --analysis_directory '.\data\awake_sleep_analysis_update'
+
+    # Test cmd lines - MACOS
+    # python3 code/testing/residuals/open.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/valid_invalid_analysis'
+    # python3 code/testing/residuals/open.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/awake_sleep_analysis_update'

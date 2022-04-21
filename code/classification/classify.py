@@ -68,6 +68,8 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
 
+    raw_data = mne.io.read_raw_edf(edf)    # edf file reading
+
     model_name = model.lower()
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
     best_dir = f'{saved_dir}/best'
@@ -99,8 +101,6 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
     full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
     return_sequences = bool(int(get_value_in_line(lines[9])))    # boolean value to return the state of each data point in the full sequence for the LSTM model
-
-    raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
     data, times = raw_data[:]    # edf file data extraction
     times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
@@ -299,6 +299,8 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     info_file = open(info_path)
     lines = info_file.readlines()
     lines = lines[3:13]
+
+    timer_task2 = time.time()
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
     downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
@@ -584,9 +586,13 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-    # Test cmd lines - patient data from 1 to 13
+    # Test cmd lines - patient data from 1 to 13 - WINDOWS
     # python code/classification/classify.py --show_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
     # python code/classification/classify.py --show_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
+
+    # Test cmd lines - patient data from 1 to 13 - MACOS
+    # python3 code/classification/classify.py --show_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
+    # python3 code/classification/classify.py --show_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
 
 
     opt = parse_opt()

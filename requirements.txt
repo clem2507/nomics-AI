@@ -11,6 +11,7 @@ pillow>=8.2.0
 tqdm>=4.60.0
 mplcursors>=0.5.1
 wandb>=0.12.14
+plotly>=5.7.0
 
 # Processing
 mne>=0.23.4
