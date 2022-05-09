@@ -1,18 +1,28 @@
 import os
-import sys
-import time
 import argparse
 
 from datetime import datetime
 
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/learning_models')
-
-from preprocessing import Preprocessing
-from ann import train_model as ann_train_model
+from data_loader import DataLoader
+from ann import train_model
 
 
-def train(model, analysis_directory, segmentation_value, downsampling_value, epochs, data_balancing, batch, patience, standard_scale, sliding_window, stateful, center_of_interest, task, full_sequence, return_sequences):
+def train(model, 
+          analysis_directory, 
+          segmentation_value, 
+          downsampling_value, 
+          epochs, 
+          data_balancing, 
+          batch, 
+          patience, 
+          standard_scale, 
+          sliding_window, 
+          stateful, 
+          center_of_interest, 
+          task, 
+          full_sequence, 
+          return_sequences, 
+          wandb):
     """
     Primary function for training the CNN or LSTM model
 
@@ -33,6 +43,7 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     -task (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -full_sequence (--full_sequence): true to feed the entire sequence without dividing it into multiple windows
     -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
+    -wandb (--wandb): true to log the training results on weights and biases
     """
 
     segmentation_value = float(segmentation_value)
@@ -42,12 +53,29 @@ def train(model, analysis_directory, segmentation_value, downsampling_value, epo
     log_time = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
 
     if os.path.exists(analysis_directory):
-        Preprocessing(analysis_directory=analysis_directory, task=task).create_dataframes()
+        DataLoader(analysis_directory=analysis_directory, 
+                   task=task).create_dataframes()
     else:
         raise Exception('input directory does not exist')
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
-        ann_train_model(analysis_directory=analysis_directory, model=model.lower(), segmentation_value=segmentation_value, downsampling_value=downsampling_value, epochs=epochs, data_balancing=data_balancing, log_time=log_time, batch_size=batch, patience=patience, standard_scale=standard_scale, stateful=stateful, sliding_window=sliding_window, center_of_interest=center_of_interest, task=task, full_sequence=full_sequence, return_sequences=return_sequences)
+        train_model(analysis_directory=analysis_directory, 
+                    model=model.lower(), 
+                    segmentation_value=segmentation_value, 
+                    downsampling_value=downsampling_value, 
+                    epochs=epochs, 
+                    data_balancing=data_balancing, 
+                    log_time=log_time, 
+                    batch_size=batch, 
+                    patience=patience, 
+                    standard_scale=standard_scale, 
+                    stateful=stateful, 
+                    sliding_window=sliding_window, 
+                    center_of_interest=center_of_interest, 
+                    task=task, 
+                    full_sequence=full_sequence, 
+                    return_sequences=return_sequences,
+                    wandb_log=wandb)
     else:
         raise Exception('model type does not exist, please choose between LSTM and CNN')
 
@@ -68,12 +96,14 @@ def parse_opt():
     parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
     parser.add_argument('--full_sequence', dest='full_sequence', action='store_true', help='invoke to feed the entire sequence without dividing it into multiple windows')
     parser.add_argument('--return_sequences', dest='return_sequences', action='store_true', help='invoke to return the state of each data point in the full sequence for the LSTM model')
+    parser.add_argument('--wandb', dest='wandb', action='store_true', help='invoke to log the training results on weights and biases')
     parser.set_defaults(data_balancing=False)
     parser.set_defaults(standard_scale=False)
     parser.set_defaults(stateful=False)
     parser.set_defaults(sliding_window=False)
     parser.set_defaults(full_sequence=False)
     parser.set_defaults(return_sequences=False)
+    parser.set_defaults(wandb=False)
     return parser.parse_args()
 
 

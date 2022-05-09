@@ -5,34 +5,28 @@ import os
 import sys
 import mne
 import time
-import math
-import pickle
-import itertools
 import argparse
-import datetime
-import mplcursors
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 from keras.models import load_model
-from plotly.subplots import make_subplots
 
 from pathlib import Path
 from datetime import timedelta
-from matplotlib.patches import Patch
-from matplotlib.lines import Line2D
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
-from util import datetime_conversion, f1, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, get_value_in_line, extract_data_from_line, string_datetime_conversion
+from util import datetime_conversion, f1, analysis_cutting, is_valid, block_print, enable_print, hours_conversion, signal_quality, get_value_in_line
 
 
-def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
+def analysis_classification(edf, 
+                            model, 
+                            show_graph, 
+                            plt_save_path, 
+                            stop_print):
     """
     Primary function for classifying an edf patient file
 
@@ -42,7 +36,7 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     -model (--model): learning model architecture, either CNN or LSTM
     -show_graph (--show_graph): true to show the output graph, false to skip it and only use the output dictionary
     -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
-    -block_print (--block_print): true to block dictionary output print in terminal
+    -stop_print (--stop_print): true to block dictionary output print in terminal
 
     Returns:
 
@@ -54,7 +48,7 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
                             -'percentage_invalid'
                             -'hours_sleep'
                             -'hours_awake'
-                            -'hours_invalid
+                            -'hours_invalid'
                             -'total_signal_quality'
                             -'new_bound_start'
                             -'new_bound_end'
@@ -65,7 +59,7 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
                             -'plot'
     """
 
-    if block_print:
+    if stop_print:
         block_print()
 
     start = time.time()    # start timer variable used for the calculation of the total execution time 
@@ -497,7 +491,21 @@ def analysis_classification(edf, model, show_graph, plt_save_path, block_print):
     total_awake_rate = awake_count/len(df_jawac)
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'model_path': model_path, 'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 'percentage_sleep': round((total_valid_rate * 100), 2), 'percentage_awake': round((total_awake_rate * 100), 2), 'percentage_invalid': round((total_invalid_rate * 100), 2), 'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 'total_signal_quality': round((signal_quality(df_label) * 100), 2), 'new_bound_start': new_start, 'new_bound_end': new_end, 'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 'hours_sleep_new_bounds': round(sleep_hours, 2), 'percentage_sleep_new_bounds': round(sleep_rate * 100, 2), 'is_valid': is_valid(times[-1] - times[0], sleep_hours)}
+    dictionary = {'model_path': model_path, 
+                  'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 
+                  'percentage_sleep': round((total_valid_rate * 100), 2), 
+                  'percentage_awake': round((total_awake_rate * 100), 2), 
+                  'percentage_invalid': round((total_invalid_rate * 100), 2), 
+                  'hours_sleep': round(((valid_count * downsampling_value) / 3600), 2), 
+                  'hours_awake': round(((awake_count * downsampling_value) / 3660), 2), 
+                  'hours_invalid': round(((invalid_count * downsampling_value) / 3600), 2), 
+                  'total_signal_quality': round((signal_quality(df_label) * 100), 2), 
+                  'new_bound_start': new_start, 
+                  'new_bound_end': new_end, 
+                  'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 
+                  'hours_sleep_new_bounds': round(sleep_hours, 2), 
+                  'percentage_sleep_new_bounds': round(sleep_rate * 100, 2), 
+                  'is_valid': is_valid(times[-1] - times[0], sleep_hours)}
 
     end = time.time()    # end timer variable used for the calculation of the total execution time 
 
@@ -586,17 +594,14 @@ def parse_opt():
     parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
     parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')
     parser.add_argument('--plt_save_path', type=str, default='', help='path to save a .png copy file of the output plot if desired')
-    parser.add_argument('--block_print', dest='block_print', action='store_true', help='invoke to block dictionary output print in terminal')
+    parser.add_argument('--stop_print', dest='stop_print', action='store_true', help='invoke to block dictionary output print in terminal')
     parser.set_defaults(show_graph=False)
-    parser.set_defaults(block_print=False)
+    parser.set_defaults(stop_print=False)
     return parser.parse_args()
 
 
 def main(p):
     out_dic = analysis_classification(**vars(p))
-    # print('-------- OUTPUT DICTIONARY --------')
-    # print(out_dic)
-    # print('-----------------------------------')
 
 
 if __name__ == '__main__':

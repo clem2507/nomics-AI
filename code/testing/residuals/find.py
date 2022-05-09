@@ -15,13 +15,18 @@ from keras.models import load_model
 from plotly.subplots import make_subplots
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
-sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training/data_loader')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training')
 
 from util import f1, get_value_in_line, extract_data_from_line, block_print, enable_print, datetime_conversion
-from preprocessing import Preprocessing
+from data_loader import DataLoader
 
 
-def find_residuals(analysis_directory, model_name, model_num, task, show_graph, save_graph):
+def find_residuals(analysis_directory, 
+                   model_name, 
+                   model_num, 
+                   task, 
+                   show_graph, 
+                   save_graph):
     """
     Method used to find the residuals between the model predictions and the actual labels
 
@@ -90,7 +95,7 @@ def find_residuals(analysis_directory, model_name, model_num, task, show_graph, 
         else:
             print('WARNING -- edf_dfs directory path does not exist')
             if os.path.exists(analysis_directory):
-                Preprocessing(analysis_directory=analysis_directory, task=task).create_dataframes()
+                DataLoader(analysis_directory=analysis_directory, task=task).create_dataframes()
             else:
                 raise Exception(analysis_directory, '-> analysis directory path does not exist')
     # filenames = sorted(os.listdir(analysis_directory))
