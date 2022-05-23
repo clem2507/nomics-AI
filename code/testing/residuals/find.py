@@ -33,7 +33,7 @@ def find_residuals(analysis_directory,
     Parameters:
 
     -analysis_directory: directory path with analysis to use for testing neural network and finding residuals
-    -model_name: learning model architecture - either CNN or LSTM
+    -model_name: learning model architecture - either MLP, CNN, ResNet or LSTM
     -model_num: number of the model to use in the best folder
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -show_graph: true to show the output graph
@@ -45,7 +45,7 @@ def find_residuals(analysis_directory,
 
     model_name = model_name.lower()
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}'
-    best_dir = f'{saved_dir}/best'
+    best_dir = f'{saved_dir}/best-1.1'
     model_list = os.listdir(best_dir)
 
     print('----- MODEL CHOICE -----')
@@ -465,7 +465,7 @@ def find_residuals(analysis_directory,
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--analysis_directory', type=str, default='', help='directory path with analysis to use for testing neural network and finding residuals')
-    parser.add_argument('--model_name', type=str, default='LSTM', help='learning model architecture - either CNN or LSTM')
+    parser.add_argument('--model_name', type=str, default='LSTM', help='learning model architecture - either MLP, CNN, ResNet or LSTM')
     parser.add_argument('--model_num', type=int, default=None, help='number of the model to use in the best folder')
     parser.add_argument('--task', type=int, default='1', help='corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep')
     parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')

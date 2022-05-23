@@ -33,7 +33,7 @@ def analysis_classification(edf,
     Parameters:
 
     -edf (--edf): edf file path containing time series data
-    -model (--model): learning model architecture, either CNN or LSTM
+    -model (--model): learning model architecture, either MLP, CNN, ResNet or LSTM
     -show_graph (--show_graph): true to show the output graph, false to skip it and only use the output dictionary
     -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
     -stop_print (--stop_print): true to block dictionary output print in terminal
@@ -68,7 +68,7 @@ def analysis_classification(edf,
 
     model_name = model.lower()
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
-    best_dir = f'{saved_dir}/best'
+    best_dir = f'{saved_dir}/best-1.1'
     model_list = os.listdir(best_dir)
 
     print('----- MODEL CHOICE -----')
@@ -144,7 +144,7 @@ def analysis_classification(edf,
         raise Exception(model_path, '-> model path does not exist')
 
     classes = []    # classes list holds the predicted labels
-    threshold = 0.5    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
+    threshold = 0.7    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
     step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
@@ -276,7 +276,7 @@ def analysis_classification(edf,
     print()
 
     saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name}'
-    best_dir = f'{saved_dir}/best'
+    best_dir = f'{saved_dir}/best-1.1'
     model_list = os.listdir(best_dir)
 
     print('----- MODEL CHOICE -----')
@@ -332,7 +332,7 @@ def analysis_classification(edf,
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.5
+    threshold = 0.7
     classes = []
     step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
@@ -409,7 +409,7 @@ def analysis_classification(edf,
     print(f'---> Task 2 done in {round((time.time() - timer_task2), 2)} sec!')
     print()
 
-    min_gap_time = int((60 / downsampling_value) * 2)   # in minutes
+    min_gap_time = int((60 / downsampling_value) * 1)   # in minutes
     previous_label = df_jawac.label[0]
     idx = []
     for i in range(len(df_jawac.label)):

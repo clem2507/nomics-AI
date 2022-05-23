@@ -17,7 +17,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from keras import Sequential
-from keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Activation
+from keras.layers import Conv1D, LSTM, Dropout, MaxPooling1D, Flatten, Dense, Activation, BatchNormalization, GlobalAveragePooling1D
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.utils import to_categorical
 
@@ -45,12 +45,12 @@ def train_model(analysis_directory,
                 return_sequences, 
                 wandb_log):
     """
-    Method used to create and evaluate a deep learning model on data, either CNN or LSTM
+    Method used to create and evaluate a deep learning model on data, either MLP, CNN, ResNet or LSTM
 
     Parameters:
 
     -analysis_directory: directory path containing the analyses to create the dataframes
-    -model_name: name of the model to train, either CNN or LSTM
+    -model_name: name of the model to train, either MLP, CNN, ResNet or LSTM
     -segmentation_value: window segmentation value in second
     -downsampling_value: signal downsampling value in second
     -epochs: number of epochs to train the model
@@ -120,19 +120,52 @@ def train_model(analysis_directory,
         else:
             n_timesteps, n_features, n_outputs, validation_split, verbose = None, 1, 2, 0.1, 1
         
-        if model_name == 'cnn':
-            # using 1Hz resolution and 1 minute window -- 60 sample size
-            model.add(Conv1D(filters=16, kernel_size=5, strides=2, activation='relu', input_shape=(n_timesteps, n_features)))   # conv layer -- 1 -- Output size 16 x 29
-            model.add(Conv1D(filters=32, kernel_size=3, strides=1, activation='relu'))    # conv layer -- 2 -- Output size 32 x 27
-            model.add(MaxPooling1D(pool_size=2))   # max pooling -- 3 -- Output size 32 x 27
-            model.add(Dropout(0.2))   # dropout -- 4 -- Output size 32 x 14
-            model.add(Flatten())   # flatten layer -- 5 -- Output size 1 x 448
-            model.add(Dense(64, activation='relu'))   # fully connected layer -- 6 -- Output size 1 x 64
-            model.add(Dropout(0.2))   # dropout -- 7 -- Output size 1 x 64
-            model.add(Dense(32, activation='relu'))   # fully connected layer -- 8 -- Output size 1 x 32
-            model.add(Dropout(0.2))   # dropout -- 9 -- Output size 1 x 32
-            model.add(Dense(n_outputs))   # fully connected layer -- 10 -- Output size 1 x 2
-            model.add(Activation(activation='softmax'))   # activation layer -- 11 -- Output size 1 x 2
+        if model_name == 'mlp':
+            model.add(Dense(500, input_dim=1, activation='relu'))
+            model.add(Dropout(0.1))
+            model.add(Dense(500, activation='relu'))
+            model.add(Dropout(0.2))
+            model.add(Dense(500, activation='relu'))
+            model.add(Dropout(0.2))
+            model.add(Dense(500, activation='relu'))
+            model.add(Dropout(0.3))
+            model.add(Dense(n_outputs, activation='sigmoid'))
+        elif model_name == 'cnn':
+            model.add(Conv1D(filters=128, kernel_size=8, strides=1, activation='relu', input_shape=(n_timesteps, n_features)))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=256, kernel_size=5, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=128, kernel_size=3, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+
+            model.add(GlobalAveragePooling1D())
+
+            model.add(Dense(n_outputs, activation='softmax'))
+        elif model_name == 'resnet':
+            model.add(Conv1D(filters=64, kernel_size=8, strides=1, activation='relu', input_shape=(n_timesteps, n_features)))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=64, kernel_size=8, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=64, kernel_size=8, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+
+            model.add(Conv1D(filters=128, kernel_size=5, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=128, kernel_size=5, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=128, kernel_size=5, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+
+            model.add(Conv1D(filters=128, kernel_size=3, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=128, kernel_size=3, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+            model.add(Conv1D(filters=128, kernel_size=3, strides=1, activation='relu'))
+            model.add(BatchNormalization())
+
+            model.add(GlobalAveragePooling1D())
+
+            model.add(Dense(n_outputs, activation='softmax'))
         elif model_name == 'lstm':
             stf = False
             lstm_units = max(24, int(2/3 * (int(segmentation_value * (1 / downsampling_value)) * n_outputs)))   # https://towardsdatascience.com/choosing-the-right-hyperparameters-for-a-simple-lstm-using-keras-f8e9ed76f046

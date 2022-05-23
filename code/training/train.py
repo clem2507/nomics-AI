@@ -28,7 +28,7 @@ def train(model,
 
     Parameters:
 
-    -model (--model): learning model architecture, either CNN or LSTM
+    -model (--model): learning model architecture, either MLP, CNN, ResNet or LSTM
     -analysis_directory (--analysis_directory): directory path containing the analyses to train the model on
     -segmentation_value (--segmentation_value): window segmentation value in second
     -downsampling_value (--downsampling_value): signal downsampling value in second
@@ -60,7 +60,7 @@ def train(model,
     
     if model.lower() == 'cnn' or model.lower() == 'lstm':
         train_model(analysis_directory=analysis_directory, 
-                    model=model.lower(), 
+                    model_name=model.lower(), 
                     segmentation_value=segmentation_value, 
                     downsampling_value=downsampling_value, 
                     epochs=epochs, 
@@ -81,7 +81,7 @@ def train(model,
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture - either CNN or LSTM')
+    parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture - either MLP, CNN, ResNet or LSTM')
     parser.add_argument('--analysis_directory', type=str, default='', help='directory path with analysis to use for neural network training')
     parser.add_argument('--segmentation_value', type=float, default=60, help='time series time split window in seconds')
     parser.add_argument('--downsampling_value', type=float, default=1, help='signal resampling in Hz')
