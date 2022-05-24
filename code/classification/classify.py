@@ -23,10 +23,10 @@ from util import datetime_conversion, f1, analysis_cutting, is_valid, block_prin
 
 
 def analysis_classification(edf, 
-                            model, 
-                            show_graph, 
-                            plt_save_path, 
-                            stop_print):
+                            model='LSTM', 
+                            show_graph=False, 
+                            plt_save_path='', 
+                            stop_print=False):
     """
     Primary function for classifying an edf patient file
 
@@ -56,6 +56,7 @@ def analysis_classification(edf,
                             -'hours_sleep_new_bounds'
                             -'percentage_sleep_new_bounds'
                             -'is_valid'
+                            -'df_jawac'
                             -'plot'
     """
 
@@ -505,6 +506,7 @@ def analysis_classification(edf,
                   'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 
                   'hours_sleep_new_bounds': round(sleep_hours, 2), 
                   'percentage_sleep_new_bounds': round(sleep_rate * 100, 2), 
+                  'df_jawac': df_jawac,
                   'is_valid': is_valid(times[-1] - times[0], sleep_hours)}
 
     end = time.time()    # end timer variable used for the calculation of the total execution time 

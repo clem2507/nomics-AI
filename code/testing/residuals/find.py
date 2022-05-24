@@ -16,9 +16,11 @@ from plotly.subplots import make_subplots
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training')
+sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/classification')
 
 from util import f1, get_value_in_line, extract_data_from_line, block_print, enable_print, datetime_conversion
 from data_loader import DataLoader
+from classify import analysis_classification
 
 
 def find_residuals(analysis_directory, 
@@ -44,49 +46,50 @@ def find_residuals(analysis_directory,
         wandb.init(project="nomics-AI", entity="nomics")
 
     model_name = model_name.lower()
-    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}'
-    best_dir = f'{saved_dir}/best-1.1'
-    model_list = os.listdir(best_dir)
+    if task != 0:
+        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}'
+        best_dir = f'{saved_dir}/best-1.1'
+        model_list = os.listdir(best_dir)
 
-    print('----- MODEL CHOICE -----')
-    for i in range(len(model_list)):
-        print(f'({i+1}) {model_list[i]}')
-    if model_num is None:
-        model_num = int(input('model number: '))
-    else:
-        print('model number:', model_num)
-    print('--> model name:', model_list[model_num-1])
-    if model_num > 0 and model_num <= len(model_list):
-        model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
-        info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
-    else:
-        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
-        most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
-        model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
-        info_path = str(most_recent_folder_path[0]) + '/info.txt'
-    print('------------------------')
+        print('----- MODEL CHOICE -----')
+        for i in range(len(model_list)):
+            print(f'({i+1}) {model_list[i]}')
+        if model_num is None:
+            model_num = int(input('model number: '))
+        else:
+            print('model number:', model_num)
+        print('--> model name:', model_list[model_num-1])
+        if model_num > 0 and model_num <= len(model_list):
+            model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+            info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+        else:
+            most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+            most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
+            model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
+            info_path = str(most_recent_folder_path[0]) + '/info.txt'
+        print('------------------------')
 
-    if os.path.exists(model_path):
-        model = load_model(model_path, compile=True, custom_objects={'f1': f1})
-    else:
-        raise Exception(model_path, '-> model path does not exist')
+        if os.path.exists(model_path):
+            model = load_model(model_path, compile=True, custom_objects={'f1': f1})
+        else:
+            raise Exception(model_path, '-> model path does not exist')
 
-    if os.path.exists(info_path):
-        info_file = open(info_path)
-        lines = info_file.readlines()
-        lines = lines[3:13]
+        if os.path.exists(info_path):
+            info_file = open(info_path)
+            lines = info_file.readlines()
+            lines = lines[3:13]
 
-        segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
-        downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
-        batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
-        standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
-        stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
-        sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
-        center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
-        full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
-        return_sequences = bool(int(get_value_in_line(lines[9])))    # boolean value to return the state of each data point in the full sequence for the LSTM model
-    else:
-        raise Exception(model_path, '-> info file path does not exist')
+            segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
+            downsampling_value = float(get_value_in_line(lines[1]))    # signal downsampling value in second
+            batch_size = int(get_value_in_line(lines[3]))    # batch size value for prediction
+            standard_scale = bool(int(get_value_in_line(lines[4])))    # boolean value for the standardizatin of the data state
+            stateful = bool(int(get_value_in_line(lines[5])))    # boolean value for the stateful model state
+            sliding_window = bool(int(get_value_in_line(lines[6])))    # boolean value for the sliding window state
+            center_of_interest = int(get_value_in_line(lines[7]))    # center of interest size in seconds for the sliding window
+            full_sequence = bool(int(get_value_in_line(lines[8])))    # boolean value to feed the entire sequence without dividing it into multiple windows
+            return_sequences = bool(int(get_value_in_line(lines[9])))    # boolean value to return the state of each data point in the full sequence for the LSTM model
+        else:
+            raise Exception(model_path, '-> info file path does not exist')
 
     # analysis loader
     if not analysis_directory[:-8] == '_edf_dfs':
@@ -98,8 +101,9 @@ def find_residuals(analysis_directory,
                 DataLoader(analysis_directory=analysis_directory, task=task).create_dataframes()
             else:
                 raise Exception(analysis_directory, '-> analysis directory path does not exist')
-    # filenames = sorted(os.listdir(analysis_directory))
-    filenames = os.listdir(analysis_directory)
+
+    filenames = sorted(os.listdir(analysis_directory))
+    # filenames = os.listdir(analysis_directory)
     # random.shuffle(filenames)
     res_data_total = 0
     for file_i in tqdm(range(len(filenames))):
@@ -114,6 +118,8 @@ def find_residuals(analysis_directory,
                 if task == 1:
                     lines = lines[7:]    # log file information
                 elif task == 2:
+                    lines = lines[5:]    # log file information
+                elif task == 0:
                     lines = lines[5:]    # log file information
                 col_names = ['start', 'end', 'label']
                 df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
@@ -133,9 +139,9 @@ def find_residuals(analysis_directory,
                     df_jawac.insert(0, 'times', times)
                     df_jawac.insert(1, 'data', data[0])
                     df_jawac = df_jawac.resample('0.1S', on='times').median()
-                elif task == 2:
+                elif task == 2 or task == 0:
                     data = raw_data[0][0][0]
-                    times = raw_data[1][1]
+                    times = raw_data[0][1]
                     times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
                     df_jawac.insert(0, 'times', times)
                     df_jawac.insert(1, 'data', data)
@@ -146,144 +152,155 @@ def find_residuals(analysis_directory,
             df_mk3 = pd.read_pickle(mk3_file)
             df_jawac = pd.read_pickle(edf_file)
 
-        df_jawac = df_jawac.resample(f'{downsampling_value}S').median()
+        # df_jawac = df_jawac.resample(f'{downsampling_value}S').median()
+        df_jawac = df_jawac.resample(f'1S').median()
         df_jawac['label'] = [1 for n in range(len(df_jawac))]
         df_jawac['pred_label'] = [1 for n in range(len(df_jawac))]
         df_jawac['res_label'] = [1 for n in range(len(df_jawac))]
+        df_jawac['proba'] = [1 for n in range(len(df_jawac))]
+        df_jawac['pred_proba'] = [0.5 for n in range(len(df_jawac))]
+        df_jawac['res_proba'] = [1 for n in range(len(df_jawac))]
         df_jawac.index = pd.to_datetime(df_jawac.index).tz_localize(None)
+
         for idx, row in df_mk3.iterrows():
             mask = (df_jawac.index >= row.start) & (df_jawac.index <= row.end)
             if task == 1:
                 df_jawac.loc[mask, ['label']] = 0
-            else:
+            elif task == 2:
                 if row.label == 'W':
                     df_jawac.loc[mask, ['label']] = 2
                 else:
                     df_jawac = df_jawac[~mask]
+            elif task == 0:
+                if row.label == 'W':
+                    df_jawac.loc[mask, ['label']] = 2
+                elif row.label == 'Out of Range':
+                    df_jawac.loc[mask, ['label']] = 0
 
         df_jawac.reset_index(inplace=True)
 
-        # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in second
-        if not stateful:
-            size = int((1 / downsampling_value) * segmentation_value)
-            if not sliding_window:
-                X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
-            else:
-                size = int(segmentation_value)   # in sec
-                X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), center_of_interest)], dtype=object)
-            X_test_seq_temp = []
-            for arr in X_test_seq:
-                if not return_sequences:
-                    if task == 1:
-                        arr = np.append(arr, pd.Series([np.var(arr)*1000]))
-                X_test_seq_temp.append(arr)
-            X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
-            X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
-        
-        classes = []    # classes list holds the predicted labels
-        threshold = 0.5    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
-        step_size = int((1 / downsampling_value) * segmentation_value)
-        if not stateful:
-            predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
-            # loop that runs through the list of model predictions to keep the highest predicted probability values
-            for item in predictions[:-1]:
-                if not return_sequences:
-                    idx = np.argmax(item)
-                    if idx == 0:
-                        if item[idx] > threshold:
+        if task == 0:
+            out_dic = analysis_classification(edf=f'{analysis_directory[:-8]}/{filenames[file_i]}/{filenames[file_i]}.edf', model=model_name)
+            df_jawac.pred_label = out_dic['df_jawac'].label.values
+            df_jawac.pred_proba = out_dic['df_jawac'].proba.values
+        else:    
+            # this bloc of code divides the given time series into windows of 'size' number of data corresponding to the segmentation value in second
+            if not stateful:
+                size = int((1 / downsampling_value) * segmentation_value)
+                if not sliding_window:
+                    X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), size)], dtype=object)
+                else:
+                    size = int(segmentation_value)   # in sec
+                    X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), center_of_interest)], dtype=object)
+                X_test_seq_temp = []
+                for arr in X_test_seq:
+                    if not return_sequences:
+                        if task == 1:
+                            arr = np.append(arr, pd.Series([np.var(arr)*1000]))
+                    X_test_seq_temp.append(arr)
+                X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
+                X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
+            
+            classes = []    # classes list holds the predicted labels
+            threshold = 0.5    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
+            step_size = int((1 / downsampling_value) * segmentation_value)
+            if not stateful:
+                predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
+                # loop that runs through the list of model predictions to keep the highest predicted probability values
+                for item in predictions[:-1]:
+                    if not return_sequences:
+                        idx = np.argmax(item)
+                        if idx == 0:
+                            if item[idx] > threshold:
+                                classes.append((idx, item[idx]))
+                            else:
+                                classes.append((1, 0.5))
+                        else:
                             classes.append((idx, item[idx]))
-                        else:
-                            classes.append((1, 0.5))
                     else:
-                        classes.append((idx, item[idx]))
-                else:
-                    labels = np.argmax(item, axis=1)
-                    if len(classes) == 0 and sliding_window:
-                        classes.append(labels[:int((segmentation_value//2)-(center_of_interest//2))])
-                    if sliding_window:
-                        for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
-                            if labels[i] == 0:
-                                if item[i][labels[i]] > threshold:
-                                    classes.append((labels[i], item[i][labels[i]]))
+                        labels = np.argmax(item, axis=1)
+                        if len(classes) == 0 and sliding_window:
+                            classes.append(labels[:int((segmentation_value//2)-(center_of_interest//2))])
+                        if sliding_window:
+                            for i in range(int((segmentation_value//2)-(center_of_interest//2)), int(len(labels) - (segmentation_value//2)+(center_of_interest//2)), 1):
+                                if labels[i] == 0:
+                                    if item[i][labels[i]] > threshold:
+                                        classes.append((labels[i], item[i][labels[i]]))
+                                    else:
+                                        classes.append((1, 0.5))
                                 else:
-                                    classes.append((1, 0.5))
-                            else:
-                                classes.append((labels[i], item[i][labels[i]]))
-                    else:
-                        for i in range(len(labels)):
-                            if labels[i] == 0:
-                                if item[i][labels[i]] > threshold:
                                     classes.append((labels[i], item[i][labels[i]]))
-                                else:
-                                    classes.append((1, 0.5))
-                            else:
-                                classes.append((labels[i], item[i][labels[i]]))
-            if return_sequences and sliding_window:
-                classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
-        else:
-            data = df_jawac.data.tolist()
-            X = np.reshape(data[0:len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))], ((len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size)))//step_size, step_size, 1))
-            predictions = model.predict(X, batch_size=batch_size)
-            classes = []
-            for i in range(len(predictions)):
-                for j in range(len(predictions[i])):
-                    idx = np.argmax(predictions[i][j])
-                    pred_label = idx
-                    proba = predictions[i][j][idx]
-                    if pred_label == 0:
-                        if proba > threshold:
-                            classes.append((pred_label, proba))
                         else:
-                            classes.append((1, 0.5))
-                    else:
-                        classes.append((pred_label, proba))
-
-        df_jawac['proba'] = [1 for n in range(len(df_jawac))]
-        df_jawac['pred_proba'] = [0.5 for n in range(len(df_jawac))]
-        df_jawac['res_proba'] = [1 for n in range(len(df_jawac))]
-
-        for i in range(len(classes)):
-            if sliding_window:
-                if not return_sequences:
-                    mask = df_jawac.index[(step_size//2)+(i*center_of_interest)-(center_of_interest//2):(step_size//2)+(i*center_of_interest)+(center_of_interest//2)]
-                else:
-                    mask = df_jawac.index[i]
+                            for i in range(len(labels)):
+                                if labels[i] == 0:
+                                    if item[i][labels[i]] > threshold:
+                                        classes.append((labels[i], item[i][labels[i]]))
+                                    else:
+                                        classes.append((1, 0.5))
+                                else:
+                                    classes.append((labels[i], item[i][labels[i]]))
+                if return_sequences and sliding_window:
+                    classes.append(labels[int((segmentation_value//2)+(center_of_interest//2)):])
             else:
-                if not return_sequences:
-                    mask = df_jawac.index[i*step_size:i*step_size+step_size]
-                else:
-                    mask = df_jawac.index[i]
-            if classes[i][0] == 0:
-                if task == 1:
-                    df_jawac.loc[mask, ['pred_label']] = 0
-                else:
-                    df_jawac.loc[mask, ['pred_label']] = 2
-            df_jawac.loc[mask, ['pred_proba']] = classes[i][1]
+                data = df_jawac.data.tolist()
+                X = np.reshape(data[0:len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size))], ((len(data)-round(((len(data)/(step_size*batch_size))%1)*(step_size*batch_size)))//step_size, step_size, 1))
+                predictions = model.predict(X, batch_size=batch_size)
+                classes = []
+                for i in range(len(predictions)):
+                    for j in range(len(predictions[i])):
+                        idx = np.argmax(predictions[i][j])
+                        pred_label = idx
+                        proba = predictions[i][j][idx]
+                        if pred_label == 0:
+                            if proba > threshold:
+                                classes.append((pred_label, proba))
+                            else:
+                                classes.append((1, 0.5))
+                        else:
+                            classes.append((pred_label, proba))
 
-        df_jawac.pred_proba = df_jawac.pred_proba.round(3)
-
-        min_gap_time = int((60 / downsampling_value) * 1)   # in minutes
-        previous_label = df_jawac.pred_label[0]
-        idx = []
-        for i in range(len(df_jawac.pred_label)):
-            idx.append(i)
-            if df_jawac.pred_label[i] != previous_label:
-                if len(idx) <= min_gap_time:
+            for i in range(len(classes)):
+                if sliding_window:
+                    if not return_sequences:
+                        mask = df_jawac.index[(step_size//2)+(i*center_of_interest)-(center_of_interest//2):(step_size//2)+(i*center_of_interest)+(center_of_interest//2)]
+                    else:
+                        mask = df_jawac.index[i]
+                else:
+                    if not return_sequences:
+                        mask = df_jawac.index[i*step_size:i*step_size+step_size]
+                    else:
+                        mask = df_jawac.index[i]
+                if classes[i][0] == 0:
                     if task == 1:
-                        if previous_label == 0:
-                            df_jawac.loc[idx, 'pred_label'] = 1
-                        elif previous_label == 1:
-                            df_jawac.loc[idx, 'pred_label'] = 0
-                    elif task == 2:
-                        if previous_label == 1:
-                            df_jawac.loc[idx, 'pred_label'] = 2
-                        elif previous_label == 2:
-                            df_jawac.loc[idx, 'pred_label'] = 1
-                    df_jawac.loc[idx, 'pred_proba'] = 0.5
-                else:
-                    idx = []
-                    idx.append(i)
-            previous_label = df_jawac.pred_label[i]
+                        df_jawac.loc[mask, ['pred_label']] = 0
+                    else:
+                        df_jawac.loc[mask, ['pred_label']] = 2
+                df_jawac.loc[mask, ['pred_proba']] = classes[i][1]
+
+            min_gap_time = int((60 / downsampling_value) * 1)   # in minutes
+            previous_label = df_jawac.pred_label[0]
+            idx = []
+            for i in range(len(df_jawac.pred_label)):
+                idx.append(i)
+                if df_jawac.pred_label[i] != previous_label:
+                    if len(idx) <= min_gap_time:
+                        if task == 1:
+                            if previous_label == 0:
+                                df_jawac.loc[idx, 'pred_label'] = 1
+                            elif previous_label == 1:
+                                df_jawac.loc[idx, 'pred_label'] = 0
+                        elif task == 2:
+                            if previous_label == 1:
+                                df_jawac.loc[idx, 'pred_label'] = 2
+                            elif previous_label == 2:
+                                df_jawac.loc[idx, 'pred_label'] = 1
+                        df_jawac.loc[idx, 'pred_proba'] = 0.5
+                    else:
+                        idx = []
+                        idx.append(i)
+                previous_label = df_jawac.pred_label[i]
+            
+        df_jawac.pred_proba = df_jawac.pred_proba.round(3)
 
         for idx, row in df_jawac.iterrows():
             if row.label != row.pred_label:
@@ -434,6 +451,8 @@ def find_residuals(analysis_directory,
             legend = 'red(invalid), green(valid), yellow(residuals)'
         elif task == 2:
             legend = 'green(sleep), blue(awake), yellow(residuals)'
+        elif task == 0:
+            legend = 'green(sleep), red(invalid), blue(awake), yellow(residuals)'
 
         fig.update_layout(title=go.layout.Title(
                               text=f'Residual subplots <br><sup>Legend: {legend}</sup>',
@@ -489,9 +508,10 @@ if __name__ == '__main__':
     main(p=opt)
 
     # Test cmd lines WINDOWS
-    # python code/testing/residuals/find.py --analysis_directory '.\data\valid_invalid_analysis'  --model_name 'LSTM' --task 1 --show_graph
-    # python code/testing/residuals/find.py --analysis_directory '.\data\awake_sleep_analysis_update'  --model_name 'LSTM' --task 2 --show_graph
+    # python code/testing/residuals/find.py --analysis_directory './data/valid_invalid/analysis'  --model_name 'LSTM' --task 1 --show_graph
+    # python code/testing/residuals/find.py --analysis_directory './data/awake_sleep/analysis'  --model_name 'LSTM' --task 2 --show_graph
+    # python code/testing/residuals/find.py --analysis_directory './data/awake_sleep/jawrhin/analysis'  --model_name 'LSTM' --task 2 --show_graph
 
     # Test cmd lines MACOS
     # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/valid_invalid_analysis'  --model_name 'LSTM' --task 1 --show_graph
-    # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/awake_sleep_analysis_update'  --model_name 'LSTM' --task 2 --show_graph
+    # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/awake_sleep_analysis'  --model_name 'LSTM' --task 2 --show_graph

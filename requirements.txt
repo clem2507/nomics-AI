@@ -11,6 +11,7 @@ pillow>=8.2.0
 tqdm>=4.60.0
 wandb>=0.12.14
 plotly>=5.7.0
+PyEDFlib>=0.1.28
 
 # Processing
 mne>=0.23.4

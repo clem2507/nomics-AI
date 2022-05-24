@@ -120,11 +120,11 @@ if __name__ == '__main__':
     main(p=opt)
 
     # CNN - valid/invalid
-    # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 1
+    # python code/training/train.py --analysis_directory 'data/valid_invalid/analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 1
     # CNN - awake/sleep
-    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis_update' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 2
+    # python code/training/train.py --analysis_directory 'data/awake_sleep/analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'cnn' --batch 32 --task 2
 
     # LSTM - valid/invalid
-    # python code/training/train.py --analysis_directory 'data/valid_invalid_analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'lstm' --batch 32 --task 1
+    # python code/training/train.py --analysis_directory 'data/valid_invalid/analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'lstm' --batch 32 --task 1
     # LSTM - awake/sleep
-    # python code/training/train.py --analysis_directory 'data/awake_sleep_analysis_update' --downsampling_value 1 --segmentation_value 600 --center_of_interest 180 --sliding_window --return_sequences --balance --epochs 100 --model 'lstm' --batch 32 --task 2
+    # python code/training/train.py --analysis_directory 'data/awake_sleep/analysis' --downsampling_value 1 --segmentation_value 600 --center_of_interest 180 --sliding_window --return_sequences --balance --epochs 100 --model 'lstm' --batch 32 --task 2

@@ -36,7 +36,7 @@ class DataLoader:
     -center_of_interest: center of interest size in seconds for the sliding window
     -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
-    -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
+    -return_sequences: true to return the state of each data point in the full sequence for the LSTM model
     """
 
     def __init__(self, 
@@ -95,7 +95,7 @@ class DataLoader:
                     lines = data_mk3.readlines()    # list with the mk3 lines
                     if self.task == 1:
                         lines = lines[7:]    # log file information
-                    elif self.task == 2:
+                    elif self.task == 2 or self.task == 0:
                         lines = lines[5:]    # log file information
                     col_names = ['start', 'end', 'label']
                     df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
@@ -118,9 +118,9 @@ class DataLoader:
                         df_jawac.insert(0, 'times', times)
                         df_jawac.insert(1, 'data', data[0])
                         df_jawac = df_jawac.resample('0.1S', on='times').median()
-                    elif self.task == 2:
+                    elif self.task == 2 or self.task == 0:
                         data = raw_data[0][0][0]
-                        times = raw_data[1][1]
+                        times = raw_data[0][1]
                         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
                         df_jawac.insert(0, 'times', times)
                         df_jawac.insert(1, 'data', data)
