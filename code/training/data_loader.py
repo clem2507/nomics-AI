@@ -93,10 +93,11 @@ class DataLoader:
                         continue
                     data_mk3 = open(mk3_file)    # mk3 file reading
                     lines = data_mk3.readlines()    # list with the mk3 lines
-                    if self.task == 1:
-                        lines = lines[7:]    # log file information
-                    elif self.task == 2 or self.task == 0:
-                        lines = lines[5:]    # log file information
+                    lines = lines[5:]    # log file information
+                    if (lines[0].split(';'))[-1] == 'START':
+                        lines.pop(0)
+                    if (lines[0].split(';'))[-1] == 'STOP':
+                        lines.pop(0)
                     col_names = ['start', 'end', 'label']
                     df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
                     for line in lines:
@@ -112,19 +113,15 @@ class DataLoader:
                     enable_print()
 
                     df_jawac = pd.DataFrame()    # dataframe creation to store time series data
-                    if self.task == 1:
-                        data, times = raw_data[:]    # edf file data extraction
-                        times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
-                        df_jawac.insert(0, 'times', times)
-                        df_jawac.insert(1, 'data', data[0])
-                        df_jawac = df_jawac.resample('0.1S', on='times').median()
-                    elif self.task == 2 or self.task == 0:
-                        data = raw_data[0][0][0]
-                        times = raw_data[0][1]
-                        times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
-                        df_jawac.insert(0, 'times', times)
-                        df_jawac.insert(1, 'data', data)
-                        df_jawac = df_jawac.resample('0.1S', on='times').median()
+
+                    data = raw_data[0][0][0]
+                    times = raw_data[0][1]
+                    times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
+                    df_jawac.insert(0, 'times', times)
+                    df_jawac.insert(1, 'data', data)
+                    if len(raw_data[0]) > 1:
+                        df_jawac.insert(1, 'hypno', raw_data[1][0][0])
+                    df_jawac = df_jawac.resample('0.1S', on='times').median()
 
                     # dataframe saving
                     df_jawac.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')

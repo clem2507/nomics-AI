@@ -24,6 +24,8 @@ from util import datetime_conversion, f1, analysis_cutting, is_valid, block_prin
 
 def analysis_classification(edf, 
                             model='LSTM', 
+                            model_path_task1='',
+                            model_path_task2='',
                             show_graph=False, 
                             plt_save_path='', 
                             stop_print=False):
@@ -34,6 +36,8 @@ def analysis_classification(edf,
 
     -edf (--edf): edf file path containing time series data
     -model (--model): learning model architecture, either MLP, CNN, ResNet or LSTM
+    -model_path_task1 (model_path_task1): corresponds to the path of the first task model weights
+    -model_path_task2 (model_path_task2): corresponds to the path of the second task model weights
     -show_graph (--show_graph): true to show the output graph, false to skip it and only use the output dictionary
     -plt_save_path (--plt_save_path): path to save a .png copy file of the output plot if desired
     -stop_print (--stop_print): true to block dictionary output print in terminal
@@ -41,7 +45,8 @@ def analysis_classification(edf,
     Returns:
 
     -dictionary: dictionary containing information computed on the jawac signal
-        dictionary keys:    -'model_path'
+        dictionary keys:    -'model_path_task1'
+                            -'model_path_task2'
                             -'total_hours'
                             -'percentage_sleep'
                             -'percentage_awake'
@@ -68,25 +73,34 @@ def analysis_classification(edf,
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
     model_name = model.lower()
-    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
-    best_dir = f'{saved_dir}/best-1.1'
-    model_list = os.listdir(best_dir)
 
-    print('----- MODEL CHOICE -----')
-    for i in range(len(model_list)):
-        print(f'({i+1}) {model_list[i]}')
-    model_num = int(input('model number: '))
-    if model_num > 0 and model_num <= len(model_list):
-        model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
-        info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+    if model_path_task1 is '':
+        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+        best_dir = f'{saved_dir}/best-1.1'
+        model_list = os.listdir(best_dir)
+
+        print('----- MODEL CHOICE -----')
+        for i in range(len(model_list)):
+            print(f'({i+1}) {model_list[i]}')
+        model_num = int(input('model number: '))
+        if model_num > 0 and model_num <= len(model_list):
+            model_path_task1 = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+            info_path_task1 = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+        else:
+            most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+            most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
+            model_path_task1 = str(most_recent_folder_path[0]) + '/best/model-best.h5'
+            info_path_task1 = str(most_recent_folder_path[0]) + '/info.txt'
+        print('------------------------')
     else:
-        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
-        most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
-        model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
-        info_path = str(most_recent_folder_path[0]) + '/info.txt'
-    print('------------------------')
-    info_file = open(info_path)
-    lines = info_file.readlines()
+        info_path_task1 = os.path.normpath(model_path_task1).split(os.sep)[:-2]
+        info_path_task1.append('info.txt')
+        info_path_task1 = '/'.join(info_path_task1)
+        info_path_task1 = os.path.normpath(info_path_task1)
+        model_path_task1 = os.path.normpath(model_path_task1)
+
+    info_file_task1 = open(info_path_task1)
+    lines = info_file_task1.readlines()
     lines = lines[3:13]
     
     segmentation_value = float(get_value_in_line(lines[0]))    # window segmentation value in second
@@ -138,14 +152,13 @@ def analysis_classification(edf,
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
     # model loader
-    if os.path.exists(model_path):
-        if model_name in ['cnn', 'lstm']:
-            model = load_model(model_path, compile=True, custom_objects={'f1': f1})
+    if os.path.exists(model_path_task1):
+        model = load_model(model_path_task1, compile=True, custom_objects={'f1': f1})
     else:
-        raise Exception(model_path, '-> model path does not exist')
+        raise Exception(model_path_task1, '-> model path does not exist')
 
     classes = []    # classes list holds the predicted labels
-    threshold = 0.7    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
+    threshold = 0.6    # above this threshold, the model invalid prediction are kept, otherwise considered as valid
     step_size = int((1 / downsampling_value) * segmentation_value)
     if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
@@ -267,34 +280,39 @@ def analysis_classification(edf,
 
     print('--------')
 
-    # if not is_valid(times[-1] - times[0], valid_hours):
-    #     raise Exception('---> Analysis invalid')
-
     print()
     print(f'---> Task 1 done in {round((time.time() - timer_task1), 2)} sec!')
     print()
     print('Task 2...')
     print()
 
-    saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name}'
-    best_dir = f'{saved_dir}/best-1.1'
-    model_list = os.listdir(best_dir)
+    if model_path_task2 is '':
+        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+        best_dir = f'{saved_dir}/best-1.1'
+        model_list = os.listdir(best_dir)
 
-    print('----- MODEL CHOICE -----')
-    for i in range(len(model_list)):
-        print(f'({i+1}) {model_list[i]}')
-    model_num = int(input('model number: '))
-    if model_num > 0 and model_num <= len(model_list):
-        model_path = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
-        info_path = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+        print('----- MODEL CHOICE -----')
+        for i in range(len(model_list)):
+            print(f'({i+1}) {model_list[i]}')
+        model_num = int(input('model number: '))
+        if model_num > 0 and model_num <= len(model_list):
+            model_path_task2 = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+            info_path_task2 = f'{best_dir}/{model_list[model_num-1]}/info.txt'
+        else:
+            most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+            most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
+            model_path_task2 = str(most_recent_folder_path[0]) + '/best/model-best.h5'
+            info_path_task2 = str(most_recent_folder_path[0]) + '/info.txt'
+        print('------------------------')
     else:
-        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
-        most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
-        model_path = str(most_recent_folder_path[0]) + '/best/model-best.h5'
-        info_path = str(most_recent_folder_path[0]) + '/info.txt'
-    print('------------------------')
-    info_file = open(info_path)
-    lines = info_file.readlines()
+        info_path_task2 = os.path.normpath(model_path_task2).split(os.sep)[:-2]
+        info_path_task2.append('info.txt')
+        info_path_task2 = '/'.join(info_path_task2)
+        info_path_task2 = os.path.normpath(info_path_task2)
+        model_path_task2 = os.path.normpath(model_path_task2)
+
+    info_file_task2 = open(info_path_task2)
+    lines = info_file_task2.readlines()
     lines = lines[3:13]
 
     timer_task2 = time.time()
@@ -310,11 +328,10 @@ def analysis_classification(edf,
     return_sequences = bool(int(get_value_in_line(lines[9])))    # boolean value to return the state of each data point in the full sequence for the LSTM model
 
     # model loader
-    if os.path.exists(model_path):
-        if model_name in ['cnn', 'lstm']:
-            model = load_model(model_path, compile=True, custom_objects={'f1': f1})
+    if os.path.exists(model_path_task2):
+        model = load_model(model_path_task2, compile=True, custom_objects={'f1': f1})
     else:
-        raise Exception(model_path, '-> model path does not exist')
+        raise Exception(model_path_task2, '-> model path does not exist')
 
     data = df_jawac[df_jawac['label']==1].data.tolist()
 
@@ -407,10 +424,22 @@ def analysis_classification(edf,
             df_jawac.loc[mask, ['label']] = 2
         df_jawac.loc[mask, ['proba']] = classes[i][1]
 
-    print(f'---> Task 2 done in {round((time.time() - timer_task2), 2)} sec!')
-    print()
+    min_gap_time = int((60 / downsampling_value) * 3)   # in minutes
+    previous_label = df_jawac.label[0]
+    idx = []
+    for i in range(len(df_jawac.label)):
+        idx.append(i)
+        if df_jawac.label[i] != previous_label:
+            if len(idx) <= min_gap_time:
+                if previous_label == 2:
+                    df_jawac.loc[idx, 'label'] = 1
+                df_jawac.loc[idx, 'proba'] = 0.5
+            else:
+                idx = []
+                idx.append(i)
+        previous_label = df_jawac.label[i]
 
-    min_gap_time = int((60 / downsampling_value) * 1)   # in minutes
+    min_gap_time = int((60 / downsampling_value) * 3)   # in minutes
     previous_label = df_jawac.label[0]
     idx = []
     for i in range(len(df_jawac.label)):
@@ -419,13 +448,14 @@ def analysis_classification(edf,
             if len(idx) <= min_gap_time:
                 if previous_label == 1:
                     df_jawac.loc[idx, 'label'] = 2
-                elif previous_label == 2:
-                    df_jawac.loc[idx, 'label'] = 1
                 df_jawac.loc[idx, 'proba'] = 0.5
             else:
                 idx = []
                 idx.append(i)
         previous_label = df_jawac.label[i]
+
+    print(f'---> Task 2 done in {round((time.time() - timer_task2), 2)} sec!')
+    print()
 
     df_label = pd.DataFrame(columns=['start', 'end', 'label', 'proba', 'data_num'])
     saved_label = df_jawac.iloc[0].label
@@ -492,7 +522,8 @@ def analysis_classification(edf,
     total_awake_rate = awake_count/len(df_jawac)
 
     # creation of the output dictionary with computed information about the signal
-    dictionary = {'model_path': model_path, 
+    dictionary = {'model_path_task1': model_path_task1, 
+                  'model_path_task2': model_path_task2, 
                   'total_hours': round(((times[-1] - times[0]).total_seconds() / 3600.0), 2), 
                   'percentage_sleep': round((total_valid_rate * 100), 2), 
                   'percentage_awake': round((total_awake_rate * 100), 2), 
@@ -594,6 +625,8 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--edf', type=str, default='', help='edf file path containing time series data')
     parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
+    parser.add_argument('--model_path_task1', type=str, default='', help='corresponds to the path of the first task model weights')
+    parser.add_argument('--model_path_task2', type=str, default='', help='corresponds to the path of the second task model weights')
     parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')
     parser.add_argument('--plt_save_path', type=str, default='', help='path to save a .png copy file of the output plot if desired')
     parser.add_argument('--stop_print', dest='stop_print', action='store_true', help='invoke to block dictionary output print in terminal')

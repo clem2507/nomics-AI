@@ -53,8 +53,7 @@ def train(model,
     log_time = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
 
     if os.path.exists(analysis_directory):
-        DataLoader(analysis_directory=analysis_directory, 
-                   task=task).create_dataframes()
+        DataLoader(analysis_directory=analysis_directory).create_dataframes()
     else:
         raise Exception('input directory does not exist')
     
