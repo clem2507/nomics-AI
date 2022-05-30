@@ -188,7 +188,7 @@ def find_residuals(analysis_directory,
                             subplot_titles=(
                                 f'Jawac Signal - {filenames[file_i]} - {graph_1_title}',
                                 f'Jawac Signal - {filenames[file_i]} - predictions', 
-                                f'Jawac Signal - {filenames[file_i]} - residuals'),
+                                f'Jawac Signal - {filenames[file_i]} - probabilities'),
                             shared_xaxes=True)
 
         if 'hypno' in df_jawac.columns.values.tolist():
@@ -229,7 +229,7 @@ def find_residuals(analysis_directory,
 
         fig.add_trace(
             go.Scatter(x=df_jawac.index.tolist(), 
-                       y=df_jawac.pred_label.tolist(), 
+                       y=df_jawac.pred_proba.tolist(), 
                        showlegend=False,
                        customdata = df_jawac.pred_proba.tolist(),
                        hovertemplate='<extra><br>proba: %{customdata}</extra>',
@@ -245,11 +245,6 @@ def find_residuals(analysis_directory,
                 tickmode = 'array',
                 tickvals = [-1, 0, 1, 2, 3, 4],
                 ticktext = ['Inv', 'REM', 'S3', 'S2', 'S1', 'Awake']
-            ),
-            yaxis3 = dict(
-                tickmode = 'array',
-                tickvals = [0, 1, 2],
-                ticktext = ['Inv', 'Sleep', 'Awake']
             )
         )
 
@@ -357,7 +352,3 @@ if __name__ == '__main__':
     # python code/testing/residuals/find.py --analysis_directory 'data/valid_invalid/analysis' --model_name 'LSTM' --show_graph
     # python code/testing/residuals/find.py --analysis_directory 'data/awake_sleep/analysis' --model_name 'LSTM' --show_graph
     # python code/testing/residuals/find.py --analysis_directory 'data/awake_sleep/jawrhin/analysis' --model_name 'LSTM' --show_graph
-
-    # Test cmd lines MACOS
-    # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/valid_invalid_analysis'  --model_name 'LSTM' --task 1 --show_graph
-    # python3 code/testing/residuals/find.py --analysis_directory '/Users/clemdetry/Documents/GitHub/nomics/jawac_processing_nomics/data/awake_sleep_analysis'  --model_name 'LSTM' --task 2 --show_graph
