@@ -94,10 +94,11 @@ class DataLoader:
                     data_mk3 = open(mk3_file)    # mk3 file reading
                     lines = data_mk3.readlines()    # list with the mk3 lines
                     lines = lines[5:]    # log file information
-                    if (lines[0].split(';'))[-1] == 'START':
-                        lines.pop(0)
-                    if (lines[0].split(';'))[-1] == 'STOP':
-                        lines.pop(0)
+                    if len(lines) > 0:
+                        if (lines[0].split(';'))[-1] == 'START':
+                            lines.pop(0)
+                        if (lines[0].split(';'))[-1] == 'STOP':
+                            lines.pop(0)
                     col_names = ['start', 'end', 'label']
                     df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
                     for line in lines:
