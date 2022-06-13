@@ -115,14 +115,24 @@ class DataLoader:
 
                     df_jawac = pd.DataFrame()    # dataframe creation to store time series data
 
-                    data = raw_data[0][0][0]
-                    times = raw_data[0][1]
-                    times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
-                    df_jawac.insert(0, 'times', times)
-                    df_jawac.insert(1, 'data', data)
-                    if len(raw_data[0]) > 1:
-                        df_jawac.insert(1, 'hypno', raw_data[1][0][0])
-                    df_jawac = df_jawac.resample('0.1S', on='times').median()
+                    if self.task != 3:
+                        data = raw_data[0][0][0]
+                        times = raw_data[0][1]
+                        times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
+                        df_jawac.insert(0, 'times', times)
+                        df_jawac.insert(1, 'data', data)
+                        if len(raw_data[0]) > 1:
+                            df_jawac.insert(1, 'hypno', raw_data[1][0][0])
+                        df_jawac = df_jawac.resample('0.1S', on='times').median()
+                    else:
+                        data_chest = raw_data[2][0][0]
+                        data_abd = raw_data[3][0][0]
+                        times = raw_data[0][1]
+                        times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
+                        df_jawac.insert(0, 'times', times)
+                        df_jawac.insert(1, 'data_chest', data_chest)
+                        df_jawac.insert(2, 'data_abd', data_abd)
+                        df_jawac = df_jawac.resample('0.1S', on='times').median()
 
                     # dataframe saving
                     df_jawac.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
