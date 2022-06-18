@@ -57,6 +57,11 @@ def extract_data_from_line(line):
     out.append(convert_string_to_time(temp[0], temp[1]))
     # end date and time
     out.append(convert_string_to_time(temp[2], temp[3]))
+    # signal number
+    if len(temp[len(temp) - 2]) == 1:
+        out.append(int(temp[len(temp) - 2]))
+    else:
+        out.append(-1)
     # zone type
     out.append((temp[len(temp) - 1]).strip())
     return [out]
@@ -539,6 +544,22 @@ def move_figure(f, x, y):
         f.canvas.manager.window.SetPosition((x, y))
     else:
         f.canvas.manager.window.move(x, y)
+
+
+def occurrence_count(list, threshold=0.9):
+    dic = {}
+    for item in list:
+        if str(item) not in dic.keys():
+            dic[str(item)] = 1
+        else:
+            dic[str(item)] += 1
+    total = 0
+    for k in dic.keys():
+        total += dic[k]
+    for k in dic.keys():
+        if dic[k]/total > threshold:
+            return True
+    return False
 
 
 class TimingCallback(Callback):

@@ -62,7 +62,7 @@ def train_model(analysis_directory,
     -stateful: true to use stateful LSTM instead of stateless
     -sliding_window: true to use sliding window with a small center portion of interest
     -center_of_interest: center of interest size in seconds for the sliding window
-    -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -task: corresponding task number, so far: task = 1 for valid/invalid, task = 2 for awake/sleep and task = 3 for belts analysis
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
     -return_sequences: true to return the state of each data point in the full sequence for the LSTM model
     -wandb_log: true to log the training results on weights and biases
@@ -80,7 +80,10 @@ def train_model(analysis_directory,
     downsampling_value = float(downsampling_value)
 
     # directory creation
-    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}/{log_time}'
+    save_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task{task}/{model_name}'
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+    save_dir += f'/{log_time}'
     os.mkdir(save_dir)
     os.mkdir(f'{save_dir}/best')
     checkpoint_filepath = f'{save_dir}/best/model-best.h5'
@@ -100,6 +103,7 @@ def train_model(analysis_directory,
     )
 
     X_train, y_train, X_test, y_test = DataLoader(analysis_directory=analysis_directory, 
+                                                  model_name = model_name,
                                                   segmentation_value=segmentation_value, 
                                                   downsampling_value=downsampling_value, 
                                                   data_balancing=data_balancing, 

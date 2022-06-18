@@ -40,7 +40,7 @@ def train(model,
     -stateful (--stateful): true to use stateful LSTM instead of stateless
     -sliding_window (--sliding_window): true to use sliding window with a small center portion of interest
     -center_of_interest (--center_of_interest): center of interest size in seconds for the sliding window
-    -task (--task): corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -task (--task): corresponding task number, so far: task = 1 for valid/invalid, task = 2 for awake/sleep and task = 3 for belts analysis
     -full_sequence (--full_sequence): true to feed the entire sequence without dividing it into multiple windows
     -return_sequences (--return_sequences): true to return the state of each data point in the full sequence for the LSTM model
     -wandb (--wandb): true to log the training results on weights and biases
@@ -57,7 +57,7 @@ def train(model,
     else:
         raise Exception('input directory does not exist')
     
-    if model.lower() == 'cnn' or model.lower() == 'lstm':
+    if model.lower() == 'cnn' or model.lower() == 'lstm' or model.lower() == 'resnet' or model.lower() == 'mlp':
         train_model(analysis_directory=analysis_directory, 
                     model_name=model.lower(), 
                     segmentation_value=segmentation_value, 
@@ -127,3 +127,5 @@ if __name__ == '__main__':
     # python code/training/train.py --analysis_directory 'data/valid_invalid/analysis' --segmentation_value 60 --downsampling_value 1 --epochs 100 --model 'lstm' --batch 32 --task 1
     # LSTM - awake/sleep
     # python code/training/train.py --analysis_directory 'data/awake_sleep/analysis' --downsampling_value 1 --segmentation_value 600 --center_of_interest 180 --sliding_window --return_sequences --balance --epochs 100 --model 'lstm' --batch 32 --task 2
+
+    # python code/training/train.py --analysis_directory 'data/task2/tfe/without_oe/analysis_backup' --balance --segmentation_value 300 --center_of_interest 180 --downsampling_value 1 --epochs 100 --model 'resnet' --wandb --sliding_window --batch 32 --task 2

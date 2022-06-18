@@ -23,7 +23,8 @@ from util import datetime_conversion, f1, analysis_cutting, is_valid, block_prin
 
 
 def analysis_classification(edf, 
-                            model='LSTM', 
+                            model_name_task1='LSTM',
+                            model_name_task2='ResNet', 
                             model_path_task1='',
                             model_path_task2='',
                             show_graph=False, 
@@ -35,7 +36,8 @@ def analysis_classification(edf,
     Parameters:
 
     -edf (--edf): edf file path containing time series data
-    -model (--model): learning model architecture, either MLP, CNN, ResNet or LSTM
+    -model_name_task1 (--model_name_task1): learning model architecture for valid/invalid task, either MLP, CNN, ResNet or LSTM
+    -model_name_task2 (--model_name_task2): learning model architecture for awake/sleep task, either MLP, CNN, ResNet or LSTM
     -model_path_task1 (model_path_task1): corresponds to the path of the first task model weights
     -model_path_task2 (model_path_task2): corresponds to the path of the second task model weights
     -show_graph (--show_graph): true to show the output graph, false to skip it and only use the output dictionary
@@ -72,10 +74,10 @@ def analysis_classification(edf,
 
     raw_data = mne.io.read_raw_edf(edf)    # edf file reading
 
-    model_name = model.lower()
+    model_name_task1 = model_name_task1.lower()
 
     if model_path_task1 == '':
-        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name_task1}'
         best_dir = f'{saved_dir}/best-1.1'
         model_list = os.listdir(best_dir)
 
@@ -145,7 +147,7 @@ def analysis_classification(edf,
             X_test_seq = np.array([(df_jawac.loc[i:i + (size-1), :].data).to_numpy() for i in range(0, len(df_jawac), center_of_interest)], dtype=object)
         X_test_seq_temp = []
         for arr in X_test_seq:
-            if not return_sequences:
+            if not return_sequences and model_name_task1 != 'resnet':
                 arr = np.append(arr, pd.Series([np.var(arr)*1000]))
             X_test_seq_temp.append(arr)
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
@@ -286,8 +288,10 @@ def analysis_classification(edf,
     print('Task 2...')
     print()
 
-    if model_path_task2 is '':
-        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name}'
+    model_name_task2 = model_name_task2.lower()
+
+    if model_path_task2 == '':
+        saved_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name_task2}'
         best_dir = f'{saved_dir}/best-1.1'
         model_list = os.listdir(best_dir)
 
@@ -350,9 +354,10 @@ def analysis_classification(edf,
         X_test_seq_pad = tf.keras.preprocessing.sequence.pad_sequences(X_test_seq_temp, padding='post', dtype='float64')
         X_test_seq_pad = np.reshape(X_test_seq_pad, (X_test_seq_pad.shape[0], X_test_seq_pad.shape[1], 1))
 
-    threshold = 0.7
+    threshold = 0.5
     classes = []
     step_size = int((1 / downsampling_value) * segmentation_value)
+    predictions = []
     if not stateful:
         predictions = model.predict(X_test_seq_pad)    # model.predict classifies the X data by predicting the y labels
         # loop that runs through the list of model predictions to keep the highest predicted probability values
@@ -597,7 +602,7 @@ def analysis_classification(edf,
             break
     title = title[::-1]
 
-    fig.add_annotation(text=f'model: {model_name} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - valid: {dictionary["is_valid"]}',
+    fig.add_annotation(text=f'model task 1: {model_name_task1} - model task 2: {model_name_task2} - total time: {hours_conversion(dictionary["total_hours"])} - hours sleep: {hours_conversion(dictionary["hours_sleep"])} - new bounds time: {hours_conversion(dictionary["total_hours_new_bounds"])} - new bounds sleep time: {hours_conversion(dictionary["hours_sleep_new_bounds"])} - total signal quality: {dictionary["total_signal_quality"]} - valid: {dictionary["is_valid"]}',
                        xref='paper', yref='paper',
                        x=0.3, y=1.045, showarrow=False)
 
@@ -610,7 +615,8 @@ def analysis_classification(edf,
     fig.layout.height = None
 
     if plt_save_path != '':
-        fig.write_image(f'{plt_save_path}/{model_name}/{threshold}/output_{title}.png')
+        fig.write_image(f'{plt_save_path}/{model_name_task1}/{threshold}/output_{title}.png')
+        fig.write_image(f'{plt_save_path}/{model_name_task2}/{threshold}/output_{title}.png')
 
     dictionary['plot'] = fig
     if show_graph:
@@ -624,7 +630,8 @@ def analysis_classification(edf,
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--edf', type=str, default='', help='edf file path containing time series data')
-    parser.add_argument('--model', type=str, default='LSTM', help='learning model architecture, either CNN, LSTM or KNN')
+    parser.add_argument('--model_name_task1', type=str, default='LSTM', help='learning model architecture for valid/invalid task - either MLP, CNN, ResNet or LSTM')
+    parser.add_argument('--model_name_task2', type=str, default='ResNet', help='learning model architecture for awake/sleep task - either MLP, CNN, ResNet or LSTM')
     parser.add_argument('--model_path_task1', type=str, default='', help='corresponds to the path of the first task model weights')
     parser.add_argument('--model_path_task2', type=str, default='', help='corresponds to the path of the second task model weights')
     parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')
@@ -645,13 +652,8 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-    # Test cmd lines - patient data from 1 to 13 - WINDOWS
-    # python code/classification/classify.py --show_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
-    # python code/classification/classify.py --show_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
-
-    # Test cmd lines - patient data from 1 to 13 - MACOS
-    # python3 code/classification/classify.py --show_graph --model 'LSTM' --edf 'code/classification/test_data/patient_data1.edf'
-    # python3 code/classification/classify.py --show_graph --model 'CNN' --edf 'code/classification/test_data/patient_data1.edf'
+    # Test cmd lines
+    # python code/classification/classify_jawac.py --show_graph --model_name_task1 'LSTM' --model_path_task1 'models\task1\lstm\best-1.0\stl-lstm-task1-1.0#2\best\model-best.h5' --model_name_task2 'ResNet' --model_path_task2 'models\task2\resnet\best-1.0\resnet-sw-task2#2\best\model-best.h5' --edf 'data\task2\jawrhin\analysis\03\03.edf'
 
 
     opt = parse_opt()

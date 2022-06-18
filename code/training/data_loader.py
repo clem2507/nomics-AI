@@ -12,11 +12,12 @@ from tensorflow.keras.utils import to_categorical
 
 from tqdm import tqdm
 from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.preprocessing import StandardScaler
 
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/utils')
 
-from util import extract_data_from_line, datetime_conversion, block_print, enable_print, downsample
+from util import extract_data_from_line, datetime_conversion, block_print, enable_print, downsample, occurrence_count
 
 
 class DataLoader:
@@ -34,13 +35,14 @@ class DataLoader:
     -stateful: true to use stateful LSTM instead of stateless
     -sliding_window: true to use sliding window with a small center portion of interest
     -center_of_interest: center of interest size in seconds for the sliding window
-    -task: corresponding task number, so far: task = 1 for valid/invalid and task = 2 for awake/sleep
+    -task: corresponding task number, so far: task = 1 for valid/invalid, task = 2 for awake/sleep and task = 3 for belts analysis
     -full_sequence: true to feed the entire sequence without dividing it into multiple windows
     -return_sequences: true to return the state of each data point in the full sequence for the LSTM model
     """
 
     def __init__(self, 
                  analysis_directory='', 
+                 model_name='LSTM',
                  segmentation_value=60, 
                  downsampling_value=1, 
                  data_balancing=True, 
@@ -54,6 +56,7 @@ class DataLoader:
                  return_sequences=False):
 
         self.directory = analysis_directory
+        self.model_name = model_name
         self.dfs_directory = f'{analysis_directory}_edf_dfs'
         self.segmentation_value = float(segmentation_value)
         self.downsampling_value = float(downsampling_value)
@@ -95,11 +98,18 @@ class DataLoader:
                     lines = data_mk3.readlines()    # list with the mk3 lines
                     lines = lines[5:]    # log file information
                     if len(lines) > 0:
-                        if (lines[0].split(';'))[-1] == 'START':
+                        if (lines[0].split(';')[-1].strip()) == 'START':
                             lines.pop(0)
-                        if (lines[0].split(';'))[-1] == 'STOP':
+                    if len(lines) > 0:
+                        if (lines[0].split(';')[-1].strip()) == 'START':
                             lines.pop(0)
-                    col_names = ['start', 'end', 'label']
+                    if len(lines) > 0:
+                        if (lines[0].split(';')[-1].strip()) == 'STOP':
+                            lines.pop(0)
+                    if len(lines) > 0:
+                        if (lines[0].split(';')[-1].strip()) == 'STOP':
+                            lines.pop(0)
+                    col_names = ['start', 'end', 'signal_num', 'label']
                     df_mk3 = pd.DataFrame(columns=col_names)    # dataframe with label data created
                     for line in lines:
                         if len(line) > 0:
@@ -116,17 +126,21 @@ class DataLoader:
                     df_jawac = pd.DataFrame()    # dataframe creation to store time series data
 
                     if self.task != 3:
-                        data = raw_data[0][0][0]
+                        jawac_signal_idx = raw_data.__dict__['_raw_extras'][0]['ch_names'].index('Jawac')
+                        data = raw_data[jawac_signal_idx][0][0]
                         times = raw_data[0][1]
                         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
                         df_jawac.insert(0, 'times', times)
                         df_jawac.insert(1, 'data', data)
-                        if len(raw_data[0]) > 1:
-                            df_jawac.insert(1, 'hypno', raw_data[1][0][0])
+                        if 'Hypno' in raw_data.__dict__['_raw_extras'][0]['ch_names']:
+                            hypno_signal_idx = raw_data.__dict__['_raw_extras'][0]['ch_names'].index('Hypno')
+                            df_jawac.insert(1, 'hypno', raw_data[hypno_signal_idx][0][0])
                         df_jawac = df_jawac.resample('0.1S', on='times').median()
                     else:
-                        data_chest = raw_data[2][0][0]
-                        data_abd = raw_data[3][0][0]
+                        chest_signal_idx = raw_data.__dict__['_raw_extras'][0]['ch_names'].index('RIP_Chest')
+                        abd_signal_idx = raw_data.__dict__['_raw_extras'][0]['ch_names'].index('RIP_Abd.')
+                        data_chest = raw_data[chest_signal_idx][0][0]
+                        data_abd = raw_data[abd_signal_idx][0][0]
                         times = raw_data[0][1]
                         times = datetime_conversion(times, raw_data.__dict__['info']['meas_date'])    # conversion to usable date dtype 
                         df_jawac.insert(0, 'times', times)
@@ -232,10 +246,13 @@ class DataLoader:
                     temp_X = [arr[0][i:i + max_length] for i in range(0, len(arr[0]), max_length)][:-1]
                     temp_y = [arr[1][i:i + max_length] for i in range(0, len(arr[1]), max_length)][:-1]
                 for i in range(len(temp_X)):
-                    if self.task == 1 and not self.return_sequences:
+                    if self.task == 1 and not self.return_sequences and self.model_name != 'resnet':
                         temp_X[i].append(np.var(temp_X[i])*1000)
                     if not self.return_sequences:
-                        label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
+                        if occurrence_count(temp_y[i], threshold=0.9):
+                            label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
+                        else:
+                            continue
                         if label == 0:
                             zero_count += 1
                         elif label == 1:
@@ -256,10 +273,12 @@ class DataLoader:
 
         if self.data_balancing:
             if not self.return_sequences:
-                oversample = SMOTE()
                 X = np.array(X)
                 y = np.array(y)
+                oversample = SMOTE()
                 X, y = oversample.fit_resample(X.reshape(X.shape[0], -1), y)
+                # undersample = RandomUnderSampler(sampling_strategy='majority')
+                # X, y = undersample.fit_resample(X.reshape(X.shape[0], -1), y)
                 X = np.reshape(X, (len(X), len(X[0]), 1))
                 y = to_categorical(y)
                 zero_count = 0
@@ -287,6 +306,8 @@ class DataLoader:
         # splitting the data into testing and training sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
         # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20)
+
+        # pd.DataFrame(data={'data': X_test, 'label': y_test}).to_pickle('test_set_dataframe.pkl')
 
         end_time = time.time()    # end timer variable used for the calculation of the total execution time 
 
