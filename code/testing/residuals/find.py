@@ -1,3 +1,4 @@
+from asyncio import tasks
 import wandb
 
 import os
@@ -93,12 +94,12 @@ def find_residuals(analysis_directory,
 
             df_jawac = df_jawac.resample(f'1S').median()
 
-            df_jawac['label'] = [1 for n in range(len(df_jawac))]
-            df_jawac['pred_label'] = [1 for n in range(len(df_jawac))]
-            df_jawac['res_label'] = [1 for n in range(len(df_jawac))]
-            df_jawac['proba'] = [1 for n in range(len(df_jawac))]
-            df_jawac['pred_proba'] = [0.5 for n in range(len(df_jawac))]
-            df_jawac['res_proba'] = [1 for n in range(len(df_jawac))]
+            df_jawac['label'] = 1
+            df_jawac['pred_label'] = 1
+            df_jawac['res_label'] = 1
+            df_jawac['proba'] = 1
+            df_jawac['pred_proba'] = 0.5
+            df_jawac['res_proba'] = 1
 
             df_jawac.index = pd.to_datetime(df_jawac.index).tz_localize(None)
 
@@ -118,6 +119,9 @@ def find_residuals(analysis_directory,
                                             model_path_task2=model_path_task2, 
                                             stop_print=True)
 
+            # start_stop_mask = (out_dic['df_jawac'].times >= df_jawac.times[0]) & (out_dic['df_jawac'].times <= df_jawac.times[-1])
+            # df_jawac.pred_label = out_dic['df_jawac'].loc(start_stop_mask).label.values
+            # df_jawac.pred_proba = out_dic['df_jawac'].loc(start_stop_mask).proba.values
             df_jawac.pred_label = out_dic['df_jawac'].label.values
             df_jawac.pred_proba = out_dic['df_jawac'].proba.values
             df_jawac.pred_proba = df_jawac.pred_proba.round(3)

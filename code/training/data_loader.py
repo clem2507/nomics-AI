@@ -97,14 +97,18 @@ class DataLoader:
                     data_mk3 = open(mk3_file)    # mk3 file reading
                     lines = data_mk3.readlines()    # list with the mk3 lines
                     lines = lines[5:]    # log file information
+                    start = None
+                    stop = None
                     if len(lines) > 0:
                         if (lines[0].split(';')[-1].strip()) == 'START':
+                            start = extract_data_from_line(line[0])[0]
                             lines.pop(0)
                     if len(lines) > 0:
                         if (lines[0].split(';')[-1].strip()) == 'START':
                             lines.pop(0)
                     if len(lines) > 0:
                         if (lines[0].split(';')[-1].strip()) == 'STOP':
+                            stop = extract_data_from_line(line[0])[0]
                             lines.pop(0)
                     if len(lines) > 0:
                         if (lines[0].split(';')[-1].strip()) == 'STOP':
@@ -147,6 +151,8 @@ class DataLoader:
                         df_jawac.insert(1, 'data_chest', data_chest)
                         df_jawac.insert(2, 'data_abd', data_abd)
                         df_jawac = df_jawac.resample('0.1S', on='times').median()
+                        mask = (df_jawac.index >= start) & (df_jawac.index <= stop)
+                        df_jawac = df_jawac.loc[mask]
 
                     # dataframe saving
                     df_jawac.to_pickle(f'{self.dfs_directory}/{dir_names[i]}/{dir_names[i]}_jawac.pkl')
@@ -177,20 +183,34 @@ class DataLoader:
                 self.jawac_df_list.append(df_jawac)
 
         for i in tqdm(range(len(self.jawac_df_list))):
-            self.jawac_df_list[i]['label'] = [1 for n in range(len(self.jawac_df_list[i]))]
+            if self.task == 3:
+                self.jawac_df_list[i]['label_chest'] = [1 for n in range(len(self.jawac_df_list[i]))]
+                self.jawac_df_list[i]['label_abd'] = [1 for n in range(len(self.jawac_df_list[i]))]
+            else:
+                self.jawac_df_list[i]['label'] = [1 for n in range(len(self.jawac_df_list[i]))]
             self.jawac_df_list[i].index = pd.to_datetime(self.jawac_df_list[i].index).tz_localize(None)
             for idx, row in self.mk3_df_list[i].iterrows():
                 mask = (self.jawac_df_list[i].index >= row.start) & (self.jawac_df_list[i].index <= row.end)
                 if self.task == 1:
                     self.jawac_df_list[i].loc[mask, ['label']] = 0
-                else:
+                elif self.task == 2:
                     if row.label == 'W':
                         self.jawac_df_list[i].loc[mask, ['label']] = 0
                     else:
                         self.jawac_df_list[i] = self.jawac_df_list[i][~mask]
-            
+                elif self.task == 3:
+                    if row.label == 'Out of Range':
+                        if row.signal_num == 3 or row.signal_num == 6:
+                            self.jawac_df_list[i].loc[mask, ['label_chest']] = 0
+                        elif row.signal_num == 4 or row.signal_num == 7:
+                            self.jawac_df_list[i].loc[mask, ['label_abd']] = 0
+                
         for i in tqdm(range(len(self.jawac_df_list))):
-            self.dataset.append([self.jawac_df_list[i].data.tolist(), self.jawac_df_list[i].label.tolist()])
+            if self.task == 3:
+                self.dataset.append([self.jawac_df_list[i].data_chest.tolist(), self.jawac_df_list[i].label_chest.tolist()])
+                self.dataset.append([self.jawac_df_list[i].data_abd.tolist(), self.jawac_df_list[i].label_abd.tolist()])
+            else:
+                self.dataset.append([self.jawac_df_list[i].data.tolist(), self.jawac_df_list[i].label.tolist()])
 
 
     def create_dataset(self):
@@ -249,7 +269,7 @@ class DataLoader:
                     if self.task == 1 and not self.return_sequences and self.model_name != 'resnet':
                         temp_X[i].append(np.var(temp_X[i])*1000)
                     if not self.return_sequences:
-                        if occurrence_count(temp_y[i], threshold=0.9):
+                        if occurrence_count(temp_y[i], threshold=0.99):
                             label = max(temp_y[i], key=temp_y[i].count)    # most common value in the data window
                         else:
                             continue

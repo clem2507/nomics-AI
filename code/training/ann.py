@@ -494,7 +494,7 @@ def train_model(analysis_directory,
     model_info_file.close()
 
     # confusion matrix plot
-    if task == 1:
+    if task == 1 or task == 3:
         labels = ['Invalid', 'Valid']
     elif task == 2:
         labels = ['Awake', 'Sleep']
