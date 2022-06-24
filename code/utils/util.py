@@ -4,9 +4,7 @@ import math
 import time
 import datetime
 import itertools
-import matplotlib
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from copy import copy
@@ -67,29 +65,6 @@ def extract_data_from_line(line):
     return [out]
 
 
-def string_datetime_conversion(times, start_time, start_date):
-    """
-    Function that converts a list of string times to a list of date time dtype
-
-    Parameters:
-
-    -times: list containing the time in string format
-    -start_time: start time of the first recorded data point
-    -start_date: start date of the first recorded data point
-
-    Returns:
-
-    -out: list with date time values
-    """
-
-    out = []
-    start_datetime = convert_string_to_time(start_time, start_date)
-    for i in range(len(times)):
-        temp_time = start_datetime + datetime.timedelta(0, times[i])
-        out.append(temp_time)
-    return out
-
-
 def datetime_conversion(times, start):
     """
     Function that converts a list of string times to a list of date time dtype
@@ -146,28 +121,6 @@ def enable_print():
     sys.stdout = sys.__stdout__
 
 
-def check_nan(values):
-    """
-    Method used to find nan values in dataframes series and delete these rows
-
-    Parameters:
-
-    -values: series with the time series data point
-
-    Returns:
-
-    -out: new series without nan values
-    """
-
-    out = []
-    for arr in values:
-        if np.isnan(np.sum(arr)):
-            out.append(False)
-        else:
-            out.append(True)
-    return pd.Series(out)
-
-
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
     """
     Confustion matrix plotter function
@@ -210,29 +163,6 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     return plt
-
-
-def occurrences_counter(arr):
-    """
-    Function that counts the total number of different classes
-
-    Parameters:
-
-    -arr: array with classes values
-
-    Returns:
-
-    -out: dictionary with the classes occurence values
-    """
-
-    out = {}
-    for label in arr:
-        idx = np.argmax(label)
-        if idx in out.keys():
-            out[idx] += 1
-        else:
-            out[idx] = 1
-    return out
 
 
 def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, threshold):
@@ -319,7 +249,7 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
         sleep_rate = sleep_count / df['data_num'].sum()
 
     if threshold != 0:
-        if not is_valid(analysis_end - analysis_start, sleep_hours):
+        if not is_valid(sleep_hours, threshold=4):
             print('threshold:', threshold)
             print('new start analysis time:', new_start_time)
             print('new end analysis time:', new_end_time)
@@ -328,7 +258,7 @@ def analysis_cutting(df, analysis_start, analysis_end, downsampling_value, thres
             print('sleep rate in new bounds:', round((sleep_rate * 100), 2), '%')
             print(f"not enough valid signal (< 4h) in first selected bounds with threshold = {threshold}, let's try with a wider tolerance")
             print()
-            if threshold == 0.98:
+            if threshold == 0.95:
                 return analysis_cutting(df_copy, analysis_start_copy, analysis_end_copy, downsampling_value_copy, threshold=0.8)
             if threshold == 0.8:
                 return analysis_cutting(df_copy, analysis_start_copy, analysis_end_copy, downsampling_value_copy, threshold=0.5)
@@ -396,50 +326,21 @@ def f1(y_true, y_pred):
     return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
 
-def num_of_correct_pred(y_true, y_pred):
+def is_valid(sleep_hours, threshold=4):
     """
-    Method that computes the total number of correct predictions made by the classifier
+    Function that takes the decision about the validity of an analysis based on its total number of sleep hours
 
     Parameters:
 
-    -y_true: true labels list of x instances
-    -y_pred: predicted labels list of x instances
-
-    Returns:
-
-    -count: the total count of correct predictions
-    """
-
-    count = 0
-    for i in range(len(y_pred)):
-        if y_true[i] == y_pred[i]:
-            count += 1
-    return count
-
-
-def is_valid(total_hours, sleep_hours):
-    """
-    Function that takes the decision about the validity of an analysis based on its total number of valid hours and rate
-    
-    If more than 6 hours of validity available, analysis is directy valid
-    If the validity time is between 4 and 6 hours, it must have at least 75% within the limits
-    If less than 4 hours, directly classified as invalid
-
-    Parameters:
-
-    -total_hours: total number of hours
     -sleep_hours: total hours of sleep
 
     Returns:
 
     True if the entire analysis is valid, false otherwise
     """
-    if type(total_hours) == int:
-        if (total_hours / 3600.0) > 6 and sleep_hours > 4:
-            return True
-    else:
-        if (total_hours.total_seconds() / 3600.0) > 6 and sleep_hours > 4:
-            return True
+
+    if sleep_hours > threshold:
+        return True
     return False
 
 
@@ -455,6 +356,7 @@ def signal_quality(df):
 
     -out: signal quality estimation (in %)
     """
+
     score = 0
     start = df.start.tolist()[0]
     end = df.end.tolist()[-1]
@@ -471,25 +373,6 @@ def signal_quality(df):
     return score
 
 
-def reduction(y_test, batch_size, n_timesteps):
-    """
-    Method used to reduce the y test label according to the batch size
-
-    Parameters:
-
-    -batch_size: number of instances used for training the model each time
-
-    Returns:
-
-    -out: the processed list
-    """
-    out = []
-    for i in range(0, len(y_test), batch_size*n_timesteps):
-        if i + (batch_size*n_timesteps) < len(y_test):
-            out.append(round(max(y_test[i:i+(batch_size*n_timesteps)], key = y_test[i:i+(batch_size*n_timesteps)].count)))
-    return out
-
-
 def get_value_in_line(line):
     """
     Method used to access the correct value in the info.txt file from models
@@ -502,6 +385,7 @@ def get_value_in_line(line):
 
     -out: the correct value
     """
+
     out = ''
     flag = False
     for i in range(len(line)):
@@ -514,39 +398,19 @@ def get_value_in_line(line):
     return out
 
 
-def multilabel_to_onelabel(classes):
-    out = []
-    for c in classes:
-        label = np.argmax(c)
-        out.append(label)
-    return out
-
-
-def downsample(df:pd.DataFrame, label_col_name:str) -> pd.DataFrame:
-    # find the number of observations in the smallest group
-    nmin = df[label_col_name].value_counts().min()
-    return (df
-            # split the dataframe per group
-            .groupby(label_col_name)
-            # sample nmin observations from each group
-            .apply(lambda x: x.sample(nmin))
-            # recombine the dataframes
-            .reset_index(drop=True)
-            )
-
-
-def move_figure(f, x, y):
-    """Move figure's upper left corner to pixel (x, y)"""
-    backend = matplotlib.get_backend()
-    if backend == 'TkAgg':
-        f.canvas.manager.window.wm_geometry("+%d+%d" % (x, y))
-    elif backend == 'WXAgg':
-        f.canvas.manager.window.SetPosition((x, y))
-    else:
-        f.canvas.manager.window.move(x, y)
-
-
 def occurrence_count(list, threshold=0.9):
+    """
+    Method used to check if there are enough classes of the same type in a given data window
+
+    Parameters:
+
+    -list: list corresponding to the data window
+
+    Returns:
+
+    -out: true if at least > threshold distribution of one label in this window 
+    """
+
     dic = {}
     for item in list:
         if str(item) not in dic.keys():

@@ -1,13 +1,10 @@
-from asyncio import tasks
 import wandb
 
 import os
 import sys
-import mne
 import argparse
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 import plotly.graph_objects as go
 
 from tqdm import tqdm
@@ -18,12 +15,10 @@ sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/training')
 sys.path.append(os.path.dirname(os.path.abspath('util.py')) + '/code/classification')
 
 from data_loader import DataLoader
-from classify_jawac import analysis_classification
+from classify import analysis_classification
 
 
 def find_residuals(analysis_directory, 
-                   model_name_task1,
-                   model_name_task2,
                    show_graph, 
                    wandb_log):
     """
@@ -32,8 +27,6 @@ def find_residuals(analysis_directory,
     Parameters:
 
     -analysis_directory: directory path with analysis to use for testing neural network and finding residuals
-    -model_name_task1: learning model architecture for valid/invalid task - either MLP, CNN, ResNet or LSTM
-    -model_name_task2: learning model architecture for awake/sleep task - either MLP, CNN, ResNet or LSTM
     -show_graph: true to show the output graph
     -wandb_log: true to log the residual plots on weights and biases
     """
@@ -41,11 +34,8 @@ def find_residuals(analysis_directory,
     if wandb_log:
         wandb.init(project="nomics-AI", entity="nomics")
 
-    model_name_task1 = model_name_task1.lower()
-
-    saved_dir_task1 = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1/{model_name_task1}'
-    best_dir = f'{saved_dir_task1}/best-1.0'
-    model_list = os.listdir(best_dir)
+    task1_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task1'
+    model_list = os.listdir(task1_dir)
 
     print('----- TASK 1 MODEL CHOICE -----')
     for i in range(len(model_list)):
@@ -53,27 +43,24 @@ def find_residuals(analysis_directory,
     model_num = int(input('model number: '))
     print('--> task 1 model name:', model_list[model_num-1])
     if model_num > 0 and model_num <= len(model_list):
-        model_path_task1 = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+        model_path_task1 = f'{task1_dir}/{model_list[model_num-1]}/best/model-best.h5'
     else:
-        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+        most_recent_folder_path = sorted(Path(task1_dir).iterdir(), key=os.path.getmtime)[::-1]
         most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
         model_path_task1 = str(most_recent_folder_path[0]) + '/best/model-best.h5'
-
-    model_name_task2 = model_name_task2.lower()
-
-    saved_dir_task2 = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2/{model_name_task2}'
-    best_dir = f'{saved_dir_task2}/best-1.0'
-    model_list = os.listdir(best_dir)
+    
+    task2_dir = os.path.dirname(os.path.abspath('util.py')) + f'/models/task2'
+    model_list = os.listdir(task2_dir)
 
     print('----- TASK 2 MODEL CHOICE -----')
     for i in range(len(model_list)):
         print(f'({i+1}) {model_list[i]}')
     model_num = int(input('model number: '))
-    print('--> task 1 model name:', model_list[model_num-1])
+    print('--> task 2 model name:', model_list[model_num-1])
     if model_num > 0 and model_num <= len(model_list):
-        model_path_task2 = f'{best_dir}/{model_list[model_num-1]}/best/model-best.h5'
+        model_path_task2 = f'{task2_dir}/{model_list[model_num-1]}/best/model-best.h5'
     else:
-        most_recent_folder_path = sorted(Path(best_dir).iterdir(), key=os.path.getmtime)[::-1]
+        most_recent_folder_path = sorted(Path(task2_dir).iterdir(), key=os.path.getmtime)[::-1]
         most_recent_folder_path = [name for name in most_recent_folder_path if not (str(name).split('/')[-1]).startswith('.')]
         model_path_task2 = str(most_recent_folder_path[0]) + '/best/model-best.h5'
     print('------------------------')
@@ -112,18 +99,14 @@ def find_residuals(analysis_directory,
 
             df_jawac.reset_index(inplace=True)
 
-            out_dic = analysis_classification(edf=f'{analysis_directory}/{filenames[file_i]}/{filenames[file_i]}.edf', 
-                                            model_name_task1=model_name_task1, 
-                                            model_name_task2=model_name_task2,
-                                            model_path_task1=model_path_task1, 
-                                            model_path_task2=model_path_task2, 
-                                            stop_print=True)
+            _, out_df = analysis_classification(edf=f'{analysis_directory}/{filenames[file_i]}/{filenames[file_i]}.edf', 
+                                              model_path_task1=model_path_task1, 
+                                              model_path_task2=model_path_task2, 
+                                              en_print=False,
+                                              save = False)
 
-            # start_stop_mask = (out_dic['df_jawac'].times >= df_jawac.times[0]) & (out_dic['df_jawac'].times <= df_jawac.times[-1])
-            # df_jawac.pred_label = out_dic['df_jawac'].loc(start_stop_mask).label.values
-            # df_jawac.pred_proba = out_dic['df_jawac'].loc(start_stop_mask).proba.values
-            df_jawac.pred_label = out_dic['df_jawac'].label.values
-            df_jawac.pred_proba = out_dic['df_jawac'].proba.values
+            df_jawac.pred_label = out_df.label.values
+            df_jawac.pred_proba = out_df.proba.values
             df_jawac.pred_proba = df_jawac.pred_proba.round(3)
 
             for idx, row in df_jawac.iterrows():
@@ -337,8 +320,6 @@ def find_residuals(analysis_directory,
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--analysis_directory', type=str, default='', help='directory path with analysis to use for testing neural network and finding residuals')
-    parser.add_argument('--model_name_task1', type=str, default='LSTM', help='learning model architecture for valid/invalid task - either MLP, CNN, ResNet or LSTM')
-    parser.add_argument('--model_name_task2', type=str, default='ResNet', help='learning model architecture for awake/sleep task - either MLP, CNN, ResNet or LSTM')
     parser.add_argument('--show_graph', dest='show_graph', action='store_true', help='invoke to show the output graph')
     parser.add_argument('--wandb_log', dest='wandb_log', action='store_true', help='invoke to log the residual plots on weights and biases')
     parser.set_defaults(show_graph=False)
@@ -360,4 +341,4 @@ if __name__ == '__main__':
     main(p=opt)
 
     # Test cmd lines WINDOWS
-    # python code/testing/residuals/find.py --analysis_directory 'data/task2/jawrhin/analysis' --model_name_task1 'LSTM' --model_name_task2 'ResNet' --show_graph
+    # python code/testing/residuals/find.py --analysis_directory 'data/task2/jawrhin/analysis' --show_graph

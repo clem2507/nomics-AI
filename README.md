@@ -24,7 +24,7 @@ the signal to have a more pertinent statement for the decision making of the ent
 
 ## Methodology
 
-One solution to address this problem would be to use machine learning to replace this redundant human task. Recently, deep learning methods such as CNNs, which use one-dimensional convolutional neural networks or recurrent neural networks such as LSTMs, have been shown to provide state-of-the-art results for difficult time series classification tasks with little or no data feature engineering.
+One solution to address this problem would be to use machine learning to replace this redundant human task. Recently, deep learning methods such as FCNs, which use one-dimensional convolutional neural networks or recurrent neural networks such as LSTMs, have been shown to provide state-of-the-art results for difficult time series classification tasks with little or no data feature engineering.
 
 ### Dataset Prepocessing
 
@@ -36,9 +36,9 @@ In order to have consistent input data for machine learning, it is advisable to 
 
 The entire implementation can be found inside the _preprocessing.py_ file. Now that the data is ready to be processed, the deep learning models can come into play.
 
-### Convolutional Neural Network (CNN)
+### Convolutional Neural Network (FCN)
 
-The first approach is to use the well-known CNN classification technique. In the context of time series data, the convolutional neural network process can be divided into 4 main steps.
+The first approach is to use the well-known FCN classification technique. In the context of time series data, the convolutional neural network process can be divided into 4 main steps.
 
 1. It first creates a kernel of time series width length k that will only move in one direction, from the start to the end of the time series.
 2. Then, the convolutional layer is created after performing convolution with the kernel on the input data. Its main goal is to filter the information and to extract the most significant features.
@@ -49,7 +49,7 @@ The first approach is to use the well-known CNN classification technique. In the
   <img src="https://user-images.githubusercontent.com/43852207/140625099-a3b752d7-290f-4f2c-9abb-baa92fc8834b.png" width="400" height="200">
 </p>
 
-The main pros of using the CNN for such a classification is its noise resistance as well as its ability to extract deep features independent from time. The CNN model is implemented using [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) sequential architecture inside the _cnn_model.py_ file. With the objective of achieving the best results, a version of the keras tuner is included to find the best hyperparameters after performing random search.
+The main pros of using the FCN for such a classification is its noise resistance as well as its ability to extract deep features independent from time. The FCN model is implemented using [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) sequential architecture inside the _fcn_model.py_ file. With the objective of achieving the best results, a version of the keras tuner is included to find the best hyperparameters after performing random search.
 
 ### Recurrent Neural Network (RNN)
 
@@ -60,7 +60,7 @@ RNN is the second deep learning approach used for this study. And more precisely
 </p>
 
 
-The advantage of using the LSTM model is its ability to learn and remember the information over long sequences of input data. It also does not require any domain expertise to manually engineer input features. In the same way as for the CNN, the architecture used for the LSTM comes from [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) inside the _lstm_model.py_ file and is complemented with a optimization tuner.
+The advantage of using the LSTM model is its ability to learn and remember the information over long sequences of input data. It also does not require any domain expertise to manually engineer input features. In the same way as for the FCN, the architecture used for the LSTM comes from [Tensorflow Keras API](https://www.tensorflow.org/guide/keras/sequential_model) inside the _lstm_model.py_ file and is complemented with a optimization tuner.
 
 ## Experiments, Results, Interpretations 
 
