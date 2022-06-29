@@ -8,7 +8,6 @@ import numpy as np
 
 from math import sqrt
 from sklearn.metrics import confusion_matrix
-
 from matplotlib import pyplot as plt
 from keras import Sequential
 from keras.layers import Conv1D, LSTM, Dropout, Dense, Activation, BatchNormalization, GlobalAveragePooling1D

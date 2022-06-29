@@ -364,12 +364,7 @@ def signal_quality(df):
     if len(df) == 0:
         return score
     for idx, row in df.iterrows():
-        if row.label == 1:
-            score += row.proba*((row.end-row.start)/time_interval)
-        else:
-            score += (1-row.proba)*((row.end-row.start)/time_interval)
-    if score < 0:
-        score = 0
+        score += row.proba*((row.end-row.start)/time_interval)
     return score
 
 

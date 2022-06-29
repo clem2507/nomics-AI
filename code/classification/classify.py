@@ -345,7 +345,7 @@ def analysis_classification(edf,
                   'hours_sleep': hours_sleep, 
                   'hours_awake': hours_awake, 
                   'hours_invalid': hours_invalid, 
-                  'total_signal_quality': round((signal_quality(df_label) * 100), 2), 
+                  'average_output_proba': round((signal_quality(df_label) * 100), 2), 
                   'new_bound_start': str(new_start), 
                   'new_bound_end': str(new_end), 
                   'total_hours_new_bounds': round((duration.total_seconds() / 3600.0), 2), 
@@ -431,11 +431,11 @@ def analysis_classification(edf,
             file.write(json.dumps(dictionary))
         
         output_path_df = os.path.normpath(edf)[:-3] + 'csv'
-        df_jawac.to_csv(output_path_df, 
-                        header=['times', 'data', 'label', 'proba'], 
-                        index=None, 
-                        sep=';', 
-                        mode='w')
+        df_jawac.drop('data', axis=1).to_csv(output_path_df, 
+                                             header=['times', 'label', 'proba'], 
+                                             index=None, 
+                                             sep=';', 
+                                             mode='w')
 
     return dictionary, df_jawac
 

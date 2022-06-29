@@ -232,8 +232,7 @@ class DataLoader:
                     zero_count += 1
                 else:
                     one_count += 1
-
-        if not self.data_balancing:
+        else:
             X = np.reshape(X, (len(X), len(X[0]), 1))
             y = to_categorical(np.array(y))
             X, y = shuffle(X, y)
